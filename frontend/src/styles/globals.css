@@ -1,0 +1,370 @@
+/* ==========================================================================
+   StudySpace design tokens — Light / Dark / Cozy / Pastel
+   Spec §3: brand indigo + pink; pink is a spark, not a wash.
+   Components use tokens only — never raw hex.
+   ========================================================================== */
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  /* --- base palette (Light, default) ------------------------------------ */
+  --bg: #f7f8fc;
+  --surface: #ffffff;
+  --surface-2: #eef0f9;
+  --border: #e3e6f2;
+  --text: #0f172a;
+  --text-muted: #5b6577;
+  --primary: #4f5bd5;
+  --primary-soft: #7c88ff;
+  --on-primary: #ffffff;
+  --accent: #e8749a;
+  --accent-soft: #ff9ab3;
+
+  /* --- semantic (always paired with an icon + label in UI) -------------- */
+  --success: #15803d;
+  --success-bg: #dcfce7;
+  --warning: #b45309;
+  --warning-bg: #fef3c7;
+  --danger: #b91c1c;
+  --danger-bg: #fee2e2;
+  --info: #1d4ed8;
+  --info-bg: #dbeafe;
+
+  /* --- AI-specific ------------------------------------------------------ */
+  --citation-bg: #e6e9ff;
+  --citation-text: #3640a8;
+  --highlight: #fff3a3;
+  --ghost-outline: rgba(79, 91, 213, 0.5);
+  --agent-active: var(--primary);
+  --agent-done: var(--success);
+
+  /* --- data viz --------------------------------------------------------- */
+  --chart-1: #4f5bd5;
+  --chart-2: #e8749a;
+  --chart-3: #2fb5a0;
+  --chart-4: #f2b14a;
+  --chart-5: #8b6fd6;
+  --chart-6: #5aa9e6;
+  --heat-1: #eceefe;
+  --heat-2: #c9cffc;
+  --heat-3: #a3acf8;
+  --heat-4: #7a86ee;
+  --heat-5: #4f5bd5;
+
+  --rating-again: #e5484d;
+  --rating-hard: #f2b14a;
+  --rating-good: #2fb5a0;
+  --rating-easy: #4f5bd5;
+
+  /* --- motion ----------------------------------------------------------- */
+  --motion-fast: 150ms;
+  --motion-base: 220ms;
+  --motion-slow: 300ms;
+
+  /* --- radii / elevation ------------------------------------------------ */
+  --radius: 14px;
+  --shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.05);
+  --shadow-md: 0 8px 24px rgba(15, 23, 42, 0.07);
+  --shadow-lg: 0 18px 48px rgba(15, 23, 42, 0.1);
+
+  /* --- shadcn/ui aliases (map spec tokens onto shadcn names) ------------ */
+  --background: var(--bg);
+  --foreground: var(--text);
+  --card: var(--surface);
+  --card-foreground: var(--text);
+  --popover: var(--surface);
+  --popover-foreground: var(--text);
+  --primary-DEFAULT: var(--primary);
+  --primary-foreground: var(--on-primary);
+  --secondary: var(--surface-2);
+  --secondary-foreground: var(--text);
+  --muted: var(--surface-2);
+  --muted-foreground: var(--text-muted);
+  --accent-DEFAULT: var(--accent);
+  --destructive: var(--danger);
+  --destructive-foreground: #ffffff;
+  --input: var(--border);
+  --ring: var(--primary-soft);
+  --success-foreground: #ffffff;
+  --warning-foreground: #ffffff;
+  --info-foreground: #ffffff;
+}
+
+/* --------------------------------------------------------------------------
+   Dark theme — lighter primary, dark text on buttons
+   -------------------------------------------------------------------------- */
+[data-theme="dark"] {
+  --bg: #0e1020;
+  --surface: #171a2e;
+  --surface-2: #1f2340;
+  --border: #2a2f52;
+  --text: #e8eaf6;
+  --text-muted: #9aa1c0;
+  --primary: #8b95ff;
+  --primary-soft: #aab2ff;
+  --on-primary: #0e1020;
+  --accent: #e8749a;
+  --accent-soft: #ff9ab3;
+
+  --success: #4ade80;
+  --success-bg: #12301f;
+  --warning: #fbbf24;
+  --warning-bg: #3a2a0a;
+  --danger: #f87171;
+  --danger-bg: #3a1414;
+  --info: #60a5fa;
+  --info-bg: #13233f;
+
+  --citation-bg: #2a2f5c;
+  --citation-text: #b7beff;
+  --highlight: rgba(250, 204, 21, 0.25);
+  --ghost-outline: rgba(139, 149, 255, 0.5);
+  --agent-active: var(--primary-soft);
+  --agent-done: var(--success);
+
+  --destructive-foreground: #0e1020;
+
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --shadow-md: 0 8px 24px rgba(0, 0, 0, 0.45);
+  --shadow-lg: 0 18px 48px rgba(0, 0, 0, 0.55);
+}
+
+/* --------------------------------------------------------------------------
+   Cozy — warm paper, terracotta primary, sage accent
+   -------------------------------------------------------------------------- */
+[data-theme="cozy"] {
+  --bg: #faf3e8;
+  --surface: #fffaf1;
+  --surface-2: #f3e8d6;
+  --border: #eadfcb;
+  --text: #3b2f2a;
+  --text-muted: #7a6a5f;
+  --primary: #b4572e;
+  --primary-soft: #d3824f;
+  --on-primary: #ffffff;
+  --accent: #7a9a7e;
+
+  --citation-bg: #f3e1d3;
+  --citation-text: #8a3f1d;
+  --highlight: #f7e6a8;
+  --ghost-outline: rgba(180, 87, 46, 0.5);
+}
+
+/* --------------------------------------------------------------------------
+   Pastel — violet primary, pink accent, mint highlight
+   -------------------------------------------------------------------------- */
+[data-theme="pastel"] {
+  --bg: #fbf7ff;
+  --surface: #ffffff;
+  --surface-2: #f3eafc;
+  --border: #eadff7;
+  --text: #2a2140;
+  --text-muted: #6b5f82;
+  --primary: #7a55c9;
+  --primary-soft: #9b7ae0;
+  --on-primary: #ffffff;
+  --accent: #f58fb0;
+
+  --citation-bg: #ede3fa;
+  --citation-text: #5a3aa5;
+  --highlight: #fdf3b8;
+  --ghost-outline: rgba(122, 85, 201, 0.5);
+}
+
+/* Follow OS preference when the user hasn't picked a theme yet */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme]):not([data-theme="light"]) {
+    --bg: #0e1020;
+    --surface: #171a2e;
+    --surface-2: #1f2340;
+    --border: #2a2f52;
+    --text: #e8eaf6;
+    --text-muted: #9aa1c0;
+    --primary: #8b95ff;
+    --primary-soft: #aab2ff;
+    --on-primary: #0e1020;
+    --success: #4ade80;
+    --success-bg: #12301f;
+    --warning: #fbbf24;
+    --warning-bg: #3a2a0a;
+    --danger: #f87171;
+    --danger-bg: #3a1414;
+    --info: #60a5fa;
+    --info-bg: #13233f;
+    --citation-bg: #2a2f5c;
+    --citation-text: #b7beff;
+    --highlight: rgba(250, 204, 21, 0.25);
+    --ghost-outline: rgba(139, 149, 255, 0.5);
+    --destructive-foreground: #0e1020;
+  }
+}
+
+/* --------------------------------------------------------------------------
+   Base
+   -------------------------------------------------------------------------- */
+@layer base {
+  * {
+    border-color: var(--border);
+  }
+
+  html {
+    color-scheme: light;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  [data-theme="dark"] {
+    color-scheme: dark;
+  }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: Inter, ui-sans-serif, system-ui, sans-serif;
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
+  ::selection {
+    background: var(--citation-bg);
+    color: var(--citation-text);
+  }
+
+  /* visible focus rings everywhere (primary-soft) */
+  :focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
+
+  h1, h2, h3, h4 {
+    letter-spacing: -0.015em;
+  }
+}
+
+@layer components {
+  /* skeleton loader */
+  .skeleton {
+    position: relative;
+    overflow: hidden;
+    background: var(--surface-2);
+    border-radius: 8px;
+  }
+  .skeleton::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    transform: translateX(-100%);
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.35), transparent);
+    animation: shimmer 1.6s infinite;
+  }
+  [data-theme="dark"] .skeleton::after {
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.06), transparent);
+  }
+
+  /* brand gradient — hero, logo, large progress bars only */
+  .brand-gradient {
+    background-image: linear-gradient(135deg, var(--primary), var(--accent));
+  }
+  .brand-text {
+    background-image: linear-gradient(135deg, var(--primary), var(--accent));
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+
+  /* dashed ghost (proposed) task outline */
+  .ghost-card {
+    border: 1.5px dashed var(--ghost-outline);
+    background: transparent;
+  }
+
+  /* source passage highlight (citation click target) */
+  .passage-highlight {
+    background: var(--highlight);
+    border-radius: 3px;
+    transition: background var(--motion-slow);
+  }
+
+  /* prose defaults for AI markdown output */
+  .ai-prose {
+    line-height: 1.65;
+    font-size: 0.95rem;
+  }
+  .ai-prose p { margin: 0.6em 0; }
+  .ai-prose h1, .ai-prose h2, .ai-prose h3 {
+    margin: 1em 0 0.4em;
+    font-weight: 650;
+  }
+  .ai-prose h1 { font-size: 1.3rem; }
+  .ai-prose h2 { font-size: 1.15rem; }
+  .ai-prose h3 { font-size: 1.02rem; }
+  .ai-prose ul, .ai-prose ol { margin: 0.5em 0; padding-left: 1.3em; }
+  .ai-prose ul { list-style: disc; }
+  .ai-prose ol { list-style: decimal; }
+  .ai-prose li { margin: 0.25em 0; }
+  .ai-prose code {
+    background: var(--surface-2);
+    padding: 0.1em 0.35em;
+    border-radius: 5px;
+    font-size: 0.88em;
+    font-family: "JetBrains Mono", ui-monospace, monospace;
+  }
+  .ai-prose pre {
+    background: var(--surface-2);
+    padding: 0.75rem 1rem;
+    border-radius: 10px;
+    overflow-x: auto;
+    margin: 0.7em 0;
+  }
+  .ai-prose pre code { background: none; padding: 0; }
+  .ai-prose blockquote {
+    border-left: 3px solid var(--border);
+    padding-left: 0.9em;
+    color: var(--text-muted);
+    margin: 0.7em 0;
+  }
+  .ai-prose table {
+    border-collapse: collapse;
+    width: 100%;
+    margin: 0.7em 0;
+    font-size: 0.92em;
+  }
+  .ai-prose th, .ai-prose td {
+    border: 1px solid var(--border);
+    padding: 0.4em 0.6em;
+    text-align: left;
+  }
+  .ai-prose th { background: var(--surface-2); }
+  .ai-prose a { color: var(--primary); text-decoration: underline; }
+  .ai-prose strong { font-weight: 650; }
+}
+
+@layer utilities {
+  .scrollbar-thin {
+    scrollbar-width: thin;
+    scrollbar-color: var(--border) transparent;
+  }
+  .scrollbar-thin::-webkit-scrollbar { width: 8px; height: 8px; }
+  .scrollbar-thin::-webkit-scrollbar-thumb {
+    background: var(--border);
+    border-radius: 8px;
+  }
+  .scrollbar-thin::-webkit-scrollbar-track { background: transparent; }
+}
+
+/* --------------------------------------------------------------------------
+   Reduced motion: calm everywhere, zero decorative movement
+   -------------------------------------------------------------------------- */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

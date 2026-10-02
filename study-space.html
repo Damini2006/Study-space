@@ -1,0 +1,813 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>StudySpace — Student Dashboard (All-in-One)</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg: linear-gradient(180deg,#fbfbff 0%, #f3fbff 100%);
+    --card: rgba(255,255,255,0.86);
+    --muted: #6b7280;
+    --accent:#7c88ff;
+    --accent-2:#ff9ab3;
+    --shadow: 0 12px 40px rgba(16,24,40,0.08);
+    --radius:14px;
+    --glass-blur:8px;
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%;margin:0;font-family:Inter,system-ui,Arial;background:var(--bg);color:var(--text,#0b1220)}
+  /* layout */
+  .app-wrap{display:grid;grid-template-columns:260px 1fr;gap:22px;padding:22px;min-height:100vh}
+  .sidebar{height:calc(100vh - 44px);position:sticky;top:22px;padding:18px;border-radius:14px;background:linear-gradient(180deg,rgba(255,255,255,0.6),rgba(255,255,255,0.5));backdrop-filter:blur(var(--glass-blur));box-shadow:var(--shadow);border:1px solid rgba(255,255,255,0.6)}
+  .brand{display:flex;gap:12px;align-items:center;margin-bottom:18px}
+  .logo{width:48px;height:48px;border-radius:12px;background:linear-gradient(135deg,var(--accent),var(--accent-2));display:flex;align-items:center;justify-content:center;color:white;font-weight:700}
+  nav{display:flex;flex-direction:column;gap:8px;margin-top:14px}
+  .nav-item{display:flex;gap:10px;align-items:center;padding:10px;border-radius:10px;cursor:pointer;color:var(--muted);transition:all .18s}
+  .nav-item:hover{background:rgba(255,255,255,0.6);transform:translateX(6px)}
+  .nav-item.active{background:linear-gradient(90deg,var(--accent),var(--accent-2));color:white;box-shadow:0 8px 24px rgba(124,136,255,0.12)}
+
+  header.top{display:flex;align-items:center;gap:12px;padding:14px;border-radius:12px;background:var(--card);backdrop-filter:blur(var(--glass-blur));box-shadow:var(--shadow);border:1px solid rgba(255,255,255,0.6)}
+  .search input{width:100%;padding:10px;border-radius:10px;border:1px solid rgba(0,0,0,0.06);background:transparent}
+  .content{display:grid;grid-template-columns:1fr 360px;gap:18px}
+  .col{display:flex;flex-direction:column;gap:18px}
+  .card{background:var(--card);border-radius:var(--radius);padding:14px;border:1px solid rgba(255,255,255,0.6);box-shadow:var(--shadow);backdrop-filter: blur(var(--glass-blur));transition:transform .12s}
+  .card:hover{transform:translateY(-6px)}
+  .notes-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px}
+
+  .note{padding:12px;border-radius:12px;background:linear-gradient(180deg,rgba(255,255,255,0.98),rgba(255,255,255,0.9));box-shadow:0 6px 18px rgba(12,20,50,0.04);position:relative;overflow:hidden}
+  .note .note-top{display:flex;justify-content:space-between;align-items:center;gap:8px}
+  .note .note-actions{display:flex;gap:6px}
+  .note h4{margin:0;font-size:1rem}
+  .note p{margin:6px 0 0 0;color:var(--muted);font-size:0.92rem}
+
+  .fab{position:fixed;right:28px;bottom:28px;width:64px;height:64px;border-radius:18px;background:linear-gradient(135deg,var(--accent),var(--accent-2));display:flex;align-items:center;justify-content:center;color:white;font-size:28px;box-shadow:0 24px 60px rgba(124,136,255,0.16);cursor:pointer;z-index:60}
+  .fab:active{transform:scale(.98)}
+
+  /* chat */
+  .chat{display:flex;flex-direction:column;gap:12px;height:60vh}
+  .chat .history{flex:1;overflow:auto;padding:10px;display:flex;flex-direction:column;gap:8px}
+  .msg{max-width:78%;padding:10px;border-radius:12px}
+  .msg.user{margin-left:auto;background:linear-gradient(90deg,var(--accent),var(--accent-2));color:white}
+  .msg.bot{background:rgba(0,0,0,0.04);color:var(--muted)}
+
+  /* modal/editor */
+  .modal{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(10,12,20,0.35);padding:20px;z-index:80}
+  .modal[aria-hidden="false"]{display:flex}
+  .modal-card{width:min(920px,96%);max-height:88vh;overflow:auto;padding:18px;border-radius:12px;background:var(--card)}
+  .editor{min-height:170px;border-radius:10px;border:1px solid rgba(0,0,0,0.06);padding:12px;background:white;outline:none}
+
+  /* vision board */
+  .board{position:relative;min-height:48vh;border-radius:12px;border:1px dashed rgba(0,0,0,0.06);background: linear-gradient(180deg,#fff,#fff8);overflow:hidden}
+  .pin{position:absolute;border-radius:12px;border:1px solid rgba(0,0,0,0.06);box-shadow:0 8px 30px rgba(0,0,0,0.06);cursor:grab}
+  .sticky-note{position:absolute;padding:12px;border-radius:10px;background:#fff7b3;color:#2b2b2b;max-width:260px;white-space:pre-wrap;cursor:grab;box-shadow:0 8px 20px rgba(0,0,0,0.08)}
+
+  /* finance chart */
+  canvas{max-width:100%;display:block}
+
+  /* small buttons */
+  .btn{padding:8px 12px;border-radius:8px;border:1px solid rgba(0,0,0,0.06);background:transparent;cursor:pointer}
+  .btn.primary{background:linear-gradient(90deg,var(--accent),var(--accent-2));color:white;border:none}
+  .btn.ghost{background:transparent;border:1px solid rgba(0,0,0,0.06)}
+  .muted{color:var(--muted);font-size:0.92rem}
+
+  /* responsive */
+  @media(max-width:980px){ .app-wrap{grid-template-columns:1fr;padding:12px} .content{grid-template-columns:1fr} .sidebar{position:relative;height:auto} }
+</style>
+</head>
+<body>
+
+<!-- App layout -->
+<div id="appRoot" class="app-wrap" aria-live="polite">
+  <!-- Sidebar -->
+  <aside class="sidebar card" aria-label="Sidebar">
+    <div class="brand">
+      <div class="logo">SS</div>
+      <div>
+        <div id="brandUser" style="font-weight:700">StudySpace</div>
+        <div class="muted" id="brandSub">Student Dashboard</div>
+      </div>
+    </div>
+
+    <nav role="navigation" aria-label="Main navigation">
+      <div class="nav-item active" data-view="home">🏠 Home</div>
+      <div class="nav-item" data-view="notes">📝 Notes</div>
+      <div class="nav-item" data-view="vision">🖼 Vision Board</div>
+      <div class="nav-item" data-view="pomodoro">⏱ Pomodoro</div>
+      <div class="nav-item" data-view="habits">✅ Habits</div>
+      <div class="nav-item" data-view="finance">💸 Finance</div>
+      <div class="nav-item" data-view="chat">🤖 Chatbot</div>
+      <div class="nav-item" id="logoutBtn">🔓 Logout</div>
+    </nav>
+
+    <div style="margin-top:18px;color:var(--muted);font-size:.9rem">Themes</div>
+    <div style="display:flex;gap:8px;margin-top:8px">
+      <button class="theme-btn card" data-theme="">Light</button>
+      <button class="theme-btn card" data-theme="theme-cozy">Cozy</button>
+      <button class="theme-btn card" data-theme="theme-pastel">Pastel</button>
+    </div>
+  </aside>
+
+  <!-- Main -->
+  <main style="width:100%">
+    <header class="top card" role="banner">
+      <div class="search" style="flex:1">
+        <input id="globalSearch" placeholder="Search notes, tags, chat..." />
+      </div>
+      <div style="display:flex;gap:8px;align-items:center;margin-left:12px">
+        <button id="musicToggle" class="btn">Ambient</button>
+        <input id="musicVol" type="range" min="0" max="1" step="0.01" value="0.18" />
+      </div>
+    </header>
+
+    <div class="content">
+      <section class="col">
+        <!-- Home / Pomodoro / Quote -->
+        <div class="card" id="homeCard">
+          <div style="display:flex;justify-content:space-between;align-items:center">
+            <h3 style="margin:0">Welcome</h3>
+            <div class="muted">Today • <span id="dateNow"></span></div>
+          </div>
+
+          <div style="display:flex;gap:12px;margin-top:12px">
+            <div style="flex:1">
+              <div style="display:flex;gap:8px;align-items:center">
+                <div style="font-weight:700">Pomodoro</div>
+                <div style="color:var(--muted);font-size:.9rem">25 / 5</div>
+              </div>
+              <div class="pomodoro" style="margin-top:8px">
+                <div id="pomTimer" style="font-size:1.8rem;font-weight:700">25:00</div>
+                <div style="display:flex;gap:8px;margin-top:8px">
+                  <button id="pomStart" class="btn primary">Start</button>
+                  <button id="pomStop" class="btn">Stop</button>
+                  <button id="pomReset" class="btn ghost">Reset</button>
+                </div>
+              </div>
+            </div>
+
+            <div style="width:260px">
+              <div style="font-weight:700">Daily Quote</div>
+              <div class="muted" id="dailyQuote" style="margin-top:8px">Be consistent, not perfect.</div>
+              <div style="margin-top:10px"><button id="newQuote" class="btn">New Quote</button></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Notes -->
+        <div class="card" id="notesCard">
+          <div style="display:flex;justify-content:space-between;align-items:center">
+            <h3 style="margin:0">Notes</h3>
+            <div style="display:flex;gap:8px;align-items:center">
+              <input id="tagFilter" placeholder="Filter by tag" style="padding:8px;border-radius:8px;border:1px solid rgba(0,0,0,0.06)" />
+              <button id="openNewNote" class="btn primary">New Note</button>
+              <button id="exportAll" class="btn">Export</button>
+            </div>
+          </div>
+
+          <div style="margin-top:12px;display:flex;gap:8px">
+            <input id="noteSearch" placeholder="Search notes..." style="flex:1;padding:10px;border-radius:10px;border:1px solid rgba(0,0,0,0.06)" />
+            <select id="noteSort" style="padding:8px;border-radius:8px">
+              <option value="new">Newest</option>
+              <option value="old">Oldest</option>
+              <option value="pinned">Pinned</option>
+            </select>
+          </div>
+
+          <div class="notes-grid" id="notesGrid" style="margin-top:14px"></div>
+        </div>
+
+        <!-- Finance -->
+        <div class="card" id="financeCard">
+          <div style="display:flex;justify-content:space-between;align-items:center">
+            <h4 style="margin:0">Finance</h4>
+            <div class="muted">Balance: ₹<span id="balance">0</span></div>
+          </div>
+          <div style="display:flex;gap:8px;margin-top:10px">
+            <input id="txTitle" placeholder="title" style="flex:2;padding:8px;border-radius:8px;border:1px solid rgba(0,0,0,0.06)" />
+            <input id="txAmount" placeholder="amt" type="number" style="width:100px;padding:8px;border-radius:8px;border:1px solid rgba(0,0,0,0.06)" />
+            <select id="txType" style="width:110px;padding:8px;border-radius:8px">
+              <option value="expense">Expense</option>
+              <option value="income">Income</option>
+            </select>
+            <button id="addTx" class="btn">Add</button>
+          </div>
+          <div style="display:flex;gap:12px;margin-top:12px">
+            <div style="flex:1">
+              <div id="txList" style="max-height:180px;overflow:auto"></div>
+            </div>
+            <div style="width:200px">
+              <canvas id="pieChart" width="200" height="200"></canvas>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <aside class="col">
+        <!-- Chat -->
+        <div class="card chat" id="chatCard">
+          <div style="display:flex;justify-content:space-between;align-items:center"><strong>Chatbot</strong><small class="muted">Study Buddy</small></div>
+          <div class="history" id="chatHistory"></div>
+          <div style="display:flex;gap:8px">
+            <input id="chatInput" placeholder="Ask about HTML, exam tips..." style="flex:1;padding:10px;border-radius:10px;border:1px solid rgba(0,0,0,0.06)" />
+            <button id="sendChat" class="btn primary">Send</button>
+          </div>
+          <div style="display:flex;gap:6px;margin-top:8px">
+            <button class="btn" data-mode="study">Study</button>
+            <button class="btn" data-mode="motivate">Motivate</button>
+            <button class="btn" data-mode="chill">Chill</button>
+          </div>
+        </div>
+
+        <!-- Vision Mini -->
+        <div class="card" id="visionMini">
+          <div style="display:flex;justify-content:space-between;align-items:center"><strong>Vision Board</strong><button id="openVision" class="btn">Open</button></div>
+          <div class="muted" style="margin-top:8px">Quick pins & stickies</div>
+        </div>
+
+        <!-- Habits -->
+        <div class="card" id="habitsCard">
+          <strong>Habits</strong>
+          <div style="margin-top:8px;display:flex;flex-direction:column;gap:8px">
+            <label><input type="checkbox" class="habitCheck" data-name="exercise"> Exercise</label>
+            <label><input type="checkbox" class="habitCheck" data-name="read"> Read 30m</label>
+            <label><input type="checkbox" class="habitCheck" data-name="water"> Drink water</label>
+          </div>
+        </div>
+      </aside>
+    </div>
+  </main>
+</div>
+
+<!-- Floating FAB -->
+<div class="fab" id="fabBtn" title="New">+</div>
+
+<!-- NOTE Modal -->
+<div class="modal" id="noteModal" aria-hidden="true">
+  <div class="modal-card">
+    <div style="display:flex;justify-content:space-between;align-items:center">
+      <h3 id="modalTitle">New Note</h3>
+      <div><button id="closeNote" class="btn ghost">Close</button></div>
+    </div>
+    <label style="display:block;margin-top:10px">Title<input id="noteTitle" style="width:100%;padding:8px;border-radius:8px;border:1px solid rgba(0,0,0,0.06)" /></label>
+    <div style="display:flex;gap:8px;margin-top:10px;align-items:center">
+      <label class="muted">Color</label>
+      <input id="noteColor" type="color" value="#fff9b3" />
+      <label class="muted">Tags</label>
+      <input id="noteTags" placeholder="study,math" style="flex:1;padding:8px;border-radius:8px;border:1px solid rgba(0,0,0,0.06)" />
+    </div>
+    <div style="margin-top:10px">
+      <div style="display:flex;gap:6px;margin-bottom:6px">
+        <button class="richBtn btn" data-cmd="bold"><b>B</b></button>
+        <button class="richBtn btn" data-cmd="italic"><i>I</i></button>
+        <button class="richBtn btn" data-cmd="underline"><u>U</u></button>
+        <button class="richBtn btn" data-cmd="insertUnorderedList">• List</button>
+      </div>
+      <div id="noteEditor" class="editor" contenteditable="true"></div>
+    </div>
+    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:10px">
+      <button id="deleteNoteBtn" class="btn ghost">Delete</button>
+      <button id="exportNoteBtn" class="btn">Export .txt</button>
+      <button id="saveNoteBtn" class="btn primary">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- Vision Modal -->
+<div class="modal" id="visionModal" aria-hidden="true">
+  <div class="modal-card">
+    <div style="display:flex;justify-content:space-between;align-items:center">
+      <h3>Vision Board</h3>
+      <div><button id="closeVisionBtn" class="btn ghost">Close</button></div>
+    </div>
+    <div style="display:flex;gap:8px;margin-top:10px">
+      <label class="btn">Add Image<input id="visionImg" type="file" accept="image/*" style="display:none" /></label>
+      <button id="visionAddSticky" class="btn">Add Sticky</button>
+      <button id="visionClear" class="btn ghost">Clear Board</button>
+    </div>
+    <div style="margin-top:12px" class="board" id="visionBoard"></div>
+  </div>
+</div>
+
+<!-- Auth Modal (login/signup) -->
+<div class="modal" id="authModal" aria-hidden="true">
+  <div class="modal-card" style="width:420px">
+    <div style="display:flex;justify-content:space-between;align-items:center">
+      <h3 id="authTitle">Login</h3>
+      <div><button id="closeAuth" class="btn ghost">Close</button></div>
+    </div>
+
+    <div id="loginView" style="margin-top:12px">
+      <label>Username<input id="loginUser" style="width:100%;padding:8px;border-radius:8px;border:1px solid rgba(0,0,0,0.06)" /></label>
+      <label style="margin-top:8px">Password<input id="loginPass" type="password" style="width:100%;padding:8px;border-radius:8px;border:1px solid rgba(0,0,0,0.06)" /></label>
+      <div style="display:flex;gap:8px;margin-top:12px">
+        <button id="doLoginBtn" class="btn primary">Login</button>
+        <button id="gotoSignup" class="btn">Signup</button>
+      </div>
+      <div id="loginMsg" class="muted" style="margin-top:8px"></div>
+    </div>
+
+    <div id="signupView" style="display:none;margin-top:12px">
+      <label>Username<input id="suUser" style="width:100%;padding:8px;border-radius:8px;border:1px solid rgba(0,0,0,0.06)" /></label>
+      <label style="margin-top:8px">Password<input id="suPass" type="password" style="width:100%;padding:8px;border-radius:8px;border:1px solid rgba(0,0,0,0.06)" /></label>
+      <label style="margin-top:8px">Confirm Password<input id="suPass2" type="password" style="width:100%;padding:8px;border-radius:8px;border:1px solid rgba(0,0,0,0.06)" /></label>
+      <div style="display:flex;gap:8px;margin-top:12px">
+        <button id="doSignupBtn" class="btn primary">Create</button>
+        <button id="gotoLogin" class="btn">Back</button>
+      </div>
+      <div id="suMsg" class="muted" style="margin-top:8px"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+/* -------------------------
+   Utilities & storage
+   -------------------------*/
+const $ = (s, r=document) => r.querySelector(s);
+const $$ = (s, r=document) => Array.from((r||document).querySelectorAll(s));
+const store = {
+  get(k,d){ try{ return JSON.parse(localStorage.getItem(k)) ?? d } catch(e){ return d } },
+  set(k,v){ localStorage.setItem(k, JSON.stringify(v)) },
+  del(k){ localStorage.removeItem(k) }
+};
+
+// session helpers
+function sessionUser(){ return store.get('sessionUser', null); }
+function requireAuth(redirectTo = 'auth'){ // if not logged in, open auth modal and return false
+  if(sessionUser()) return true;
+  openAuthModal();
+  return false;
+}
+
+/* -------------------------
+   Initial small things
+   -------------------------*/
+$('#dateNow').textContent = new Date().toLocaleDateString();
+const currentUser = () => sessionUser();
+if(sessionUser()){
+  $('#brandUser').textContent = sessionUser();
+}
+
+/* -------------------------
+   Theme buttons
+   -------------------------*/
+$$('.theme-btn').forEach(b => b.addEventListener('click', ()=>{
+  document.documentElement.className = '';
+  const t = b.dataset.theme || '';
+  if(t) document.documentElement.classList.add(t);
+  store.set('theme', t);
+}));
+const savedTheme = store.get('theme','');
+if(savedTheme) document.documentElement.classList.add(savedTheme);
+
+/* -------------------------
+   NAV behavior
+   -------------------------*/
+$$('.nav-item').forEach(n => n.addEventListener('click', () => {
+  $$('.nav-item').forEach(x=>x.classList.remove('active'));
+  n.classList.add('active');
+  const view = n.dataset.view;
+  if(view === 'vision') openVisionModal();
+  if(view === 'chat') document.getElementById('chatCard').scrollIntoView({behavior:'smooth'});
+  if(view === 'notes') document.getElementById('notesCard').scrollIntoView({behavior:'smooth'});
+}));
+
+// logout
+$('#logoutBtn').addEventListener('click', ()=>{
+  store.set('sessionUser', null);
+  alert('Logged out — actions are now locked until login.');
+  $('#brandUser').textContent = 'StudySpace';
+});
+
+/* -------------------------
+   AUTH modal (login / signup)
+   -------------------------*/
+function openAuthModal(){
+  $('#authModal').setAttribute('aria-hidden','false');
+  $('#authTitle').textContent = 'Login';
+  $('#loginView').style.display = 'block';
+  $('#signupView').style.display = 'none';
+  $('#loginMsg').textContent = '';
+  $('#suMsg').textContent = '';
+}
+function closeAuthModal(){
+  $('#authModal').setAttribute('aria-hidden','true');
+}
+$('#closeAuth').addEventListener('click', closeAuthModal);
+
+$('#gotoSignup').addEventListener('click', ()=>{
+  $('#loginView').style.display = 'none';
+  $('#signupView').style.display = 'block';
+  $('#authTitle').textContent = 'Signup';
+});
+$('#gotoLogin').addEventListener('click', ()=>{
+  $('#signupView').style.display = 'none';
+  $('#loginView').style.display = 'block';
+  $('#authTitle').textContent = 'Login';
+});
+
+// password hashing helper (SHA-256 -> base64)
+async function digest(text){
+  const enc = new TextEncoder().encode(text);
+  const h = await crypto.subtle.digest('SHA-256', enc);
+  return btoa(String.fromCharCode(...new Uint8Array(h)));
+}
+
+$('#doSignupBtn').addEventListener('click', async ()=>{
+  const u = $('#suUser').value.trim();
+  const p = $('#suPass').value;
+  const p2 = $('#suPass2').value;
+  if(!u || !p){ $('#suMsg').textContent = 'Please fill both fields'; return; }
+  if(p.length < 4){ $('#suMsg').textContent = 'Password too short'; return; }
+  if(p !== p2){ $('#suMsg').textContent = 'Passwords do not match'; return; }
+  const users = store.get('users', {});
+  if(users[u]){ $('#suMsg').textContent = 'Username exists'; return; }
+  const salt = Math.random().toString(36).slice(2,10);
+  const hash = await digest(p + salt);
+  users[u] = { username:u, salt, hash, createdAt:Date.now() };
+  store.set('users', users);
+  // initialize userData
+  const uds = store.get('userData', {});
+  uds[u] = { notes:[], tx:[], board:[], habits:{} };
+  store.set('userData', uds);
+  store.set('sessionUser', u);
+  $('#brandUser').textContent = u;
+  closeAuthModal();
+  renderAll();
+});
+
+$('#doLoginBtn').addEventListener('click', async ()=>{
+  const u = $('#loginUser').value.trim();
+  const p = $('#loginPass').value;
+  const users = store.get('users', {});
+  if(!users[u]){ $('#loginMsg').textContent = 'User not found'; return; }
+  const user = users[u];
+  const h = await digest(p + user.salt);
+  if(h !== user.hash){ $('#loginMsg').textContent = 'Invalid password'; return; }
+  store.set('sessionUser', u);
+  $('#brandUser').textContent = u;
+  closeAuthModal();
+  renderAll();
+});
+
+/* -------------------------
+   NOTES subsystem
+   -------------------------*/
+let editingNoteId = null;
+function getUserData(){ const u = sessionUser(); const all = store.get('userData', {}); if(!u) return null; if(!all[u]) all[u] = { notes:[], tx:[], board:[], habits:{} }; return all[u]; }
+function persistUserData(data){ const u = sessionUser(); if(!u) return; const all = store.get('userData', {}); all[u] = data; store.set('userData', all); }
+
+function renderNotes(){
+  const grid = $('#notesGrid');
+  const data = getUserData();
+  grid.innerHTML = '';
+  if(!data || !data.notes.length){
+    grid.innerHTML = '<div class="muted">No notes yet — create one!</div>';
+    return;
+  }
+  // filter & sort
+  const q = ($('#noteSearch').value||'').toLowerCase().trim();
+  const tagQ = ($('#tagFilter').value||'').toLowerCase().trim();
+  let notes = data.notes.slice();
+  const sort = $('#noteSort').value;
+  if(sort === 'new') notes.sort((a,b)=>b.updatedAt - a.updatedAt);
+  else if(sort === 'old') notes.sort((a,b)=>a.updatedAt - b.updatedAt);
+  else notes.sort((a,b)=>(b.pinned?1:0)-(a.pinned?1:0) || b.updatedAt-a.updatedAt);
+  notes = notes.filter(n => {
+    if(q && !((n.title||'').toLowerCase().includes(q) || (n.contentText||'').toLowerCase().includes(q))) return false;
+    if(tagQ && !((n.tags||[]).join(' ').toLowerCase().includes(tagQ))) return false;
+    return true;
+  });
+  notes.forEach(n => {
+    const el = document.createElement('div'); el.className='note card'; el.style.background = n.color || '#fff9b3';
+    el.innerHTML = `<div class="note-top">
+      <div><h4>${escapeHtml(n.title||'Untitled')}</h4><div class="muted" style="font-size:.85rem">${new Date(n.updatedAt).toLocaleString()}</div></div>
+      <div class="note-actions">
+        <button data-act="pin">${n.pinned?'📌':'📍'}</button>
+        <button data-act="edit">✏️</button>
+        <button data-act="exp">⬇️</button>
+        <button data-act="del">🗑️</button>
+      </div>
+    </div>
+    <p>${(n.contentText||'').slice(0,220)}</p>
+    <div style="margin-top:8px;font-size:.85rem;color:var(--muted)">${(n.tags||[]).map(t=>'#'+t).join(' ')}</div>`;
+    el.querySelectorAll('button').forEach(btn=>{
+      btn.addEventListener('click', e=>{
+        const a = btn.dataset.act;
+        if(a === 'pin'){ if(!requireAuth()) return; n.pinned = !n.pinned; n.updatedAt = Date.now(); persistUserData(data); renderNotes(); }
+        if(a === 'edit'){ if(!requireAuth()) return openNoteModal(n.id); }
+        if(a === 'del'){ if(!requireAuth()) return; if(confirm('Delete note?')){ data.notes = data.notes.filter(x=>x.id!==n.id); persistUserData(data); renderNotes(); } }
+        if(a === 'exp'){ exportNoteTxt(n); }
+      });
+    });
+    grid.appendChild(el);
+  });
+}
+
+function escapeHtml(s){ return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+$('#noteSearch').addEventListener('input', renderNotes);
+$('#noteSort').addEventListener('change', renderNotes);
+$('#tagFilter').addEventListener('input', renderNotes);
+
+$('#openNewNote').addEventListener('click', ()=>{ if(!requireAuth()) return; openNoteModal(); });
+$('#fabBtn').addEventListener('click', ()=>{ if(!requireAuth()) return openNoteModal(); });
+
+function openNoteModal(id){
+  editingNoteId = id || null;
+  if(editingNoteId){
+    const data = getUserData(); const n = data.notes.find(x=>x.id===editingNoteId);
+    $('#modalTitle').textContent = 'Edit Note';
+    $('#noteTitle').value = n.title; $('#noteColor').value = n.color||'#fff9b3'; $('#noteTags').value = (n.tags||[]).join(',');
+    $('#noteEditor').innerHTML = n.content || '';
+  } else {
+    $('#modalTitle').textContent = 'New Note';
+    $('#noteTitle').value = ''; $('#noteColor').value='#fff9b3'; $('#noteTags').value=''; $('#noteEditor').innerHTML = '<p></p>';
+  }
+  $('#noteModal').setAttribute('aria-hidden','false');
+}
+
+$('#closeNote').addEventListener('click', ()=>{ $('#noteModal').setAttribute('aria-hidden','true'); editingNoteId = null; });
+
+$$('.richBtn').forEach(b => b.addEventListener('click', ()=>{ document.execCommand(b.dataset.cmd, false, null); $('#noteEditor').focus(); }));
+
+$('#saveNoteBtn').addEventListener('click', ()=>{
+  if(!requireAuth()) return;
+  const data = getUserData(); if(!data) return;
+  const title = $('#noteTitle').value.trim();
+  const content = $('#noteEditor').innerHTML.trim();
+  const contentText = $('#noteEditor').innerText || $('#noteEditor').textContent || '';
+  const color = $('#noteColor').value;
+  const tags = ($('#noteTags').value||'').split(',').map(s=>s.trim()).filter(Boolean);
+  const now = Date.now();
+  if(editingNoteId){
+    data.notes = data.notes.map(n => n.id === editingNoteId ? {...n, title, content, contentText, color, tags, updatedAt: now } : n);
+  } else {
+    data.notes.unshift({ id: crypto.randomUUID(), title, content, contentText, color, tags, pinned:false, createdAt:now, updatedAt:now });
+  }
+  persistUserData(data);
+  renderNotes();
+  $('#noteModal').setAttribute('aria-hidden','true');
+  editingNoteId = null;
+});
+
+$('#deleteNoteBtn').addEventListener('click', ()=>{
+  if(!editingNoteId) return;
+  if(!requireAuth()) return;
+  const data = getUserData();
+  if(confirm('Delete note?')){ data.notes = data.notes.filter(n=>n.id!==editingNoteId); persistUserData(data); renderNotes(); $('#noteModal').setAttribute('aria-hidden','true'); editingNoteId=null; }
+});
+
+function exportNoteTxt(n){
+  const txt = `${n.title}\n\n${n.contentText || ''}`;
+  const b = new Blob([txt], {type:'text/plain'});
+  const url = URL.createObjectURL(b);
+  const a = document.createElement('a'); a.href = url; a.download = (n.title||'note') + '.txt'; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
+}
+$('#exportAll').addEventListener('click', ()=>{
+  if(!requireAuth()) return;
+  const data = getUserData(); if(!data || !data.notes.length){ alert('No notes'); return; }
+  const all = data.notes.map(n => `${n.title}\n\n${n.contentText||''}`).join('\n\n-----\n\n');
+  const b = new Blob([all], {type:'text/plain'}); const url = URL.createObjectURL(b); const a=document.createElement('a'); a.href=url; a.download = `all-notes-${Date.now()}.txt`; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
+});
+
+/* -------------------------
+   CHATBOT
+   -------------------------*/
+/* -------------------------
+   CHATBOT
+   -------------------------*/
+const canned = {
+  study: [
+    'Use Pomodoro for focused sprints.',
+    'Practice by building small projects.',
+    'Review notes after each class to retain better.'
+  ],
+  motivate: [
+    'One step at a time — keep going!',
+    'Consistency wins — you got this!',
+    'Believe in yourself — small progress is still progress!'
+  ],
+  chill: [
+    'Take a 5-minute break and breathe.',
+    'Play soft lofi and relax.',
+    'Stretch and grab some water 🍵'
+  ]
+};
+
+let botMode = 'study';
+
+function appendChat(text, who='bot') {
+  const h = $('#chatHistory');
+  const el = document.createElement('div');
+  el.className = 'msg ' + (who==='user' ? 'user' : 'bot');
+  el.textContent = text;
+  h.appendChild(el);
+  h.scrollTop = h.scrollHeight;
+}
+
+function botReply(input) {
+  appendChat('Typing...', 'bot');
+  setTimeout(() => {
+    // remove "Typing..."
+    const last = $('#chatHistory').lastElementChild;
+    if(last && last.textContent === 'Typing...') last.remove();
+
+    let key = botMode; // use selected mode first
+    if(!botMode) {
+      if(/motiva|inspire|encourag/i.test(input)) key='motivate';
+      else if(/chill|music|relax/i.test(input)) key='chill';
+      else key='study';
+    }
+
+    const arr = canned[key] || canned.study;
+    appendChat(arr[Math.floor(Math.random()*arr.length)], 'bot');
+  }, 700 + Math.random()*800);
+}
+
+$('#sendChat').addEventListener('click', () => {
+  if(!requireAuth()) return;
+  const t = $('#chatInput').value.trim();
+  if(!t) return;
+  appendChat(t,'user');
+  $('#chatInput').value='';
+  botReply(t);
+});
+
+$('#chatInput').addEventListener('keydown', e => {
+  if(e.key==='Enter') $('#sendChat').click();
+});
+
+// mode buttons
+$$('#chatCard .btn').forEach(b => {
+  if(b.dataset.mode) {
+    b.addEventListener('click', () => {
+      botMode = b.dataset.mode;
+      appendChat(`Mode switched to: ${botMode}`, 'bot');
+    });
+  }
+});
+
+/* -------------------------
+   POMODORO
+   -------------------------*/
+let pom = { focus:25*60, break:5*60, mode:'focus', remaining:25*60, running:false, interval:null };
+function formatTime(s){ const m=Math.floor(s/60).toString().padStart(2,'0'); const r=(s%60).toString().padStart(2,'0'); return `${m}:${r}`; }
+function updatePomUI(){ $('#pomTimer').textContent = formatTime(pom.remaining); }
+$('#pomStart').addEventListener('click', ()=>{ if(!requireAuth()) return; if(pom.running) return; pom.running=true; pom.interval = setInterval(()=>{ pom.remaining--; updatePomUI(); if(pom.remaining<=0){ clearInterval(pom.interval); pom.running=false; if(pom.mode==='focus'){ alert('Focus session done — time for break!'); pom.mode='break'; pom.remaining=pom.break; } else { alert('Break over — back to focus!'); pom.mode='focus'; pom.remaining=pom.focus; } updatePomUI(); } }, 1000); });
+$('#pomStop').addEventListener('click', ()=>{ if(pom.interval) clearInterval(pom.interval); pom.running=false; pom.interval=null; });
+$('#pomReset').addEventListener('click', ()=>{ if(pom.interval) clearInterval(pom.interval); pom.running=false; pom.mode='focus'; pom.remaining = pom.focus; updatePomUI(); });
+
+updatePomUI();
+
+/* -------------------------
+   FINANCE (transactions + pie)
+   -------------------------*/
+function renderTx(){
+  const data = getUserData(); const list = $('#txList'); list.innerHTML = ''; if(!data) return;
+  const tx = data.tx || []; let bal = 0;
+  const byCat = {};
+  tx.forEach(t => { bal += (t.type==='income'? t.amount : -t.amount); const row = document.createElement('div'); row.style.display='flex'; row.style.justifyContent='space-between'; row.style.padding='6px 0'; row.innerHTML = `<div>${escapeHtml(t.title)}</div><div>₹${t.type==='income' ? t.amount.toFixed(2) : '-'+t.amount.toFixed(2)}</div>`; list.appendChild(row); if(t.category){ byCat[t.category] = (byCat[t.category]||0) + t.amount; } });
+  $('#balance').textContent = bal.toFixed(2);
+  drawPie(Object.entries(byCat));
+}
+$('#addTx').addEventListener('click', ()=>{ if(!requireAuth()) return; const title = $('#txTitle').value.trim(); const amt = Number($('#txAmount').value); const type = $('#txType').value; if(!title || !amt){ alert('Enter title & amount'); return; } const cat = 'other'; const data = getUserData(); data.tx = data.tx||[]; data.tx.unshift({ id: crypto.randomUUID(), title, amount: amt, type, category:cat, when: Date.now() }); persistUserData(data); $('#txTitle').value=''; $('#txAmount').value=''; renderTx(); });
+
+function drawPie(entries){ // entries: [[cat, value], ...]
+  const canvas = $('#pieChart'); const ctx = canvas.getContext('2d'); ctx.clearRect(0,0,canvas.width,canvas.height);
+  if(!entries || !entries.length) { ctx.fillStyle = '#f3f3f3'; ctx.fillRect(0,0,canvas.width,canvas.height); return; }
+  const total = entries.reduce((s,e)=>s+e[1],0); let start=0;
+  entries.forEach((e,i)=>{
+    const [cat, val] = e;
+    const slice = val/total;
+    const angle = slice*2*Math.PI;
+    ctx.beginPath();
+    ctx.moveTo(canvas.width/2, canvas.height/2);
+    ctx.arc(canvas.width/2, canvas.height/2, Math.min(canvas.width,canvas.height)/2 - 6, start, start+angle);
+    start += angle;
+    ctx.closePath();
+    ctx.fillStyle = pickColor(i);
+    ctx.fill();
+  });
+}
+function pickColor(i){ const palette = ['#ffd57e','#8eaaff','#b9f6ca','#ff9ab3','#d3c0ff','#ffd3e0','#b8e1ff']; return palette[i % palette.length]; }
+
+/* -------------------------
+   VISION BOARD (drag & sticky)
+   -------------------------*/
+let visionItems = []; // persisted inside userData.board
+function persistBoard(){ const d = getUserData(); if(!d) return; d.board = visionItems; persistUserData(d); }
+function renderBoard(){
+  const board = $('#visionBoard'); board.innerHTML='';
+  visionItems.forEach(item=>{
+    if(item.type === 'image'){
+      const el = document.createElement('div'); el.className='pin'; el.style.left = (item.x||20)+'px'; el.style.top = (item.y||20)+'px'; el.style.padding='6px';
+      const img = document.createElement('img'); img.src = item.src; img.style.maxWidth='260px'; img.style.height='auto'; el.appendChild(img);
+      makeDraggable(el, item); board.appendChild(el);
+    } else {
+      const s = document.createElement('div'); s.className='sticky-note'; s.style.left = (item.x||40)+'px'; s.style.top = (item.y||40)+'px'; s.textContent = item.text || 'Your note'; s.contentEditable = true;
+      s.addEventListener('input', ()=>{ item.text = s.textContent; persistBoard(); });
+      makeDraggable(s, item); board.appendChild(s);
+    }
+  });
+}
+function makeDraggable(el, item){
+  let startX, startY, origX, origY, dragging=false;
+  const onDown = (e)=>{
+    if(!requireAuth()) return;
+    dragging=true;
+    const p = e.touches ? e.touches[0] : e;
+    startX = p.clientX; startY = p.clientY; origX = item.x || 20; origY = item.y || 20;
+    document.addEventListener('mousemove', onMove); document.addEventListener('touchmove', onMove, {passive:false});
+    document.addEventListener('mouseup', onUp); document.addEventListener('touchend', onUp);
+  };
+  const onMove = (e)=>{
+    if(!dragging) return;
+    const p = e.touches ? e.touches[0] : e;
+    const dx = p.clientX - startX; const dy = p.clientY - startY;
+    const nx = Math.max(0, Math.min(board.clientWidth - el.offsetWidth, origX + dx));
+    const ny = Math.max(0, Math.min(board.clientHeight - el.offsetHeight, origY + dy));
+    el.style.left = nx + 'px'; el.style.top = ny + 'px';
+  };
+  const onUp = ()=>{ dragging=false; document.removeEventListener('mousemove', onMove); document.removeEventListener('touchmove', onMove); document.removeEventListener('mouseup', onUp); document.removeEventListener('touchend', onUp); item.x = parseInt(el.style.left)||20; item.y = parseInt(el.style.top)||20; persistBoard(); };
+  el.addEventListener('mousedown', onDown); el.addEventListener('touchstart', onDown);
+}
+
+$('#visionAddSticky').addEventListener('click', ()=>{ if(!requireAuth()) return; visionItems.push({ id: crypto.randomUUID(), type:'sticky', text:'Vision ✨', x:50 + Math.random()*120, y:50 + Math.random()*80 }); persistBoard(); renderBoard(); });
+$('#visionImg').addEventListener('change', e => {
+  if(!requireAuth()) { e.target.value=''; return; }
+  const f = e.target.files[0]; if(!f) return;
+  const r = new FileReader(); r.onload = ()=>{ visionItems.push({ id: crypto.randomUUID(), type:'image', src: r.result, x:30 + Math.random()*100, y:30 + Math.random()*80 }); persistBoard(); renderBoard(); }; r.readAsDataURL(f); e.target.value='';
+});
+$('#visionClear').addEventListener('click', ()=>{ if(!requireAuth()) return; if(confirm('Clear board?')){ visionItems = []; persistBoard(); renderBoard(); } });
+
+$('#openVision').addEventListener('click', ()=>{ if(!requireAuth()) return openVisionModal(); });
+$('#closeVisionBtn').addEventListener('click', ()=>$('#visionModal').setAttribute('aria-hidden','true'));
+function openVisionModal(){ $('#visionModal').setAttribute('aria-hidden','false'); renderBoard(); }
+
+/* -------------------------
+   Ambient Music (WebAudio)
+   -------------------------*/
+let audioCtx, masterGain;
+function startAmbient(){
+  if(audioCtx) return;
+  audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  masterGain = audioCtx.createGain(); masterGain.gain.value = Number($('#musicVol').value || 0.18); masterGain.connect(audioCtx.destination);
+  // simple two-osc pad
+  const o1 = audioCtx.createOscillator(); o1.type='sine'; o1.frequency.value=220;
+  const g1 = audioCtx.createGain(); g1.gain.value = 0.01; o1.connect(g1).connect(masterGain); o1.start();
+  const o2 = audioCtx.createOscillator(); o2.type='sine'; o2.frequency.value=261.6; const g2 = audioCtx.createGain(); g2.gain.value=0.006; o2.connect(g2).connect(masterGain); o2.start();
+}
+$('#musicToggle').addEventListener('click', ()=>{ if(!audioCtx){ startAmbient(); $('#musicToggle').textContent='Ambient ✓'; } else if(audioCtx && audioCtx.state === 'suspended'){ audioCtx.resume(); $('#musicToggle').textContent='Ambient ✓'; } else { audioCtx.suspend(); $('#musicToggle').textContent='Ambient'; } });
+$('#musicVol').addEventListener('input', ()=>{ if(masterGain) masterGain.gain.value = Number($('#musicVol').value); store.set('vol', Number($('#musicVol').value)); });
+
+/* -------------------------
+   small helpers & render
+   -------------------------*/
+function renderAll(){
+  // load user data into local variables & UI
+  const u = sessionUser();
+  if(u){
+    const d = getUserData();
+    visionItems = d.board || [];
+    renderNotes(); renderTx();
+    $('#brandUser').textContent = u;
+  } else {
+    visionItems = [];
+    $('#notesGrid').innerHTML = '<div class="muted">Login to add or edit content</div>';
+    $('#txList').innerHTML = '';
+  }
+  renderBoard();
+}
+
+function persistUserDataAndRefresh(data){ persistUserData(data); renderAll(); }
+
+/* on load, mount */
+(function init(){
+  // restore saved
+  if(sessionUser()){
+    $('#brandUser').textContent = sessionUser();
+  }
+  // try to restore audio vol
+  if(store.get('vol') !== null) $('#musicVol').value = store.get('vol');
+  // quotes
+  const quotes = ['Be consistent, not perfect.','Small habits compound into big wins.','Study in short focused bursts.','Teach to learn: explain aloud.','Focus on progress.'];
+  $('#newQuote').addEventListener('click', ()=> $('#dailyQuote').textContent = quotes[Math.floor(Math.random()*quotes.length)]);
+  // chat mode buttons
+  $$('.btn[data-mode]').forEach(b => b.addEventListener('click', ()=> botMode = b.dataset.mode));
+  // hook note modal export
+  $('#exportNoteBtn').addEventListener('click', ()=>{
+    if(!editingNoteId){ alert('No open note'); return; }
+    const d = getUserData(); const n = d.notes.find(x=>x.id===editingNoteId); if(n) exportNoteTxt(n);
+  });
+  // init auth UI if session exists
+  renderAll();
+})();
+
+/* ensure interactive controls redirect to login when not auth
+   already wrapped with requireAuth in code above for actions */
+
+</script>
+</body>
+</html>

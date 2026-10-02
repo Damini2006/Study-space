@@ -1,0 +1,612 @@
+{
+  "version": "v1",
+  "description": "Golden dataset for StudySpace RAG evaluation. 50 answerable + 50 unanswerable questions over the seeded demo sources (Cell Biology, Photosynthesis & Respiration, HTML & CSS).",
+  "questions": [
+    {
+      "id": "q001",
+      "kind": "answerable",
+      "question": "What are the four phases of mitosis?",
+      "reference": "Prophase, metaphase, anaphase and telophase, followed by cytokinesis."
+    },
+    {
+      "id": "q002",
+      "kind": "answerable",
+      "question": "Where do the light-independent reactions of photosynthesis occur?",
+      "reference": "In the stroma of the chloroplast (the Calvin cycle)."
+    },
+    {
+      "id": "q003",
+      "kind": "answerable",
+      "question": "What is the net ATP yield of glycolysis?",
+      "reference": "2 ATP per glucose (4 produced minus 2 invested)."
+    },
+    {
+      "id": "q004",
+      "kind": "answerable",
+      "question": "What is the final electron acceptor in oxidative phosphorylation?",
+      "reference": "Oxygen, which combines with electrons and protons to form water."
+    },
+    {
+      "id": "q005",
+      "kind": "answerable",
+      "question": "Which HTML element is the primary container for main page content?",
+      "reference": "<main> — it marks the dominant content of the document."
+    },
+    {
+      "id": "q006",
+      "kind": "answerable",
+      "question": "What does box-sizing: border-box change?",
+      "reference": "Width includes padding and border instead of only the content box."
+    },
+    {
+      "id": "q007",
+      "kind": "answerable",
+      "question": "Why do leaves look green?",
+      "reference": "Chlorophyll reflects green light while absorbing red and blue light most strongly."
+    },
+    {
+      "id": "q008",
+      "kind": "answerable",
+      "question": "How does a plant cell avoid bursting in a hypotonic solution?",
+      "reference": "Its cell wall counteracts swelling turgor pressure from the vacuole."
+    },
+    {
+      "id": "q009",
+      "kind": "answerable",
+      "question": "What enzyme fixes CO2 in the Calvin cycle?",
+      "reference": "RuBisCO."
+    },
+    {
+      "id": "q010",
+      "kind": "answerable",
+      "question": "How many mitochondria are in a typical human liver cell?",
+      "reference": "1000-2000."
+    },
+    {
+      "id": "q011",
+      "kind": "answerable",
+      "question": "What is the role of the Golgi apparatus?",
+      "reference": "Modifies, sorts and packages proteins into vesicles for shipping."
+    },
+    {
+      "id": "q012",
+      "kind": "answerable",
+      "question": "What does the CSS '1fr' unit represent?",
+      "reference": "A share of the remaining free space in a grid container."
+    },
+    {
+      "id": "q013",
+      "kind": "answerable",
+      "question": "What is the purpose of the viewport meta tag?",
+      "reference": "Prevents mobile browsers from rendering a zoomed-out 980px canvas."
+    },
+    {
+      "id": "q014",
+      "kind": "answerable",
+      "question": "How many turns of the Calvin cycle are needed to produce one glucose?",
+      "reference": "Six turns."
+    },
+    {
+      "id": "q015",
+      "kind": "answerable",
+      "question": "What is the difference between prokaryotic and eukaryotic cells?",
+      "reference": "Prokaryotes have no membrane-bound nucleus; eukaryotes store DNA inside a nucleus enclosed by a nuclear membrane."
+    },
+    {
+      "id": "q016",
+      "kind": "answerable",
+      "question": "What is the typical size of an animal cell?",
+      "reference": "About 10-30 micrometres across."
+    },
+    {
+      "id": "q017",
+      "kind": "answerable",
+      "question": "What is the function of lysosomes?",
+      "reference": "Contain digestive enzymes that break down worn-out organelles and macromolecules at acidic pH (~4.5)."
+    },
+    {
+      "id": "q017",
+      "kind": "answerable",
+      "question": "What happens during the light-dependent reactions of photosynthesis?",
+      "reference": "Water is split to supply electrons, releasing oxygen. Energy is stored as ATP and NADPH via an electron transport chain and chemiosmosis."
+    },
+    {
+      "id": "q018",
+      "kind": "answerable",
+      "question": "What is the correct equation for cellular respiration?",
+      "reference": "C6H12O6 + 6O2 -> 6CO2 + 6H2O + ATP."
+    },
+    {
+      "id": "q019",
+      "kind": "answerable",
+      "question": "What is the purpose of the 'alt' attribute on images?",
+      "reference": "Describes the image content for screen readers and when the image cannot load; decorative images use alt=\"\"."
+    },
+    {
+      "id": "q020",
+      "kind": "answerable",
+      "question": "How does flexbox justify-content work?",
+      "reference": "Aligns items along the main axis (e.g., center, space-between, flex-end)."
+    },
+    {
+      "id": "q021",
+      "kind": "answerable",
+      "question": "What is the role of intermediate filaments in the cytoskeleton?",
+      "reference": "Provide mechanical strength and structural support to the cell."
+    },
+    {
+      "id": "q022",
+      "kind": "answerable",
+      "question": "How many ATP are produced per glucose in total during cellular respiration?",
+      "reference": "About 36-38 ATP."
+    },
+    {
+      "id": "q023",
+      "kind": "answerable",
+      "question": "What is the function of the nuclear membrane?",
+      "reference": "Encloses the nucleus in eukaryotic cells, separating DNA from the cytoplasm."
+    },
+    {
+      "id": "q024",
+      "kind": "answerable",
+      "question": "What does the CSS 'position: sticky' do?",
+      "reference": "Switches between relative and fixed positioning as the user scrolls."
+    },
+    {
+      "id": "q025",
+      "kind": "answerable",
+      "question": "What is the purpose of the 'rel=noopener noreferrer' attribute on links with target=_blank?",
+      "reference": "Prevents the new page from accessing the originating page's window object (security)."
+    },
+    {
+      "id": "q026",
+      "kind": "answerable",
+      "question": "How does RuBisCO's activity change at high temperatures?",
+      "reference": "Increasing temperature beyond about 40 degrees Celsius denatures RuBisCO and the photosynthetic rate falls."
+    },
+    {
+      "id": "q027",
+      "kind": "answerable",
+      "question": "What is the chromatin region called in prokaryotes?",
+      "reference": "The nucleoid."
+    },
+    {
+      "id": "q028",
+      "kind": "answerable",
+      "question": "What is the thickness of the cell membrane?",
+      "reference": "About 7.5 nanometres."
+    },
+    {
+      "id": "q029",
+      "kind": "answerable",
+      "question": "What is the purpose of the 'picture' HTML element?",
+      "reference": "Serves different image formats and sizes to different screen sizes and resolutions."
+    },
+    {
+      "id": "q030",
+      "kind": "answerable",
+      "question": "How does the proton gradient drive ATP synthesis in mitochondria?",
+      "reference": "Protons flow back through ATP synthase from the intermembrane space to the matrix, driving rotation that synthesizes ATP from ADP and Pi."
+    },
+    {
+      "id": "q031",
+      "kind": "answerable",
+      "question": "What is the difference between rough and smooth ER?",
+      "reference": "Rough ER is studded with ribosomes and folds proteins; smooth ER makes lipids and stores calcium."
+    },
+    {
+      "id": "q032",
+      "kind": "answerable",
+      "question": "What is the purpose of CSS custom properties (variables)?",
+      "reference": "Allow reusable values (colors, spacing, etc.) that can be changed globally and respect cascade/inheritance."
+    },
+    {
+      "id": "q033",
+      "kind": "answerable",
+      "question": "How many ATP does the Krebs cycle produce per glucose?",
+      "reference": "2 ATP (or GTP) per glucose."
+    },
+    {
+      "id": "q034",
+      "kind": "answerable",
+      "question": "What is the role of NADH and FADH2 in oxidative phosphorylation?",
+      "reference": "Donate electrons to the electron transport chain, powering proton pumping across the inner mitochondrial membrane."
+    },
+    {
+      "id": "q035",
+      "kind": "answerable",
+      "question": "What is the purpose of the 'main' HTML landmark?",
+      "reference": "Identifies the dominant content of the document for screen readers and search engines."
+    },
+    {
+      "id": "q036",
+      "kind": "answerable",
+      "question": "How does CSS Grid 'repeat(auto-fill, minmax(220px, 1fr))' create responsive columns?",
+      "reference": "Automatically fits as many 220px-minimum columns as space allows, each sharing remaining space equally."
+    },
+    {
+      "id": "q037",
+      "kind": "answerable",
+      "question": "What happens during glycolysis?",
+      "reference": "One glucose (6C) is split into two pyruvate (3C), net 2 ATP and 2 NADH; does not require oxygen."
+    },
+    {
+      "id": "q038",
+      "kind": "answerable",
+      "question": "What is the function of ribosomes?",
+      "reference": "Synthesise proteins by translating messenger RNA."
+    },
+    {
+      "id": "q039",
+      "kind": "answerable",
+      "question": "What is the difference between mitosis and meiosis?",
+      "reference": "Mitosis produces two identical daughter cells; meiosis halves the chromosome number and produces four genetically unique gametes with crossing over."
+    },
+    {
+      "id": "q040",
+      "kind": "answerable",
+      "question": "What is the purpose of the 'defer' attribute on script tags?",
+      "reference": "Downloads the script in parallel and executes it after HTML parsing is complete, before DOMContentLoaded."
+    },
+    {
+      "id": "q041",
+      "kind": "answerable",
+      "question": "How does the Calvin cycle regenerate RuBP?",
+      "reference": "Using ATP, the cycle rearranges G3P back into the 5-carbon RuBP to continue carbon fixation."
+    },
+    {
+      "id": "q042",
+      "kind": "answerable",
+      "question": "What is the purpose of the 'lang' attribute on the html element?",
+      "reference": "Declares the document language for screen readers, search engines, and browser translation."
+    },
+    {
+      "id": "q043",
+      "kind": "answerable",
+      "question": "How does chemiosmosis differ between chloroplasts and mitochondria?",
+      "reference": "Chloroplasts pump protons into the thylakoid lumen; mitochondria pump protons into the intermembrane space."
+    },
+    {
+      "id": "q044",
+      "kind": "answerable",
+      "question": "What is the purpose of CSS 'prefers-reduced-motion'?",
+      "reference": "Allows users to disable non-essential animations for accessibility."
+    },
+    {
+      "id": "q045",
+      "kind": "answerable",
+      "question": "What is the function of the cytoskeleton during cell division?",
+      "reference": "Forms the spindle that separates chromosomes during mitosis."
+    },
+    {
+      "id": "q046",
+      "kind": "answerable",
+      "question": "What is the difference between 'em' and 'rem' units in CSS?",
+      "reference": "'em' is relative to the parent element's font size; 'rem' is relative to the root (html) font size."
+    },
+    {
+      "id": "q047",
+      "kind": "answerable",
+      "question": "How many NADH are produced per glucose in the Krebs cycle?",
+      "reference": "6 NADH per glucose (2 turns × 3 NADH)."
+    },
+    {
+      "id": "q048",
+      "kind": "answerable",
+      "question": "What is the purpose of the 'async' attribute on script tags?",
+      "reference": "Downloads the script in parallel and executes it as soon as it's ready, potentially before HTML parsing finishes."
+    },
+    {
+      "id": "q049",
+      "kind": "answerable",
+      "question": "How does the cell membrane control what enters the cell?",
+      "reference": "Selectively permeable phospholipid bilayer; small non-polar molecules cross freely, ions and polar molecules require transport proteins."
+    },
+    {
+      "id": "q050",
+      "kind": "answerable",
+      "question": "What is the role of 'focus-visible' in CSS?",
+      "reference": "Shows keyboard focus styles only for keyboard navigation, not mouse clicks."
+    },
+    {
+      "id": "q051",
+      "kind": "unanswerable",
+      "question": "What is the capital of France?",
+      "reference": "Not in the provided sources."
+    },
+    {
+      "id": "q052",
+      "kind": "unanswerable",
+      "question": "How do you bake a chocolate cake?",
+      "reference": "Not in the provided sources."
+    },
+    {
+      "id": "q053",
+      "kind": "unanswerable",
+      "question": "What is the population of Tokyo in 2024?",
+      "reference": "Not in the provided sources."
+    },
+    {
+      "id": "q054",
+      "kind": "unanswerable",
+      "question": "Who won the 2022 FIFA World Cup?",
+      "reference": "Not in the provided sources."
+    },
+    {
+      "id": "q055",
+      "kind": "unanswerable",
+      "question": "What is the chemical formula for table salt?",
+      "reference": "Not in the provided sources."
+    },
+    {
+      "id": "q056",
+      "kind": "unanswerable",
+      "question": "How do you say hello in Japanese?",
+      "reference": "Not in the provided sources."
+    },
+    {
+      "id": "q057",
+      "kind": "unanswerable",
+      "question": "What is the speed of light in a vacuum?",
+      "reference": "Not in the provided sources."
+    },
+    {
+      "id": "q058",
+      "kind": "unanswerable",
+      "question": "Who wrote Romeo and Juliet?",
+      "reference": "Not in the provided sources."
+    },
+    {
+      "id": "q059",
+      "kind": "unanswerable",
+      "question": "What is the boiling point of water at sea level?",
+      "reference": "Not in the provided sources."
+    },
+    {
+      "id": "q060",
+      "kind": "unanswerable",
+      "question": "What are the symptoms of the common cold?",
+      "reference": "Not in the provided sources."
+    },
+    {
+      "id": "q061",
+      "kind": "unanswerable",
+      "question": "How do you change a car tire?",
+      "reference": "Not in the provided sources."
+    },
+    {
+      "id": "q062",
+      "kind": "unanswerable",
+      "question": "What is the GDP of Germany?",
+      "reference": "Not in the provided sources."
+    },
+    {
+      "id": "q063",
+      "kind": "unanswerable",
+      "question": "Who painted the Mona Lisa?",
+      "reference": "Not in the provided sources."
+    },
+    {
+      "id": "q064",
+      "kind": "unanswerable",
+      "question": "What is the distance from Earth to the Moon?",
+      "reference": "Not in the provided sources."
+    },
+    {
+      "id": "q065",
+      "kind": "unanswerable",
+      "question": "How do you solve a Rubik's cube?",
+      "reference": "Not in the provided sources."
+    },
+    {
+      "id": "q066",
+      "kind": "unanswerable",
+      "question": "What is the chemical composition of aspirin?",
+      "reference": "Not in the provided sources."
+    },
+    {
+      "id": "q067",
+      "kind": "unanswerable",
+      "question": "What are the phases of the moon?",
+      "reference": "Not in the provided sources."
+    },
+    {
+      "id": "q068",
+      "kind": "unanswerable",
+      "question": "How do you make sourdough bread?",
+      "reference": "Not in the provided sources."
+    },
+    {
+      "id": "q069",
+      "kind": "unanswerable",
+      "question": "What is the tallest mountain in the world?",
+      "reference": "Not in the provided sources."
+    },
+    {
+      "id": "q070",
+      "kind": "unanswerable",
+      "question": "What is the currency of Japan?",
+      "reference": "Not in the provided sources."
+    },
+    {
+      "id": "q071",
+      "kind": "unanswerable",
+      "question": "Who discovered penicillin?",
+      "reference": "Not in the provided sources."
+    },
+    {
+      "id": "q072",
+      "kind": "unanswerable",
+      "question": "What is the periodic table symbol for gold?",
+      "reference": "Not in the provided sources."
+    },
+    {
+      "id": "q073",
+      "kind": "unanswerable",
+      "question": "How many bones are in the adult human body?",
+      "reference": "Not in the provided sources."
+    },
+    {
+      "id": "q074",
+      "kind": "unanswerable",
+      "question": "What is the largest ocean on Earth?",
+      "reference": "Not in the provided sources."
+    },
+    {
+      "id": "q075",
+      "kind": "unanswerable",
+      "question": "Who invented the telephone?",
+      "reference": "Not in the provided sources."
+    },
+    {
+      "id": "q076",
+      "kind": "unanswerable",
+      "question": "What is the Pythagorean theorem?",
+      "reference": "Not in the provided sources."
+    },
+    {
+      "id": "q077",
+      "kind": "unanswerable",
+      "question": "How do you calculate compound interest?",
+      "reference": "Not in the provided sources."
+    },
+    {
+      "id": "q078",
+      "kind": "unanswerable",
+      "question": "What is the difference between RNA and DNA?",
+      "reference": "Not in the provided sources."
+    },
+    {
+      "id": "q079",
+      "kind": "unanswerable",
+      "question": "What is the function of the liver in humans?",
+      "reference": "Not in the provided sources."
+    },
+    {
+      "id": "q080",
+      "kind": "unanswerable",
+      "question": "What are the layers of the Earth's atmosphere?",
+      "reference": "Not in the provided sources."
+    },
+    {
+      "id": "q081",
+      "kind": "unanswerable",
+      "question": "How do you write a for loop in Python?",
+      "reference": "Not in the provided sources."
+    },
+    {
+      "id": "q082",
+      "kind": "unanswerable",
+      "question": "What is the capital of Australia?",
+      "reference": "Not in the provided sources."
+    },
+    {
+      "id": "q083",
+      "kind": "unanswerable",
+      "question": "What is the chemical formula for glucose?",
+      "reference": "Not in the provided sources."
+    },
+    {
+      "id": "q084",
+      "kind": "unanswerable",
+      "question": "How does a vaccine work?",
+      "reference": "Not in the provided sources."
+    },
+    {
+      "id": "q085",
+      "kind": "unanswerable",
+      "question": "What is the speed of sound in air?",
+      "reference": "Not in the provided sources."
+    },
+    {
+      "id": "q086",
+      "kind": "unanswerable",
+      "question": "What is the half-life of carbon-14?",
+      "reference": "Not in the provided sources."
+    },
+    {
+      "id": "q087",
+      "kind": "unanswerable",
+      "question": "What is the function of the kidneys?",
+      "reference": "Not in the provided sources."
+    },
+    {
+      "id": "q088",
+      "kind": "unanswerable",
+      "question": "How do you calculate the area of a circle?",
+      "reference": "Not in the provided sources."
+    },
+    {
+      "id": "q089",
+      "kind": "unanswerable",
+      "question": "What is the structure of an atom?",
+      "reference": "Not in the provided sources."
+    },
+    {
+      "id": "q090",
+      "kind": "unanswerable",
+      "question": "What is the theory of relativity?",
+      "reference": "Not in the provided sources."
+    },
+    {
+      "id": "q091",
+      "kind": "unanswerable",
+      "question": "Who developed the first polio vaccine?",
+      "reference": "Not in the provided sources."
+    },
+    {
+      "id": "q092",
+      "kind": "unanswerable",
+      "question": "What is the molecular weight of water?",
+      "reference": "Not in the provided sources."
+    },
+    {
+      "id": "q093",
+      "kind": "unanswerable",
+      "question": "What is the difference between a virus and a bacterium?",
+      "reference": "Not in the provided sources."
+    },
+    {
+      "id": "q094",
+      "kind": "unanswerable",
+      "question": "How does photosynthesis differ in C4 plants?",
+      "reference": "Not in the provided sources."
+    },
+    {
+      "id": "q095",
+      "kind": "unanswerable",
+      "question": "What is the role of chlorophyll b?",
+      "reference": "Not in the provided sources."
+    },
+    {
+      "id": "q096",
+      "kind": "unanswerable",
+      "question": "What is the electron configuration of carbon?",
+      "reference": "Not in the provided sources."
+    },
+    {
+      "id": "q097",
+      "kind": "unanswerable",
+      "question": "What is the function of the endoplasmic reticulum in protein folding?",
+      "reference": "Not in the provided sources."
+    },
+    {
+      "id": "q098",
+      "kind": "unanswerable",
+      "question": "How do telomeres protect chromosomes?",
+      "reference": "Not in the provided sources."
+    },
+    {
+      "id": "q099",
+      "kind": "unanswerable",
+      "question": "What is the central dogma of molecular biology?",
+      "reference": "Not in the provided sources."
+    },
+    {
+      "id": "q100",
+      "kind": "unanswerable",
+      "question": "What is the CRISPR-Cas9 system used for?",
+      "reference": "Not in the provided sources."
+    }
+  ]
+}
