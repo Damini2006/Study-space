@@ -269,6 +269,31 @@
     50% { transform: translate(80px, -30px); }
   }
 
+  /* 3D Hero Orbs */
+  .orb-3d {
+    filter: blur(40px);
+    animation: float 8s ease-in-out infinite;
+    will-change: transform;
+  }
+  @keyframes float {
+    0%, 100% { transform: translate3d(0, 0, 0) scale(1); }
+    50% { transform: translate3d(0, -20px, 0) scale(1.05); }
+  }
+  .animate-spin {
+    animation: spin 20s linear infinite;
+  }
+  @keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+  }
+  .animate-spin-reverse {
+    animation: spin-reverse 15s linear infinite;
+  }
+  @keyframes spin-reverse {
+    from { transform: rotate(360deg); }
+    to { transform: rotate(0deg); }
+  }
+
   /* secondary slowdrift orb */
   .orbit-orb-2 {
     animation-name: drift;

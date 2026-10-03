@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 import { motion } from "framer-motion";
 import {
   ArrowRight,
@@ -20,6 +20,8 @@ import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/components/ui/toast";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { useTheme } from "@/hooks/useTheme";
+import { cn } from "@/lib/utils";
 
 const FEATURES = [
   {
@@ -89,9 +91,17 @@ const fadeUp = {
   show: (i = 0) => ({
     opacity: 1,
     y: 0,
-    transition: { duration: 0.5, delay: i * 0.08, ease: [0.22, 1, 0.36, 1] },
+    transition: { duration: 0.6, delay: i * 0.06, ease: [0.22, 1, 0.36, 1] },
   }),
 };
+
+function hexToRgba(hex, alpha) {
+  const clean = hex.replace("#", "");
+  const r = parseInt(clean.slice(0, 2), 16);
+  const g = parseInt(clean.slice(2, 4), 16);
+  const b = parseInt(clean.slice(4, 6), 16);
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+}
 
 export default function Landing() {
   const { startDemo } = useAuth();
@@ -99,12 +109,25 @@ export default function Landing() {
   const navigate = useNavigate();
   const [launching, setLaunching] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+  const { theme, setTheme } = useTheme();
+  const location = useLocation();
+  const [orb1Pos, setOrb1Pos] = useState({ x: 0, y: 0 });
+  const [orb2Pos, setOrb2Pos] = useState({ x: 0, y: 0 });
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 8);
     onScroll();
     window.addEventListener("scroll", onScroll, { passive: true });
     return () => window.removeEventListener("scroll", onScroll);
+  }, []);
+
+  useEffect(() => {
+    const animate = () => {
+      setOrb1Pos({ x: Math.sin(Date.now() / 2000) * 80, y: Math.cos(Date.now() / 1800) * 60 });
+      setOrb2Pos({ x: Math.cos(Date.now() / 1500) * 60, y: Math.sin(Date.now() / 1900) * 50 });
+      requestAnimationFrame(animate);
+    };
+    animate();
   }, []);
 
   const launchDemo = async (reset = false) => {
@@ -118,9 +141,36 @@ export default function Landing() {
     }
   };
 
+  const PAGE_META = {
+    "/": { title: "StudySpace — source-grounded AI study workspace", desc: "Chat with your notes, generate study material, review with spaced repetition." },
+    "/auth": { title: "Sign in — StudySpace", desc: "Sign in to your StudySpace workspace." },
+    "/app/dashboard": { title: "Dashboard — StudySpace", desc: "Your today view: plan, streaks, spaces and habits." },
+    "/app/focus": { title: "Focus — StudySpace", desc: "Pomodoro, ambient sounds, habits and session history." },
+    "/app/vision": { title: "Vision Board — StudySpace", desc: "Drag stickies and images on your vision board." },
+    "/app/finance": { title: "Finance — StudySpace", desc: "Track spending and see your category breakdown." },
+    "/privacy": { title: "Privacy Policy — StudySpace", desc: "How StudySpace handles your data." },
+    "/terms": { title: "Terms of Service — StudySpace", desc: "StudySpace terms of service." },
+    "/thanks": { title: "Welcome — StudySpace", desc: "Your workspace is ready." },
+  };
+
+  useEffect(() => {
+    const meta = PAGE_META[location.pathname] || {
+      title: "StudySpace",
+      desc: "Source-grounded AI study workspace.",
+    };
+    document.title = meta.title;
+    let tag = document.querySelector('meta[name="description"]');
+    if (!tag) {
+      tag = document.createElement("meta");
+      tag.setAttribute("name", "description");
+      document.head.appendChild(tag);
+    }
+    tag.setAttribute("content", meta.desc);
+  }, [location.pathname]);
+
   return (
-    <div className="min-h-screen overflow-x-hidden bg-background">
-      {/* ---- sticky nav with scroll border ---- */}
+    <div className="min-h-screen overflow-x-hidden bg-background text-background">
+      {/* ================= NAV ================= */}
       <header
         className={`sticky top-0 z-30 backdrop-blur-xl transition-all duration-300 ${
           scrolled
@@ -128,14 +178,14 @@ export default function Landing() {
             : "border-b border-transparent bg-background/40"
         }`}
       >
-        <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4 sm:px-6">
-          <Link to="/" className="flex items-center gap-2.5">
-            <span className="brand-gradient flex size-8 items-center justify-center rounded-xl text-xs font-extrabold text-white shadow-md">
+        <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-6 sm:px-8">
+          <Link to="/" className="flex items-center gap-3">
+            <span className="brand-gradient flex size-9 items-center justify-center rounded-2xl text-xs font-extrabold text-white shadow-lg">
               SS
             </span>
-            <span className="text-base font-bold tracking-tight">StudySpace</span>
+            <span className="text-lg font-bold tracking-tight">StudySpace</span>
           </Link>
-          <nav className="flex items-center gap-1.5 sm:gap-2">
+          <nav className="flex items-center gap-2 sm:gap-3">
             <Link
               to="/auth"
               className="rounded-full px-4 py-2 text-sm text-muted-foreground transition-colors hover:text-foreground"
@@ -149,53 +199,75 @@ export default function Landing() {
         </div>
       </header>
 
-      <main>
-        {/* ================= HERO ================= */}
-        <section className="relative">
-          {/* ambient gradient orbs */}
-          <div className="pointer-events-none absolute -top-32 left-1/2 h-[520px] w-[820px] -translate-x-1/2 rounded-full bg-gradient-to-br from-primary/25 via-accent/15 to-transparent blur-3xl" />
-          <div className="pointer-events-none absolute right-[10%] top-56 h-72 w-72 rounded-full bg-primary/10 blur-3xl" />
-          {/* 3D orbit orbs (inspired by indoor-tech landing) */}
-          <div className="orbit-orb orbit-orb-2 pointer-events-none absolute -inset-0 rounded-full opacity-55 animate-orbit" />
-          <div className="orbit-orb pointer-events-none absolute inset-0 rounded-full opacity-40 animate-drift" />
+      {/* ================= HERO ================= */}
+      <section className="relative min-h-screen relative overflow-hidden bg-gradient-to-b from-bg to-surface">
+        {/* === 3D Scene Background === */}
+        <div className="fixed inset-0 overflow-hidden pointer-events-none">
+          {/* Orb 1 - primary glow */}
+          <div
+            className="orb-3d absolute top-1/3 left-1/4 w-64 h-64 rounded-2xl bg-primary/20 shadow-[0_0_60px_rgba(79,91,213,0.4)] border-2 border-primary/20 animate-spin"
+            style={{ transform: `perspective(600px) translate3d(${orb1Pos.x}px, ${orb1Pos.y}px, 0) scale(1)` }}
+          />
+          {/* Orb 2 - accent glow */}
+          <div
+            className="orb-3d absolute bottom-1/4 right-1/4 w-80 h-80 rounded-2xl bg-accent/15 shadow-[0_0_60px_rgba(232,116,154,0.3)] border-2 border-accent/20 animate-spin-reverse"
+            style={{ transform: `perspective(600px) translate3d(${orb2Pos.x}px, ${orb2Pos.y}px, 0) scale(1.2)` }}
+          />
+          {/* Depth lines */}
+          <div className="absolute inset-0 opacity-5">
+            <div className="h-[1px] w-full bg-gradient-to-b from-primary/5 to-transparent absolute top-0 md:top-1/2 transform rotate-90 md:rotate-0"></div>
+            <div className="h-[1px] w-full bg-gradient-to-r from-accent/5 to-transparent absolute left-0 md:left-1/2 transform -rotate-90 md:rotate-0"></div>
+          </div>
+        </div>
 
-          <div className="relative mx-auto max-w-4xl px-4 pb-16 pt-16 text-center sm:px-6 sm:pt-24">
+        <div className="relative z-10 min-h-screen flex flex-col items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+          <motion.div
+            initial={{ opacity: 0, y: 32 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true, amount: 0.3 }}
+            transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
+          >
             <motion.span
-              initial={{ opacity: 0, y: 12 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="inline-flex items-center gap-1.5 rounded-full border border-border bg-surface/80 px-3.5 py-1.5 text-xs font-medium text-muted-foreground shadow-sm"
+              initial={{ opacity: 0, scale: 0.8 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ type: "spring", stiffness: 380, damping: 32 }}
+              className="inline-flex items-center gap-1.5 rounded-2xl border border-border bg-surface/80 px-4 py-2 text-xs font-medium text-muted-foreground shadow-sm"
             >
               <Sparkles className="size-3.5 text-accent" />
               Source-grounded AI study workspace
             </motion.span>
 
             <motion.h1
-              initial={{ opacity: 0, y: 16 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.05 }}
-              className="mt-6 text-balance text-4xl font-extrabold leading-[1.08] tracking-tight sm:text-6xl"
+              initial={{ opacity: 0, y: 32, rotateX: 15 }}
+              animate={{ opacity: 1, y: 0, rotateX: 0 }}
+              transition={{ type: "spring", stiffness: 380, damping: 32, delay: 0.1 }}
+              className="mt-10 text-5xl sm:text-6xl lg:text-7xl font-extrabold leading-[1.1] tracking-tight text-white sm:text-center"
             >
               Study from{" "}
-              <span className="brand-text">your own notes</span>,
-              <br className="hidden sm:block" /> verified against every source.
+              <span className="relative">
+                <span className="bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">your own notes</span>
+              </span>,
+              <br className="hidden sm:block" />
+              verified against every source.
             </motion.h1>
 
             <motion.p
-              initial={{ opacity: 0, y: 16 }}
+              initial={{ opacity: 0, y: 32 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.12 }}
-              className="mx-auto mt-5 max-w-xl text-pretty text-base text-muted-foreground sm:text-lg"
+              transition={{ type: "spring", stiffness: 380, damping: 32, delay: 0.15 }}
+              className="mt-6 text-lg sm:text-xl max-w-2xl text-pretty text-muted-foreground leading-relaxed sm:text-center"
             >
               Upload a document, ask a question, get an answer that cites the exact passage. Generate
               study material, review with spaced repetition, and plan with an AI that asks permission
               first.
             </motion.p>
 
+            {/* CTA Buttons */}
             <motion.div
-              initial={{ opacity: 0, y: 16 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.2 }}
-              className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row"
+              initial={{ opacity: 0, y: 32, x: -20 }}
+              animate={{ opacity: 1, y: 0, x: 0 }}
+              transition={{ type: "spring", stiffness: 380, damping: 32, delay: 0.2 }}
+              className="mt-10 flex flex-col sm:flex-row gap-4 justify-center"
             >
               <Button variant="gradient" size="lg" onClick={() => launchDemo(false)} disabled={launching}>
                 <GraduationCap className="size-4" />
@@ -208,197 +280,125 @@ export default function Landing() {
               </Link>
             </motion.div>
 
-            <motion.p
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: 0.3 }}
-              className="mt-4 text-xs text-muted-foreground"
-            >
-              One click, no signup — a seeded demo with sources, cards, notes and a plan.
-            </motion.p>
-
-            {/* three pillars */}
+            {/* Three Pillars */}
             <motion.div
-              initial={{ opacity: 0, y: 16 }}
+              initial={{ opacity: 0, y: 32 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.35 }}
-              className="mt-12 grid grid-cols-3 gap-3 text-left"
+              transition={{ type: "spring", stiffness: 380, damping: 32, delay: 0.3 }}
+              className="mt-14 grid grid-cols-3 gap-4 sm:grid-cols-5 max-w-2xl w-full justify-center"
             >
               {PILLARS.map(({ icon: Icon, label, desc }) => (
-                <div
+                <motion.div
                   key={label}
-                  className="rounded-2xl border border-border bg-surface/70 p-4 backdrop-blur transition-transform hover:-translate-y-1"
+                  className="group rounded-2xl border border-border bg-surface/80 p-5 backdrop-blur transition-all duration-500 hover:translate-y-1 hover:shadow-[0_0_40px_rgba(var(--primary),0.15)]"
                 >
-                  <Icon className="size-5 text-primary" />
-                  <p className="mt-2 text-sm font-semibold">{label}</p>
-                  <p className="text-xs text-muted-foreground">{desc}</p>
-                </div>
+                  <Icon className="size-5 group-hover:text-primary mb-2 block" />
+                  <p className="text-sm font-medium group-hover:text-primary transition-colors">{label}</p>
+                  <p className="text-xs text-muted-foreground line-clamp-2">{desc}</p>
+                </motion.div>
               ))}
             </motion.div>
-          </div>
-        </section>
 
-        {/* ================= CHAT PREVIEW ================= */}
-        <section className="mx-auto max-w-3xl px-4 pb-24 sm:px-6">
-          <motion.div
-            initial={{ opacity: 0, y: 32 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true, amount: 0.3 }}
-            transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
-          >
-            <Card className="relative p-5 shadow-[var(--shadow-lg)]">
-              <div className="absolute -top-3 left-6 flex items-center gap-1.5 rounded-full border border-border bg-surface px-3 py-1 text-[11px] font-medium text-muted-foreground shadow-sm">
-                <span className="size-1.5 rounded-full bg-success" />
-                Live preview
-              </div>
-              <div className="mb-4 flex items-center justify-between border-b border-border pb-3 pt-1">
-                <div className="flex items-center gap-1.5">
-                  <span className="size-2.5 rounded-full bg-destructive/60" />
-                  <span className="size-2.5 rounded-full bg-warning/60" />
-                  <span className="size-2.5 rounded-full bg-success/60" />
-                </div>
-                <span className="text-xs text-muted-foreground">Botany 201 · Chat</span>
-              </div>
-              <div className="space-y-3 text-sm">
-                <div className="ml-auto max-w-[80%] rounded-2xl rounded-br-md bg-primary px-3.5 py-2.5 text-on-primary">
-                  Where do the light-independent reactions of photosynthesis occur?
-                </div>
-                <div className="max-w-[85%] rounded-2xl rounded-bl-md border border-border bg-surface-2 px-3.5 py-2.5">
-                  They occur in the <strong>stroma</strong> of the chloroplast, during the Calvin cycle
-                  <button className="mx-0.5 inline-flex h-4 min-w-4 items-center justify-center rounded bg-citation px-1 align-middle font-mono text-[10px] font-bold text-citation-foreground">1</button>.
-                  ATP and NADPH from the light reactions are used to fix CO₂
-                  <button className="mx-0.5 inline-flex h-4 min-w-4 items-center justify-center rounded bg-citation px-1 align-middle font-mono text-[10px] font-bold text-citation-foreground">2</button>.
-                </div>
-                <div className="flex items-center gap-2 text-xs">
-                  <CheckCircle2 className="size-3.5 text-success" />
-                  <span className="rounded-full bg-success-bg px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-success">
-                    Verified
-                  </span>
-                  <span className="text-muted-foreground">2 citations from your sources</span>
-                </div>
-              </div>
-            </Card>
+            {/* Orb hover interaction */}
+            <div
+              className="absolute -inset-1/2 pointer-events-none opacity-5"
+              onMouseMove={(e) => {
+                const { clientX, clientY } = e;
+                const docWidth = document.documentElement.clientWidth;
+                const docHeight = document.documentElement.clientHeight;
+                setOrb1Pos({
+                  x: (clientX / docWidth - 0.5) * 100,
+                  y: (clientY / docHeight - 0.5) * 80,
+                });
+                setOrb2Pos({
+                  x: (clientX / docWidth - 0.3) * 80,
+                  y: (clientY / docHeight - 0.7) * 60,
+                });
+              }}
+            />
           </motion.div>
-        </section>
-
-        {/* ================= FEATURES ================= */}
-        <section className="mx-auto max-w-6xl px-4 pb-20 sm:px-6" aria-label="Features">
-          <motion.h2
-            initial={{ opacity: 0, y: 16 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            className="text-3xl font-bold tracking-tight"
-          >
-            Everything for a calmer, citable study habit
-          </motion.h2>
-          <motion.p
-            initial={{ opacity: 0, y: 16 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ delay: 0.06 }}
-            className="mb-10 mt-2 max-w-2xl text-sm text-muted-foreground sm:text-base"
-          >
-            Seven core features, no filler. Every answer is source-grounded; every AI action is
-            honest about what it does and doesn’t know.
-          </motion.p>
-
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {FEATURES.map(({ icon: Icon, title, body, tint }, i) => (
-              <motion.div
-                key={title}
-                custom={i}
-                variants={fadeUp}
-                initial="hidden"
-                whileInView="show"
-                viewport={{ once: true, amount: 0.2 }}
-              >
-                <Card className="card-hover h-full p-5">
-                  <div
-                    className="mb-4 flex size-10 items-center justify-center rounded-xl"
-                    style={{ background: `${tint}1f`, color: tint }}
-                  >
-                    <Icon className="size-5" />
-                  </div>
-                  <h3 className="text-sm font-semibold">{title}</h3>
-                  <p className="mt-1.5 text-xs leading-relaxed text-muted-foreground">{body}</p>
-                </Card>
-              </motion.div>
-            ))}
-          </div>
-        </section>
-
-        {/* ================= HOW IT WORKS ================= */}
-        <section className="mx-auto max-w-6xl px-4 pb-24 sm:px-6" aria-label="How it works">
-          <motion.h2
-            initial={{ opacity: 0, y: 16 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            className="mb-10 text-3xl font-bold tracking-tight"
-          >
-            How it works
-          </motion.h2>
-          <ol className="grid gap-5 sm:grid-cols-3">
-            {STEPS.map((s, i) => (
-              <motion.li
-                key={s.n}
-                custom={i}
-                variants={fadeUp}
-                initial="hidden"
-                whileInView="show"
-                viewport={{ once: true, amount: 0.3 }}
-                className="relative rounded-2xl border border-border bg-card p-6"
-              >
-                <span className="brand-gradient flex size-9 items-center justify-center rounded-full text-sm font-bold text-white shadow">
-                  {s.n}
-                </span>
-                <h3 className="mt-4 text-sm font-semibold">{s.title}</h3>
-                <p className="mt-1.5 text-xs leading-relaxed text-muted-foreground">{s.body}</p>
-                {i < STEPS.length - 1 && (
-                  <ArrowRight className="absolute -right-3 top-1/2 hidden size-5 -translate-y-1/2 text-border sm:block" />
-                )}
-              </motion.li>
-            ))}
-          </ol>
-        </section>
-      </main>
-
-      {/* sticky mobile CTA — always visible on small screens */}
-      <div className="fixed inset-x-0 bottom-0 z-40 border-t border-border bg-surface/95 px-4 py-3 backdrop-blur lg:hidden">
-        <Button variant="gradient" className="w-full" onClick={() => launchDemo(false)} disabled={launching}>
-          <GraduationCap className="size-4" />
-          {launching ? "Preparing…" : "Try the demo workspace"}
-        </Button>
-      </div>
-
-      <footer className="border-t border-border bg-surface py-10 pb-24 lg:pb-10">
-        <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-4 px-4 text-xs text-muted-foreground sm:flex-row">
-          <div className="flex items-center gap-2">
-            <span className="brand-gradient flex size-6 items-center justify-center rounded-md text-[10px] font-extrabold text-white">
-              SS
-            </span>
-            <span>StudySpace — source-grounded AI study workspace.</span>
-          </div>
-          <div className="flex items-center gap-5">
-            <Link to="/auth" className="transition-colors hover:text-foreground">Sign in</Link>
-            <button type="button" onClick={() => launchDemo(true)} className="transition-colors hover:text-foreground">
-              Reset demo
-            </button>
-            <Link to="/privacy" className="transition-colors hover:text-foreground">Privacy</Link>
-            <Link to="/terms" className="transition-colors hover:text-foreground">Terms</Link>
-            <a
-              href="https://github.com/Damini2006/Study-space"
-              target="_blank"
-              rel="noreferrer"
-              className="transition-colors hover:text-foreground"
-            >
-              GitHub
-            </a>
-          </div>
-          <p className="mt-2 text-[11px] text-muted-foreground/70">
-            14 Innovation Drive, Bengaluru, Karnataka 560103, India · privacy@studyspace.app
-          </p>
         </div>
-      </footer>
+      </section>
+
+      {/* ================= FEATURES SECTION ================= */}
+      <section className="mx-auto max-w-7xl px-6 py-20 sm:px-8 lg:px-12" aria-label="Features">
+        <motion.h2
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          className="mb-10 text-4xl font-bold tracking-tight text-center"
+        >
+          Everything for a calmer, citable study habit
+        </motion.h2>
+        <motion.p
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ delay: 0.08 }}
+          className="mb-10 max-w-2xl mx-auto text-lg text-muted-foreground sm:text-center"
+        >
+          Seven core features, no filler. Every answer is source-grounded; every AI action is
+          honest about what it does and doesn't know.
+        </motion.p>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+          {FEATURES.map(({ icon: Icon, title, body, tint }, i) => (
+            <motion.div
+              key={title}
+              custom={i}
+              variants={fadeUp}
+              initial="hidden"
+              whileInView="show"
+              viewport={{ once: true, amount: 0.25 }}
+              className="rounded-3xl border border-border bg-surface/80 p-6 hover:bg-surface/90 transition-all duration-500 hover:shadow-[0_0_40px_rgba(var(--primary),0.1)]"
+            >
+              <div className="mb-4 flex size-10 items-center justify-center rounded-2xl" style={{ backgroundColor: hexToRgba(tint, 0.15), color: tint }}>
+                <Icon className="size-5" />
+              </div>
+              <h3 className="text-sm font-semibold mb-2">{title}</h3>
+              <p className="text-sm leading-relaxed text-muted-foreground">{body}</p>
+            </motion.div>
+          ))}
+        </div>
+      </section>
+
+      {/* ================= HOW IT WORKS ================= */}
+      <section className="mx-auto max-w-7xl px-6 py-20 sm:px-8 lg:px-12" aria-label="How it works">
+        <motion.h2
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          className="mb-10 text-4xl font-bold tracking-tight text-center"
+        >
+          How it works
+        </motion.h2>
+        <ol className="grid gap-5 sm:grid-cols-3">
+          {STEPS.map((s, i) => (
+            <motion.li
+              key={s.n}
+              custom={i}
+              variants={fadeUp}
+              initial="hidden"
+              whileInView="show"
+              viewport={{ once: true, amount: 0.3 }}
+              className="relative rounded-2xl border border-border bg-surface/80 p-6 flex items-start gap-4"
+            >
+              <span className="absolute left-0 top-1/2 -translate-y-1/2 brand-gradient flex size-8 items-center justify-center rounded-full text-xs font-bold text-white shadow">
+                {s.n}
+              </span>
+              <div className="flex-1">
+                <h3 className="mt-2 font-semibold">{s.title}</h3>
+                <p className="text-sm text-muted-foreground line-clamp-3">{s.body}</p>
+              </div>
+              {i < STEPS.length - 1 && (
+                <ArrowRight
+                  className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground text-sm opacity-40 transition-opacity hover:opacity-100"
+                />
+              )}
+            </motion.li>
+          ))}
+        </ol>
+      </section>
     </div>
   );
 }
