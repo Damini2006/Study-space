@@ -89,7 +89,7 @@ export default function AuthPage() {
         </motion.div>
 
         {/* Auth Form Card */}
-        <div className="col-span-2">
+        <div>
           <Link to="/" className="mb-6 flex items-center gap-2">
             <span className="brand-gradient flex size-8 items-center justify-center rounded-lg text-xs font-bold text-white">SS</span>
             <span className="text-lg font-bold">StudySpace</span>

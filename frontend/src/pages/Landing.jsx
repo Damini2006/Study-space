@@ -242,7 +242,7 @@ export default function Landing() {
               initial={{ x: 20, opacity: 0 }}
               animate={{ x: 0, opacity: 1 }}
               transition={{ type: "spring", stiffness: 400, damping: 30, delay: 0.1 }}
-              className="inline-flex items-center gap-2 rounded-2xl border border-border bg-surface/80 px-4 py-2 text-sm font-medium text-primary shadow-sm mb-8"
+              className="inline-flex items-center gap-2 rounded-2xl border border-border bg-surface/80 px-4 py-2 text-sm font-medium text-primary shadow-sm mb-4"
             >
               <Sparkles className="size-3.5 text-accent" />
               Source-grounded AI
@@ -252,7 +252,7 @@ export default function Landing() {
               initial={{ x: -20, opacity: 0 }}
               animate={{ x: 0, opacity: 1 }}
               transition={{ type: "spring", stiffness: 380, damping: 32, delay: 0.2 }}
-              className="mt-10 text-6xl sm:text-7xl lg:text-8xl font-extrabold leading-[1.05] tracking-tight text-white sm:text-center"
+              className="mt-6 text-4xl sm:text-5xl lg:text-6xl font-extrabold leading-[1.1] tracking-tight text-white sm:text-center"
             >
               Study from
               <span className="relative">
@@ -334,6 +334,51 @@ export default function Landing() {
                 });
               }}
             />
+          </motion.div>
+        </div>
+      </section>
+
+      {/* ================= ENHANCED STATS / FEATURE HIGHLIGHTS ================= */}
+      <section className="mx-auto max-w-7xl px-6 py-12 sm:px-8 lg:px-12 bg-surface/50">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 max-w-6xl mx-auto">
+          {/* Interactive stat card 1 */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ type: "spring", stiffness: 380, damping: 32, delay: 0.1 }}
+            className="group rounded-2xl border border-border bg-surface/80 p-6 backdrop-blur hover:bg-surface/90 hover:shadow-[0_0_40px_rgba(var(--primary),0.1)] transition-all duration-300 cursor-pointer"
+            onMouseEnter={() => setOrb1Pos(prev => ({...prev, x: prev.x + 10}))}
+            onMouseLeave={() => setOrb1Pos({ x: 0, y: 0 })}
+          >
+            <div className="size-10 text-primary mb-2">📄</div>
+            <h3 className="text-xl font-bold">Source-Powered</h3>
+            <p className="text-sm text-muted-foreground">Chat with your PDFs, notes and docs</p>
+          </motion.div>
+
+          {/* Interactive stat card 2 */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ type: "spring", stiffness: 380, damping: 32, delay: 0.2 }}
+            className="group rounded-2xl border border-border bg-surface/80 p-6 backdrop-blur hover:bg-surface/90 hover:shadow-[0_0_40px_rgba(var(--primary),0.1)] transition-all duration-300 cursor-pointer"
+            onMouseEnter={() => setOrb2Pos(prev => ({...prev, y: prev.y + 10}))}
+            onMouseLeave={() => setOrb2Pos({ x: 0, y: 0 })}
+          >
+            <div className="size-10 text-accent mb-2">🔐</div>
+            <h3 className="text-xl font-bold">Honest Answers</h3>
+            <p className="text-sm text-muted-foreground">Four safety layers, always grounded</p>
+          </motion.div>
+
+          {/* Interactive stat card 3 */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ type: "spring", stiffness: 380, damping: 32, delay: 0.3 }}
+            className="group rounded-2xl border border-border bg-surface/80 p-6 backdrop-blur hover:bg-surface/90 hover:shadow-[0_0_40px_rgba(var(--primary),0.1)] transition-all duration-300 cursor-pointer"
+          >
+            <div className="size-10 text-purple-600 mb-2">📊</div>
+            <h3 className="text-xl font-bold">FSRS Scheduling</h3>
+            <p className="text-sm text-muted-foreground">Real spaced repetition, per-card tracking</p>
           </motion.div>
         </div>
       </section>
