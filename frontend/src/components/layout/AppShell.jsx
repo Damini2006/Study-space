@@ -103,18 +103,21 @@ export default function AppShell() {
   // plain active style so two layoutId owners never coexist.
   const buildNav = (animated) => (
     <nav className="flex flex-col gap-1" aria-label="Main navigation">
+      <p className="mb-1 px-3 text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground/60">
+        Workspace
+      </p>
       {NAV.map(({ to, label, icon: Icon }) => (
         <NavLink
           key={to}
           to={to}
           className={({ isActive }) =>
             cn(
-              "relative flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
+              "relative flex items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium transition-all duration-200",
               isActive
                 ? animated
                   ? "text-primary"
                   : "bg-primary/10 text-primary"
-                : "text-muted-foreground hover:text-foreground"
+                : "text-muted-foreground hover:bg-surface-2 hover:text-foreground"
             )
           }
         >
@@ -123,12 +126,12 @@ export default function AppShell() {
               {isActive && animated && (
                 <motion.span
                   layoutId="nav-active-pill"
-                  className="absolute inset-0 rounded-lg bg-primary/10"
+                  className="absolute inset-0 rounded-xl bg-primary/10"
                   transition={{ type: "spring", stiffness: 420, damping: 34 }}
                   aria-hidden
                 />
               )}
-              <span className="relative flex items-center gap-2.5">
+              <span className="relative flex items-center gap-3">
                 <Icon className="size-4" aria-hidden />
                 {label}
               </span>
@@ -141,12 +144,12 @@ export default function AppShell() {
           to="/app/admin"
           className={({ isActive }) =>
             cn(
-              "relative flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
+              "relative flex items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium transition-all duration-200",
               isActive
                 ? animated
                   ? "text-primary"
                   : "bg-primary/10 text-primary"
-                : "text-muted-foreground hover:text-foreground"
+                : "text-muted-foreground hover:bg-surface-2 hover:text-foreground"
             )
           }
         >
@@ -155,12 +158,12 @@ export default function AppShell() {
               {isActive && animated && (
                 <motion.span
                   layoutId="nav-active-pill"
-                  className="absolute inset-0 rounded-lg bg-primary/10"
+                  className="absolute inset-0 rounded-xl bg-primary/10"
                   transition={{ type: "spring", stiffness: 420, damping: 34 }}
                   aria-hidden
                 />
               )}
-              <span className="relative flex items-center gap-2.5">
+              <span className="relative flex items-center gap-3">
                 <ShieldCheck className="size-4" aria-hidden />
                 Admin / Evals
               </span>
@@ -177,8 +180,8 @@ export default function AppShell() {
     <div className="min-h-screen bg-background lg:grid lg:grid-cols-[240px_1fr]">
       {/* Desktop sidebar */}
       <aside className="hidden border-r border-border bg-surface lg:flex lg:flex-col">
-        <div className="flex items-center gap-2.5 border-b border-border p-4">
-          <div className="brand-gradient flex size-9 items-center justify-center rounded-lg text-sm font-bold text-white">
+        <div className="flex items-center gap-3 border-b border-border px-5 py-5">
+          <div className="brand-gradient flex size-10 items-center justify-center rounded-xl text-sm font-bold text-white shadow-sm">
             SS
           </div>
           <div className="min-w-0">
@@ -188,7 +191,7 @@ export default function AppShell() {
             </div>
           </div>
         </div>
-        <div className="flex-1 p-3">{navLinks}</div>
+        <div className="flex-1 p-4">{navLinks}</div>
         <div className="border-t border-border p-3">
           <button
             type="button"
@@ -284,7 +287,7 @@ export default function AppShell() {
 
         {/* Desktop title bar (subtle) */}
         <header className={cn(
-          "hidden items-center gap-3 border-b bg-surface px-6 py-3 backdrop-blur transition-all lg:flex",
+          "hidden items-center gap-3 border-b bg-surface/80 px-8 py-4 backdrop-blur-xl transition-all lg:flex",
           scrolled ? "border-border shadow-[var(--shadow-sm)]" : "border-transparent"
         )}>
           <div className="min-w-0 flex-1">
@@ -317,7 +320,7 @@ export default function AppShell() {
           </span>
         </header>
 
-        <main className="min-w-0 flex-1 px-3 py-4 pb-24 lg:px-6 lg:pb-6">
+        <main className="min-w-0 flex-1 px-4 py-6 pb-24 lg:px-10 lg:pb-10">
           <AnimatePresence mode="wait" initial={false}>
             <motion.div
               key={location.pathname}

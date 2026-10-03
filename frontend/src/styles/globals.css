@@ -64,10 +64,11 @@
   --motion-slow: 300ms;
 
   /* --- radii / elevation ------------------------------------------------ */
-  --radius: 14px;
-  --shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.05);
-  --shadow-md: 0 8px 24px rgba(15, 23, 42, 0.07);
-  --shadow-lg: 0 18px 48px rgba(15, 23, 42, 0.1);
+  --radius: 16px;
+  --radius-sm: 10px;
+  --shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.04), 0 1px 3px rgba(15, 23, 42, 0.06);
+  --shadow-md: 0 4px 12px rgba(15, 23, 42, 0.05), 0 12px 32px rgba(15, 23, 42, 0.08);
+  --shadow-lg: 0 12px 28px rgba(15, 23, 42, 0.06), 0 32px 64px rgba(15, 23, 42, 0.12);
 
   /* --- shadcn/ui aliases (map spec tokens onto shadcn names) ------------ */
   --background: var(--bg);
@@ -225,8 +226,20 @@
     font-feature-settings: "cv02", "cv03", "cv04", "cv11";
     -webkit-font-smoothing: antialiased;
     text-rendering: optimizeLegibility;
+    letter-spacing: -0.005em;
     /* instant-feeling theme switch with a short cross-fade */
     transition: background-color var(--motion-base) ease, color var(--motion-base) ease;
+  }
+
+  /* subtle ambient wash at the top of the app, in the brand hue */
+  body::before {
+    content: "";
+    position: fixed;
+    inset: 0 0 auto 0;
+    height: 340px;
+    pointer-events: none;
+    background: radial-gradient(60% 120% at 50% -40%, color-mix(in srgb, var(--primary) 10%, transparent), transparent);
+    z-index: -1;
   }
 
   /* cross-fade surfaces when the theme changes */
@@ -247,8 +260,10 @@
   }
 
   h1, h2, h3, h4 {
-    letter-spacing: -0.015em;
+    letter-spacing: -0.02em;
   }
+  h1 { font-weight: 700; }
+  h2 { font-weight: 600; }
 }
 
 @layer components {
