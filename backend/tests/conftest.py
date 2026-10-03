@@ -105,7 +105,7 @@ async def two_users(migrated_db):
             "('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'alice@test.dev'), "
             "('bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb', 'bob@test.dev')"
         )
-        rows = await conn.fetch("select user_id from public.profiles order by user_id")
+        rows = await conn.fetch("select id from public.profiles order by id")
         assert len(rows) == 2  # trigger created profiles
     finally:
         await conn.close()
