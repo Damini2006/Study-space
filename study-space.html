@@ -15,6 +15,7 @@
     --shadow: 0 12px 40px rgba(16,24,40,0.08);
     --radius:14px;
     --glass-blur:8px;
+    --text: #0b1220;
   }
   *{box-sizing:border-box}
   html,body{height:100%;margin:0;font-family:Inter,system-ui,Arial;background:var(--bg);color:var(--text,#0b1220)}
@@ -73,7 +74,14 @@
   .muted{color:var(--muted);font-size:0.92rem}
 
   /* responsive */
-  @media(max-width:980px){ .app-wrap{grid-template-columns:1fr;padding:12px} .content{grid-template-columns:1fr} .sidebar{position:relative;height:auto} }
+  /* entrance animations */
+  .enter{opacity:1;transform:none;transition:opacity .5s ease-out,transform .5s ease-out;}
+  .nav-item,.card,.fab{opacity:0;transform:translateY(20px);}
+
+  /* 3D shape */
+  .shape3d{width:120px;height:120px;background:var(--accent);border-radius:12px;position:absolute;top:20px;right:20px;transform-style:preserve-3d;animation:spin3d 8s infinite linear;}
+  @keyframes spin3d{from{transform:rotateX(0deg) rotateY(0deg);}to{transform:rotateX(360deg) rotateY(360deg);}}
+
 </style>
 </head>
 <body>
@@ -300,6 +308,7 @@
     <div id="loginView" style="margin-top:12px">
       <label>Username<input id="loginUser" style="width:100%;padding:8px;border-radius:8px;border:1px solid rgba(0,0,0,0.06)" /></label>
       <label style="margin-top:8px">Password<input id="loginPass" type="password" style="width:100%;padding:8px;border-radius:8px;border:1px solid rgba(0,0,0,0.06)" /></label>
+<a href="#" id="forgotPass" class="muted" style="display:block;margin-top:4px;">Forgot password?</a>
       <div style="display:flex;gap:8px;margin-top:12px">
         <button id="doLoginBtn" class="btn primary">Login</button>
         <button id="gotoSignup" class="btn">Signup</button>
