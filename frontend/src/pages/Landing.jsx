@@ -237,19 +237,37 @@ export default function Landing() {
               Source-grounded AI study workspace
             </motion.span>
 
-            <motion.h1
-              initial={{ opacity: 0, y: 32, rotateX: 15 }}
-              animate={{ opacity: 1, y: 0, rotateX: 0 }}
-              transition={{ type: "spring", stiffness: 380, damping: 32, delay: 0.1 }}
-              className="mt-10 text-5xl sm:text-6xl lg:text-7xl font-extrabold leading-[1.1] tracking-tight text-white sm:text-center"
+            {/* Quote badge that slides in from right */}
+            <motion.div
+              initial={{ x: 20, opacity: 0 }}
+              animate={{ x: 0, opacity: 1 }}
+              transition={{ type: "spring", stiffness: 400, damping: 30, delay: 0.1 }}
+              className="inline-flex items-center gap-2 rounded-2xl border border-border bg-surface/80 px-4 py-2 text-sm font-medium text-primary shadow-sm mb-8"
             >
-              Study from{" "}
+              <Sparkles className="size-3.5 text-accent" />
+              Source-grounded AI
+            </motion.div>
+
+            <motion.h1
+              initial={{ x: -20, opacity: 0 }}
+              animate={{ x: 0, opacity: 1 }}
+              transition={{ type: "spring", stiffness: 380, damping: 32, delay: 0.2 }}
+              className="mt-10 text-6xl sm:text-7xl lg:text-8xl font-extrabold leading-[1.05] tracking-tight text-white sm:text-center"
+            >
+              Study from
               <span className="relative">
                 <span className="bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">your own notes</span>
               </span>,
               <br className="hidden sm:block" />
               verified against every source.
             </motion.h1>
+
+            {/* Subtle accent line moving across */}
+            <motion.div
+              whileInView={{ opacity: 1, x: 0 }}
+              transition={{ type: "spring", stiffness: 300, damping: 20 }}
+              className="mt-8 flex h-0.5 w-full bg-gradient-to-r from-primary to-accent transition-all duration-500 sm:w-40 lg:w-60"
+            />
 
             <motion.p
               initial={{ opacity: 0, y: 32 }}
@@ -323,22 +341,22 @@ export default function Landing() {
       {/* ================= FEATURES SECTION ================= */}
       <section className="mx-auto max-w-7xl px-6 py-20 sm:px-8 lg:px-12" aria-label="Features">
         <motion.h2
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
+          initial={{ opacity: 0, y: 20, x: -20 }}
+          animate={{ opacity: 1, y: 0, x: 0 }}
+          transition={{ type: "spring", stiffness: 380, damping: 32, delay: 0.1 }}
           viewport={{ once: true }}
-          className="mb-10 text-4xl font-bold tracking-tight text-center"
+          className="mb-12 text-5xl font-bold tracking-tight text-center"
         >
           Everything for a calmer, citable study habit
         </motion.h2>
         <motion.p
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
+          initial={{ opacity: 0, y: 20, x: -20 }}
+          animate={{ opacity: 1, y: 0, x: 0 }}
+          transition={{ type: "spring", stiffness: 380, damping: 32, delay: 0.12 }}
           viewport={{ once: true }}
-          transition={{ delay: 0.08 }}
           className="mb-10 max-w-2xl mx-auto text-lg text-muted-foreground sm:text-center"
         >
-          Seven core features, no filler. Every answer is source-grounded; every AI action is
-          honest about what it does and doesn't know.
+          Seven core features, no filler. Every answer is source-grounded; every AI action is honest about what it does and doesn't know.
         </motion.p>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -363,16 +381,27 @@ export default function Landing() {
       </section>
 
       {/* ================= HOW IT WORKS ================= */}
-      <section className="mx-auto max-w-7xl px-6 py-20 sm:px-8 lg:px-12" aria-label="How it works">
+      <section className="mx-auto max-w-7xl px-6 py-24 sm:px-8 lg:px-12" aria-label="How it works">
         <motion.h2
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
+          initial={{ x: -20, opacity: 0 }}
+          animate={{ x: 0, opacity: 1 }}
+          transition={{ type: "spring", stiffness: 380, damping: 32, delay: 0.1 }}
           viewport={{ once: true }}
-          className="mb-10 text-4xl font-bold tracking-tight text-center"
+          className="mb-12 text-5xl font-bold tracking-tight text-center"
         >
           How it works
         </motion.h2>
-        <ol className="grid gap-5 sm:grid-cols-3">
+        <motion.p
+          initial={{ x: 20, opacity: 0 }}
+          animate={{ x: 0, opacity: 1 }}
+          transition={{ type: "spring", stiffness: 380, damping: 32, delay: 0.12 }}
+          viewport={{ once: true }}
+          className="mb-12 max-w-2xl mx-auto text-lg text-muted-foreground sm:text-center"
+        >
+          A three-step system to study smarter with AI-powered citation and review
+        </motion.p>
+
+        <ol className="grid gap-6 sm:grid-cols-3">
           {STEPS.map((s, i) => (
             <motion.li
               key={s.n}
@@ -381,14 +410,14 @@ export default function Landing() {
               initial="hidden"
               whileInView="show"
               viewport={{ once: true, amount: 0.3 }}
-              className="relative rounded-2xl border border-border bg-surface/80 p-6 flex items-start gap-4"
+              className="relative rounded-2xl border border-border bg-surface/80 p-8 flex items-start gap-6 transform hover:translate-y-[-4] transition-transform duration-300"
             >
-              <span className="absolute left-0 top-1/2 -translate-y-1/2 brand-gradient flex size-8 items-center justify-center rounded-full text-xs font-bold text-white shadow">
+              <span className="absolute left-0 top-1/2 -translate-y-1/2 brand-gradient flex size-9 items-center justify-center rounded-full text-xs font-bold text-white shadow">
                 {s.n}
               </span>
-              <div className="flex-1">
-                <h3 className="mt-2 font-semibold">{s.title}</h3>
-                <p className="text-sm text-muted-foreground line-clamp-3">{s.body}</p>
+              <div className="flex-1 flex-initial">
+                <h3 className="mt-2 font-semibold text-lg">{s.title}</h3>
+                <p className="text-base text-muted-foreground line-clamp-3">{s.body}</p>
               </div>
               {i < STEPS.length - 1 && (
                 <ArrowRight
