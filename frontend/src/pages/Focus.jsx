@@ -19,6 +19,7 @@ import { Input, Label } from "@/components/ui/input";
 import { Dialog } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/dialog";
+import AmbientMixer from "@/components/focus/AmbientMixer";
 import { focusApi } from "@/services/api-services";
 import { useToast } from "@/components/ui/toast";
 import { cn, formatClock, formatDate } from "@/lib/utils";
@@ -175,6 +176,8 @@ export default function Focus() {
           </div>
         </div>
       </Card>
+
+      <AmbientMixer />
 
       {/* Recent sessions */}
       <div className="space-y-3">
