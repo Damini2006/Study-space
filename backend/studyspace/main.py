@@ -14,6 +14,7 @@ from studyspace.routers import (
     chat,
     demo,
     evals,
+    finance,
     focus,
     habits,
     me,
@@ -26,6 +27,7 @@ from studyspace.routers import (
     spaces,
     study,
     studio,
+    vision,
 )
 
 
@@ -72,6 +74,8 @@ def create_app() -> FastAPI:
     app.include_router(notes.router, prefix="/api")
     app.include_router(focus.router, prefix="/api")
     app.include_router(habits.router, prefix="/api")
+    app.include_router(vision.router, prefix="/api")
+    app.include_router(finance.router, prefix="/api")
     app.include_router(analytics.router, prefix="/api")
     app.include_router(evals.router, prefix="/api")
     app.include_router(demo.router, prefix="/api")
