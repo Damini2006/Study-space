@@ -75,108 +75,108 @@ export default function AuthPage() {
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-background p-4">
-      <div className="w-full max-w-sm grid grid-cols-2 gap-6 items-start">
-        {/* 3D Left Panel */}
-        <motion.div
-          className="relative group flex-shrink-0 w-24 h-96 flex items-center justify-center rounded-2xl bg-gradient-to-b from-primary/20 to-accent/10 border border-primary/20 perspective-1000 overflow-hidden transition-all duration-500"
-          whileHover={{ rotateY: 180 }}
-          whileTap={{ scale: 0.95 }}
-        >
-          <motion.span
-            className="relative w-full h-full transform rotate-y-180 transition-transform duration-500 group-hover:hover-rotate-y-0"
-            style={{ fontSize: 64 }}
-            >SS</motion.span>
-        </motion.div>
+      <div className="w-full max-w-sm">
+          {/* 3D Left Panel */}
+          <motion.div
+            className="relative group flex-shrink-0 w-16 h-48 flex items-center justify-center rounded-2xl bg-gradient-to-b from-primary/20 to-accent/10 border border-primary/20 perspective-1000 overflow-hidden transition-all duration-500"
+            whileHover={{ rotateY: 180 }}
+            whileTap={{ scale: 0.95 }}
+          >
+            <motion.span
+              className="relative w-full h-full flex items-center justify-center transform rotate-y-180 transition-transform duration-500 group-hover:hover-rotate-y-0 text-2xl font-bold text-white"
+              >SS</motion.span>
+          </motion.div>
 
-        {/* Auth Form Card */}
-        <div>
-          <Link to="/" className="mb-6 flex items-center gap-2">
-            <span className="brand-gradient flex size-8 items-center justify-center rounded-lg text-xs font-bold text-white">SS</span>
-            <span className="text-lg font-bold">StudySpace</span>
-          </Link>
-          <Card className="p-6">
-            <h1 className="text-xl font-bold tracking-tight">
-              {mode === "signin" ? "Welcome back" : "Create your account"}
-            </h1>
-            <p className="mt-1 text-sm text-muted-foreground">
-              {mode === "signin" ? "Sign in to your study workspace." : "Start your source-grounded study habit."}
-            </p>
+          {/* Auth Form Card */}
+          <div className="mt-6">
+            <Link to="/" className="mb-4 flex items-center gap-2">
+              <span className="brand-gradient flex size-7 items-center justify-center rounded-lg text-xs font-bold text-white">SS</span>
+              <span className="text-base font-bold">StudySpace</span>
+            </Link>
+            <Card className="p-5">
+              <h1 className="text-lg font-bold tracking-tight">
+                {mode === "signin" ? "Welcome back" : "Create your account"}
+              </h1>
+              <p className="mt-1 text-xs text-muted-foreground">
+                {mode === "signin" ? "Sign in to your study workspace." : "Start your source-grounded study habit."}
+              </p>
 
-            <form onSubmit={submit} className="mt-5 space-y-3">
-              {mode === "signup" && (
-                <div className="space-y-1.5">
-                  <Label htmlFor="name">Display name</Label>
-                  <Input id="name" value={name} onChange={(e) => setName(e.target.value)} placeholder="Ada Lovelace" autoComplete="name" />
+              <form onSubmit={submit} className="mt-4 space-y-2.5">
+                {mode === "signup" && (
+                  <div className="space-y-1">
+                    <Label htmlFor="name" className="text-xs">Display name</Label>
+                    <Input id="name" value={name} onChange={(e) => setName(e.target.value)} placeholder="Ada Lovelace" autoComplete="name" className="h-9" />
+                  </div>
+                )}
+                <div className="space-y-1">
+                  <Label htmlFor="email" className="text-xs">Email</Label>
+                  <Input id="email" type="email" required value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@school.edu" autoComplete="email" className="h-9" />
                 </div>
-              )}
-              <div className="space-y-1.5">
-                <Label htmlFor="email">Email</Label>
-                <Input id="email" type="email" required value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@school.edu" autoComplete="email" />
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="password">Password</Label>
-                <div className="relative">
-                  <Input
-                    id="password"
-                    type={showPassword ? "text" : "password"}
-                    required
-                    minLength={8}
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    placeholder="At least 8 characters"
-                    autoComplete={mode === "signin" ? "current-password" : "new-password"}
-                  />
-                  <button
-                    type="button"
-                    aria-label={showPassword ? "Hide password" : "Show password"}
-                    onClick={() => setShowPassword((v) => !v)}
-                    className="absolute right-2 top-1/2 -translate-y-1/2 rounded p-1 text-muted-foreground hover:text-foreground"
-                  >
-                    {showPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
-                  </button>
+                <div className="space-y-1">
+                  <Label htmlFor="password" className="text-xs">Password</Label>
+                  <div className="relative">
+                    <Input
+                      id="password"
+                      type={showPassword ? "text" : "password"}
+                      required
+                      minLength={8}
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      placeholder="At least 8 characters"
+                      autoComplete={mode === "signin" ? "current-password" : "new-password"}
+                      className="h-9"
+                    />
+                    <button
+                      type="button"
+                      aria-label={showPassword ? "Hide password" : "Show password"}
+                      onClick={() => setShowPassword((v) => !v)}
+                      className="absolute right-2 top-1/2 -translate-y-1/2 rounded p-1 text-muted-foreground hover:text-foreground"
+                    >
+                      {showPassword ? <EyeOff className="size-3.5" /> : <Eye className="size-3.5" />}
+                    </button>
+                  </div>
                 </div>
+                <Button type="submit" className="w-full h-9" disabled={busy}>
+                  {busy ? <Loader2 className="size-3.5 animate-spin" /> : mode === "signin" ? "Sign in" : "Create account"}
+                </Button>
+              </form>
+
+              <div className="my-3 flex items-center gap-3 text-xs text-muted-foreground">
+                <span className="h-px flex-1 bg-border" />
+                or
+                <span className="h-px flex-1 bg-border" />
               </div>
-              <Button type="submit" className="w-full" disabled={busy}>
-                {busy ? <Loader2 className="size-4 animate-spin" /> : mode === "signin" ? "Sign in" : "Create account"}
-              </Button>
-            </form>
 
-            <div className="my-4 flex items-center gap-3 text-xs text-muted-foreground">
-              <span className="h-px flex-1 bg-border" />
-              or
-              <span className="h-px flex-1 bg-border" />
-            </div>
+              <div className="grid grid-cols-2 gap-2">
+                <Button variant="outline" onClick={() => signInWithGoogle()} disabled={busy} className="h-9 text-xs">
+                  Google
+                </Button>
+                <Button variant="secondary" onClick={demo} disabled={busy} className="h-9 text-xs">
+                  <GraduationCap className="size-3.5" />
+                  Demo
+                </Button>
+              </div>
 
-            <div className="grid grid-cols-2 gap-2">
-              <Button variant="outline" onClick={() => signInWithGoogle()} disabled={busy}>
-                Google
-              </Button>
-              <Button variant="secondary" onClick={demo} disabled={busy}>
-                <GraduationCap className="size-4" />
-                Demo
-              </Button>
-            </div>
-
-            <p className="mt-4 text-center text-xs text-muted-foreground">
-              {mode === "signin" ? (
-                <>
-                  New here?{" "}
-                  <button type="button" className="font-medium text-primary hover:underline" onClick={() => setMode("signup")}>
-                    Create an account
-                  </button>
-                </>
-              ) : (
-                <>
-                  Already have an account?{" "}
-                  <button type="button" className="font-medium text-primary hover:underline" onClick={() => setMode("signin")}>
-                    Sign in
-                  </button>
-                </>
-              )}
-            </p>
-          </Card>
+              <p className="mt-3 text-center text-xs text-muted-foreground">
+                {mode === "signin" ? (
+                  <>
+                    New here?{" "}
+                    <button type="button" className="font-medium text-primary hover:underline" onClick={() => setMode("signup")}>
+                      Create an account
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    Already have an account?{" "}
+                    <button type="button" className="font-medium text-primary hover:underline" onClick={() => setMode("signin")}>
+                      Sign in
+                    </button>
+                  </>
+                )}
+              </p>
+            </Card>
+          </div>
         </div>
-      </div>
     </div>
   );
 }

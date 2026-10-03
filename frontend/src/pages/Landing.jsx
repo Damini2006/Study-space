@@ -205,12 +205,12 @@ export default function Landing() {
         <div className="fixed inset-0 overflow-hidden pointer-events-none">
           {/* Orb 1 - primary glow */}
           <div
-            className="orb-3d absolute top-1/3 left-1/4 w-64 h-64 rounded-2xl bg-primary/20 shadow-[0_0_60px_rgba(79,91,213,0.4)] border-2 border-primary/20 animate-spin"
+            className="orb-3d absolute top-1/3 left-1/4 w-40 h-40 rounded-2xl bg-primary/20 shadow-[0_0_60px_rgba(79,91,213,0.4)] border-2 border-primary/20 animate-spin"
             style={{ transform: `perspective(600px) translate3d(${orb1Pos.x}px, ${orb1Pos.y}px, 0) scale(1)` }}
           />
           {/* Orb 2 - accent glow */}
           <div
-            className="orb-3d absolute bottom-1/4 right-1/4 w-80 h-80 rounded-2xl bg-accent/15 shadow-[0_0_60px_rgba(232,116,154,0.3)] border-2 border-accent/20 animate-spin-reverse"
+            className="orb-3d absolute bottom-1/4 right-1/4 w-48 h-48 rounded-2xl bg-accent/15 shadow-[0_0_60px_rgba(232,116,154,0.3)] border-2 border-accent/20 animate-spin-reverse"
             style={{ transform: `perspective(600px) translate3d(${orb2Pos.x}px, ${orb2Pos.y}px, 0) scale(1.2)` }}
           />
           {/* Depth lines */}
@@ -252,7 +252,7 @@ export default function Landing() {
               initial={{ x: -20, opacity: 0 }}
               animate={{ x: 0, opacity: 1 }}
               transition={{ type: "spring", stiffness: 380, damping: 32, delay: 0.2 }}
-              className="mt-4 text-4xl sm:text-5xl lg:text-6xl font-extrabold leading-[1.05] tracking-tight text-white sm:text-center"
+              className="mt-4 text-3xl sm:text-4xl lg:text-5xl font-extrabold leading-[1.1] tracking-tight text-white sm:text-center"
             >
               Study from
               <span className="relative">
@@ -273,7 +273,7 @@ export default function Landing() {
               initial={{ opacity: 0, y: 32 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ type: "spring", stiffness: 380, damping: 32, delay: 0.15 }}
-              className="mt-6 text-lg sm:text-xl max-w-2xl text-pretty text-muted-foreground leading-relaxed sm:text-center"
+              className="mt-6 text-base sm:text-lg max-w-2xl text-pretty text-muted-foreground leading-relaxed sm:text-center"
             >
               Upload a document, ask a question, get an answer that cites the exact passage. Generate
               study material, review with spaced repetition, and plan with an AI that asks permission
@@ -285,7 +285,7 @@ export default function Landing() {
               initial={{ opacity: 0, y: 32, x: -20 }}
               animate={{ opacity: 1, y: 0, x: 0 }}
               transition={{ type: "spring", stiffness: 380, damping: 32, delay: 0.2 }}
-              className="mt-10 flex flex-col sm:flex-row gap-4 justify-center"
+              className="mt-8 flex flex-col sm:flex-row gap-3 justify-center"
             >
               <Button variant="gradient" size="lg" onClick={() => launchDemo(false)} disabled={launching}>
                 <GraduationCap className="size-4" />
@@ -303,15 +303,15 @@ export default function Landing() {
               initial={{ opacity: 0, y: 32 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ type: "spring", stiffness: 380, damping: 32, delay: 0.3 }}
-              className="mt-14 grid grid-cols-3 gap-4 sm:grid-cols-5 max-w-2xl w-full justify-center"
+              className="mt-10 grid grid-cols-3 gap-3 sm:grid-cols-5 max-w-2xl w-full justify-center"
             >
               {PILLARS.map(({ icon: Icon, label, desc }) => (
                 <motion.div
                   key={label}
-                  className="group rounded-2xl border border-border bg-surface/80 p-5 backdrop-blur transition-all duration-500 hover:translate-y-1 hover:shadow-[0_0_40px_rgba(var(--primary),0.15)]"
+                  className="group rounded-2xl border border-border bg-surface/80 p-4 backdrop-blur transition-all duration-500 hover:translate-y-1 hover:shadow-[0_0_40px_rgba(var(--primary),0.15)]"
                 >
-                  <Icon className="size-5 group-hover:text-primary mb-2 block" />
-                  <p className="text-sm font-medium group-hover:text-primary transition-colors">{label}</p>
+                  <Icon className="size-4 group-hover:text-primary mb-1.5 block" />
+                  <p className="text-xs font-medium group-hover:text-primary transition-colors">{label}</p>
                   <p className="text-xs text-muted-foreground line-clamp-2">{desc}</p>
                 </motion.div>
               ))}
@@ -346,12 +346,12 @@ export default function Landing() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ type: "spring", stiffness: 380, damping: 32, delay: 0.1 }}
-            className="group rounded-2xl border border-border bg-surface/80 p-6 backdrop-blur hover:bg-surface/90 hover:shadow-[0_0_40px_rgba(var(--primary),0.1)] transition-all duration-300 cursor-pointer"
+            className="group rounded-2xl border border-border bg-surface/80 p-5 backdrop-blur hover:bg-surface/90 hover:shadow-[0_0_40px_rgba(var(--primary),0.1)] transition-all duration-300 cursor-pointer"
             onMouseEnter={() => setOrb1Pos(prev => ({...prev, x: prev.x + 10}))}
             onMouseLeave={() => setOrb1Pos({ x: 0, y: 0 })}
           >
             <div className="size-10 text-primary mb-2">📄</div>
-            <h3 className="text-xl font-bold">Source-Powered</h3>
+            <h3 className="text-lg font-bold">Source-Powered</h3>
             <p className="text-sm text-muted-foreground">Chat with your PDFs, notes and docs</p>
           </motion.div>
 
@@ -360,12 +360,12 @@ export default function Landing() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ type: "spring", stiffness: 380, damping: 32, delay: 0.2 }}
-            className="group rounded-2xl border border-border bg-surface/80 p-6 backdrop-blur hover:bg-surface/90 hover:shadow-[0_0_40px_rgba(var(--primary),0.1)] transition-all duration-300 cursor-pointer"
+            className="group rounded-2xl border border-border bg-surface/80 p-5 backdrop-blur hover:bg-surface/90 hover:shadow-[0_0_40px_rgba(var(--primary),0.1)] transition-all duration-300 cursor-pointer"
             onMouseEnter={() => setOrb2Pos(prev => ({...prev, y: prev.y + 10}))}
             onMouseLeave={() => setOrb2Pos({ x: 0, y: 0 })}
           >
             <div className="size-10 text-accent mb-2">🔐</div>
-            <h3 className="text-xl font-bold">Honest Answers</h3>
+            <h3 className="text-lg font-bold">Honest Answers</h3>
             <p className="text-sm text-muted-foreground">Four safety layers, always grounded</p>
           </motion.div>
 
@@ -374,23 +374,23 @@ export default function Landing() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ type: "spring", stiffness: 380, damping: 32, delay: 0.3 }}
-            className="group rounded-2xl border border-border bg-surface/80 p-6 backdrop-blur hover:bg-surface/90 hover:shadow-[0_0_40px_rgba(var(--primary),0.1)] transition-all duration-300 cursor-pointer"
+            className="group rounded-2xl border border-border bg-surface/80 p-5 backdrop-blur hover:bg-surface/90 hover:shadow-[0_0_40px_rgba(var(--primary),0.1)] transition-all duration-300 cursor-pointer"
           >
             <div className="size-10 text-purple-600 mb-2">📊</div>
-            <h3 className="text-xl font-bold">FSRS Scheduling</h3>
+            <h3 className="text-lg font-bold">FSRS Scheduling</h3>
             <p className="text-sm text-muted-foreground">Real spaced repetition, per-card tracking</p>
           </motion.div>
         </div>
       </section>
 
       {/* ================= FEATURES SECTION ================= */}
-      <section className="mx-auto max-w-7xl px-6 py-20 sm:px-8 lg:px-12" aria-label="Features">
+      <section className="mx-auto max-w-7xl px-6 py-16 sm:px-8 lg:px-12" aria-label="Features">
         <motion.h2
           initial={{ opacity: 0, y: 20, x: -20 }}
           animate={{ opacity: 1, y: 0, x: 0 }}
           transition={{ type: "spring", stiffness: 380, damping: 32, delay: 0.1 }}
           viewport={{ once: true }}
-          className="mb-12 text-5xl font-bold tracking-tight text-center"
+          className="mb-12 text-3xl sm:text-4xl font-bold tracking-tight text-center"
         >
           Everything for a calmer, citable study habit
         </motion.h2>
@@ -399,7 +399,7 @@ export default function Landing() {
           animate={{ opacity: 1, y: 0, x: 0 }}
           transition={{ type: "spring", stiffness: 380, damping: 32, delay: 0.12 }}
           viewport={{ once: true }}
-          className="mb-10 max-w-2xl mx-auto text-lg text-muted-foreground sm:text-center"
+          className="mb-10 max-w-2xl mx-auto text-base text-muted-foreground sm:text-center"
         >
           Seven core features, no filler. Every answer is source-grounded; every AI action is honest about what it does and doesn't know.
         </motion.p>
@@ -413,7 +413,7 @@ export default function Landing() {
               initial="hidden"
               whileInView="show"
               viewport={{ once: true, amount: 0.25 }}
-              className="rounded-3xl border border-border bg-surface/80 p-6 hover:bg-surface/90 transition-all duration-500 hover:shadow-[0_0_40px_rgba(var(--primary),0.1)]"
+              className="rounded-3xl border border-border bg-surface/80 p-5 hover:bg-surface/90 transition-all duration-500 hover:shadow-[0_0_40px_rgba(var(--primary),0.1)]"
             >
               <div className="mb-4 flex size-10 items-center justify-center rounded-2xl" style={{ backgroundColor: hexToRgba(tint, 0.15), color: tint }}>
                 <Icon className="size-5" />
@@ -426,13 +426,13 @@ export default function Landing() {
       </section>
 
       {/* ================= HOW IT WORKS ================= */}
-      <section className="mx-auto max-w-7xl px-6 py-24 sm:px-8 lg:px-12" aria-label="How it works">
+      <section className="mx-auto max-w-7xl px-6 py-16 sm:px-8 lg:px-12" aria-label="How it works">
         <motion.h2
           initial={{ x: -20, opacity: 0 }}
           animate={{ x: 0, opacity: 1 }}
           transition={{ type: "spring", stiffness: 380, damping: 32, delay: 0.1 }}
           viewport={{ once: true }}
-          className="mb-12 text-5xl font-bold tracking-tight text-center"
+          className="mb-12 text-3xl sm:text-4xl font-bold tracking-tight text-center"
         >
           How it works
         </motion.h2>
@@ -441,7 +441,7 @@ export default function Landing() {
           animate={{ x: 0, opacity: 1 }}
           transition={{ type: "spring", stiffness: 380, damping: 32, delay: 0.12 }}
           viewport={{ once: true }}
-          className="mb-12 max-w-2xl mx-auto text-lg text-muted-foreground sm:text-center"
+          className="mb-12 max-w-2xl mx-auto text-base text-muted-foreground sm:text-center"
         >
           A three-step system to study smarter with AI-powered citation and review
         </motion.p>
@@ -455,14 +455,14 @@ export default function Landing() {
               initial="hidden"
               whileInView="show"
               viewport={{ once: true, amount: 0.3 }}
-              className="relative rounded-2xl border border-border bg-surface/80 p-8 flex items-start gap-6 transform hover:translate-y-[-4] transition-transform duration-300"
+              className="relative rounded-2xl border border-border bg-surface/80 p-6 flex items-start gap-4 transform hover:translate-y-[-4] transition-transform duration-300"
             >
               <span className="absolute left-0 top-1/2 -translate-y-1/2 brand-gradient flex size-9 items-center justify-center rounded-full text-xs font-bold text-white shadow">
                 {s.n}
               </span>
               <div className="flex-1 flex-initial">
-                <h3 className="mt-2 font-semibold text-lg">{s.title}</h3>
-                <p className="text-base text-muted-foreground line-clamp-3">{s.body}</p>
+                <h3 className="mt-2 font-semibold">{s.title}</h3>
+                <p className="text-sm text-muted-foreground line-clamp-3">{s.body}</p>
               </div>
               {i < STEPS.length - 1 && (
                 <ArrowRight
