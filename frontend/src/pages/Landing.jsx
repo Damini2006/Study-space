@@ -1,6 +1,6 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
-import { motion } from "framer-motion";
+import { motion, useScroll, useTransform, useSpring, useMotionValue } from "framer-motion";
 import {
   ArrowRight,
   BookOpen,
@@ -33,7 +33,7 @@ const FEATURES = [
   {
     icon: ShieldCheck,
     title: "Honest answers, always",
-    body: "Four switchable safety layers — relevance gate, citation validation, claim verification, and graceful “I couldn’t find this” responses.",
+    body: "Four switchable safety layers — relevance gate, citation validation, claim verification, and graceful \u201CI couldn\u2019t find this\u201D responses.",
     tint: "#2fb5a0",
   },
   {
@@ -103,6 +103,71 @@ function hexToRgba(hex, alpha) {
   return `rgba(${r}, ${g}, ${b}, ${alpha})`;
 }
 
+function FloatingOrb({ className, color, size, delay = 0 }) {
+  const x = useMotionValue(0);
+  const y = useMotionValue(0);
+  const springX = useSpring(x, { stiffness: 50, damping: 20 });
+  const springY = useSpring(y, { stiffness: 50, damping: 20 });
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      x.set(Math.sin(Date.now() / 2000 + delay) * 30);
+      y.set(Math.cos(Date.now() / 1800 + delay) * 20);
+    }, 50);
+    return () => clearInterval(interval);
+  }, [x, y, delay]);
+
+  return (
+    <motion.div
+      className={cn("absolute rounded-full blur-3xl pointer-events-none", className)}
+      style={{
+        width: size,
+        height: size,
+        backgroundColor: color,
+        x: springX,
+        y: springY,
+        opacity: 0.4,
+      }}
+    />
+  );
+}
+
+function ParticleField() {
+  const particles = Array.from({ length: 20 }, (_, i) => ({
+    id: i,
+    x: Math.random() * 100,
+    y: Math.random() * 100,
+    size: Math.random() * 3 + 1,
+    duration: Math.random() * 10 + 10,
+  }));
+
+  return (
+    <div className="absolute inset-0 overflow-hidden pointer-events-none">
+      {particles.map((p) => (
+        <motion.div
+          key={p.id}
+          className="absolute rounded-full bg-primary/20"
+          style={{
+            width: p.size,
+            height: p.size,
+            left: `${p.x}%`,
+            top: `${p.y}%`,
+          }}
+          animate={{
+            y: [0, -30, 0],
+            opacity: [0.2, 0.6, 0.2],
+          }}
+          transition={{
+            duration: p.duration,
+            repeat: Infinity,
+            ease: "easeInOut",
+          }}
+        />
+      ))}
+    </div>
+  );
+}
+
 export default function Landing() {
   const { startDemo } = useAuth();
   const { error } = useToast();
@@ -111,23 +176,19 @@ export default function Landing() {
   const [scrolled, setScrolled] = useState(false);
   const { theme, setTheme } = useTheme();
   const location = useLocation();
-  const [orb1Pos, setOrb1Pos] = useState({ x: 0, y: 0 });
-  const [orb2Pos, setOrb2Pos] = useState({ x: 0, y: 0 });
+  const heroRef = useRef(null);
+  const { scrollYProgress } = useScroll({
+    target: heroRef,
+    offset: ["start start", "end start"],
+  });
+  const heroY = useTransform(scrollYProgress, [0, 1], [0, 200]);
+  const heroOpacity = useTransform(scrollYProgress, [0, 0.8], [1, 0]);
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 8);
     onScroll();
     window.addEventListener("scroll", onScroll, { passive: true });
     return () => window.removeEventListener("scroll", onScroll);
-  }, []);
-
-  useEffect(() => {
-    const animate = () => {
-      setOrb1Pos({ x: Math.sin(Date.now() / 2000) * 80, y: Math.cos(Date.now() / 1800) * 60 });
-      setOrb2Pos({ x: Math.cos(Date.now() / 1500) * 60, y: Math.sin(Date.now() / 1900) * 50 });
-      requestAnimationFrame(animate);
-    };
-    animate();
   }, []);
 
   const launchDemo = async (reset = false) => {
@@ -178,17 +239,17 @@ export default function Landing() {
             : "border-b border-transparent bg-background/40"
         }`}
       >
-        <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-6 sm:px-8">
-          <Link to="/" className="flex items-center gap-3">
-            <span className="brand-gradient flex size-9 items-center justify-center rounded-2xl text-xs font-extrabold text-white shadow-lg">
+        <div className="mx-auto flex h-14 max-w-7xl items-center justify-between px-6 sm:px-8">
+          <Link to="/" className="flex items-center gap-2.5">
+            <span className="brand-gradient flex size-8 items-center justify-center rounded-xl text-xs font-extrabold text-white shadow-lg">
               SS
             </span>
-            <span className="text-lg font-bold tracking-tight">StudySpace</span>
+            <span className="text-base font-bold tracking-tight">StudySpace</span>
           </Link>
           <nav className="flex items-center gap-2 sm:gap-3">
             <Link
               to="/auth"
-              className="rounded-full px-4 py-2 text-sm text-muted-foreground transition-colors hover:text-foreground"
+              className="rounded-full px-3.5 py-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
             >
               Sign in
             </Link>
@@ -200,91 +261,70 @@ export default function Landing() {
       </header>
 
       {/* ================= HERO ================= */}
-      <section className="relative min-h-screen relative overflow-hidden bg-gradient-to-b from-bg to-surface">
+      <section ref={heroRef} className="relative min-h-screen overflow-hidden">
         {/* === 3D Scene Background === */}
-        <div className="fixed inset-0 overflow-hidden pointer-events-none">
-          {/* Orb 1 - primary glow */}
-          <div
-            className="orb-3d absolute top-1/3 left-1/4 w-40 h-40 rounded-2xl bg-primary/20 shadow-[0_0_60px_rgba(79,91,213,0.4)] border-2 border-primary/20 animate-spin"
-            style={{ transform: `perspective(600px) translate3d(${orb1Pos.x}px, ${orb1Pos.y}px, 0) scale(1)` }}
-          />
-          {/* Orb 2 - accent glow */}
-          <div
-            className="orb-3d absolute bottom-1/4 right-1/4 w-48 h-48 rounded-2xl bg-accent/15 shadow-[0_0_60px_rgba(232,116,154,0.3)] border-2 border-accent/20 animate-spin-reverse"
-            style={{ transform: `perspective(600px) translate3d(${orb2Pos.x}px, ${orb2Pos.y}px, 0) scale(1.2)` }}
-          />
-          {/* Depth lines */}
-          <div className="absolute inset-0 opacity-5">
-            <div className="h-[1px] w-full bg-gradient-to-b from-primary/5 to-transparent absolute top-0 md:top-1/2 transform rotate-90 md:rotate-0"></div>
-            <div className="h-[1px] w-full bg-gradient-to-r from-accent/5 to-transparent absolute left-0 md:left-1/2 transform -rotate-90 md:rotate-0"></div>
-          </div>
+        <div className="absolute inset-0">
+          <FloatingOrb className="top-1/4 left-1/4" color="#4f5bd5" size={200} />
+          <FloatingOrb className="bottom-1/4 right-1/4" color="#e8749a" size={160} delay={1} />
+          <FloatingOrb className="top-1/2 right-1/3" color="#2fb5a0" size={120} delay={2} />
+          <ParticleField />
+          {/* Grid overlay */}
+          <div className="absolute inset-0 bg-[linear-gradient(rgba(79,91,213,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(79,91,213,0.03)_1px,transparent_1px)] bg-[size:60px_60px]" />
         </div>
 
-        <div className="relative z-10 min-h-screen flex flex-col items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+        <motion.div
+          style={{ y: heroY, opacity: heroOpacity }}
+          className="relative z-10 min-h-screen flex flex-col items-center justify-center py-16 px-4 sm:px-6 lg:px-8"
+        >
           <motion.div
             initial={{ opacity: 0, y: 32 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true, amount: 0.3 }}
+            animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
+            className="text-center"
           >
-            <motion.span
-              initial={{ opacity: 0, scale: 0.8 }}
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}
               transition={{ type: "spring", stiffness: 380, damping: 32 }}
-              className="inline-flex items-center gap-1.5 rounded-2xl border border-border bg-surface/80 px-4 py-2 text-xs font-medium text-muted-foreground shadow-sm"
+              className="inline-flex items-center gap-2 rounded-full border border-border bg-surface/80 px-4 py-1.5 text-xs font-medium text-muted-foreground shadow-sm mb-6"
             >
-              <Sparkles className="size-3.5 text-accent" />
+              <Sparkles className="size-3 text-accent" />
               Source-grounded AI study workspace
-            </motion.span>
-
-            {/* Quote badge that slides in from right */}
-            <motion.div
-              initial={{ x: 20, opacity: 0 }}
-              animate={{ x: 0, opacity: 1 }}
-              transition={{ type: "spring", stiffness: 400, damping: 30, delay: 0.1 }}
-              className="inline-flex items-center gap-2 rounded-2xl border border-border bg-surface/80 px-3.5 py-1.5 text-xs font-medium text-primary shadow-sm mb-2"
-            >
-              <Sparkles className="size-2.5 text-accent" />
-              Source-grounded AI
             </motion.div>
 
             <motion.h1
-              initial={{ x: -20, opacity: 0 }}
-              animate={{ x: 0, opacity: 1 }}
-              transition={{ type: "spring", stiffness: 380, damping: 32, delay: 0.2 }}
-              className="mt-4 text-3xl sm:text-4xl lg:text-5xl font-extrabold leading-[1.1] tracking-tight text-white sm:text-center"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ type: "spring", stiffness: 380, damping: 32, delay: 0.1 }}
+              className="text-4xl sm:text-5xl lg:text-6xl font-extrabold leading-[1.1] tracking-tight text-white max-w-4xl mx-auto"
             >
-              Study from
-              <span className="relative">
-                <span className="bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">your own notes</span>
-              </span>,
-              <br className="hidden sm:block" />
-              verified against every source.
+              Every answer,{" "}
+              <span className="relative inline-block">
+                <span className="bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">cited</span>
+                <motion.span
+                  className="absolute -bottom-1 left-0 right-0 h-0.5 bg-gradient-to-r from-primary to-accent rounded-full"
+                  initial={{ scaleX: 0 }}
+                  animate={{ scaleX: 1 }}
+                  transition={{ delay: 0.5, duration: 0.8, ease: "easeOut" }}
+                />
+              </span>
+              {" "}to your sources.
             </motion.h1>
 
-            {/* Subtle accent line moving across */}
-            <motion.div
-              whileInView={{ opacity: 1, x: 0 }}
-              transition={{ type: "spring", stiffness: 300, damping: 20 }}
-              className="mt-6 flex h-0.5 w-full bg-gradient-to-r from-primary to-accent transition-all duration-500 sm:w-40 lg:w-60 opacity-0 sm:opacity-100"
-            />
-
             <motion.p
-              initial={{ opacity: 0, y: 32 }}
+              initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ type: "spring", stiffness: 380, damping: 32, delay: 0.15 }}
-              className="mt-6 text-base sm:text-lg max-w-2xl text-pretty text-muted-foreground leading-relaxed sm:text-center"
+              transition={{ type: "spring", stiffness: 380, damping: 32, delay: 0.2 }}
+              className="mt-6 text-base sm:text-lg max-w-2xl text-pretty text-muted-foreground leading-relaxed mx-auto"
             >
-              Upload a document, ask a question, get an answer that cites the exact passage. Generate
-              study material, review with spaced repetition, and plan with an AI that asks permission
-              first.
+              Upload documents, ask questions, get answers with exact citations. Generate study material, review with spaced repetition, and plan with an AI that asks permission first.
             </motion.p>
 
             {/* CTA Buttons */}
             <motion.div
-              initial={{ opacity: 0, y: 32, x: -20 }}
-              animate={{ opacity: 1, y: 0, x: 0 }}
-              transition={{ type: "spring", stiffness: 380, damping: 32, delay: 0.2 }}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ type: "spring", stiffness: 380, damping: 32, delay: 0.3 }}
               className="mt-8 flex flex-col sm:flex-row gap-3 justify-center"
             >
               <Button variant="gradient" size="lg" onClick={() => launchDemo(false)} disabled={launching}>
@@ -300,111 +340,92 @@ export default function Landing() {
 
             {/* Three Pillars */}
             <motion.div
-              initial={{ opacity: 0, y: 32 }}
+              initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ type: "spring", stiffness: 380, damping: 32, delay: 0.3 }}
-              className="mt-10 grid grid-cols-3 gap-3 sm:grid-cols-5 max-w-2xl w-full justify-center"
+              transition={{ type: "spring", stiffness: 380, damping: 32, delay: 0.4 }}
+              className="mt-12 grid grid-cols-3 gap-3 sm:gap-4 max-w-lg w-full mx-auto"
             >
               {PILLARS.map(({ icon: Icon, label, desc }) => (
                 <motion.div
                   key={label}
-                  className="group rounded-2xl border border-border bg-surface/80 p-4 backdrop-blur transition-all duration-500 hover:translate-y-1 hover:shadow-[0_0_40px_rgba(var(--primary),0.15)]"
+                  whileHover={{ y: -4, scale: 1.02 }}
+                  transition={{ type: "spring", stiffness: 400, damping: 25 }}
+                  className="group rounded-2xl border border-border bg-surface/80 p-4 backdrop-blur cursor-default"
                 >
-                  <Icon className="size-4 group-hover:text-primary mb-1.5 block" />
-                  <p className="text-xs font-medium group-hover:text-primary transition-colors">{label}</p>
-                  <p className="text-xs text-muted-foreground line-clamp-2">{desc}</p>
+                  <Icon className="size-5 group-hover:text-primary mb-2 block transition-colors" />
+                  <p className="text-sm font-medium group-hover:text-primary transition-colors">{label}</p>
+                  <p className="text-xs text-muted-foreground line-clamp-2 mt-0.5">{desc}</p>
                 </motion.div>
               ))}
             </motion.div>
-
-            {/* Orb hover interaction */}
-            <div
-              className="absolute -inset-1/2 pointer-events-none opacity-5"
-              onMouseMove={(e) => {
-                const { clientX, clientY } = e;
-                const docWidth = document.documentElement.clientWidth;
-                const docHeight = document.documentElement.clientHeight;
-                setOrb1Pos({
-                  x: (clientX / docWidth - 0.5) * 100,
-                  y: (clientY / docHeight - 0.5) * 80,
-                });
-                setOrb2Pos({
-                  x: (clientX / docWidth - 0.3) * 80,
-                  y: (clientY / docHeight - 0.7) * 60,
-                });
-              }}
-            />
           </motion.div>
-        </div>
+        </motion.div>
+
+        {/* Scroll indicator */}
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 1 }}
+          className="absolute bottom-8 left-1/2 -translate-x-1/2"
+        >
+          <motion.div
+            animate={{ y: [0, 8, 0] }}
+            transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+            className="w-6 h-10 rounded-full border-2 border-muted-foreground/30 flex items-start justify-center p-1.5"
+          >
+            <div className="w-1 h-2 rounded-full bg-muted-foreground/50" />
+          </motion.div>
+        </motion.div>
       </section>
 
-      {/* ================= ENHANCED STATS / FEATURE HIGHLIGHTS ================= */}
-      <section className="mx-auto max-w-7xl px-6 py-12 sm:px-8 lg:px-12 bg-surface/50">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 max-w-6xl mx-auto">
-          {/* Interactive stat card 1 */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ type: "spring", stiffness: 380, damping: 32, delay: 0.1 }}
-            className="group rounded-2xl border border-border bg-surface/80 p-5 backdrop-blur hover:bg-surface/90 hover:shadow-[0_0_40px_rgba(var(--primary),0.1)] transition-all duration-300 cursor-pointer"
-            onMouseEnter={() => setOrb1Pos(prev => ({...prev, x: prev.x + 10}))}
-            onMouseLeave={() => setOrb1Pos({ x: 0, y: 0 })}
-          >
-            <div className="size-10 text-primary mb-2">📄</div>
-            <h3 className="text-lg font-bold">Source-Powered</h3>
-            <p className="text-sm text-muted-foreground">Chat with your PDFs, notes and docs</p>
-          </motion.div>
-
-          {/* Interactive stat card 2 */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ type: "spring", stiffness: 380, damping: 32, delay: 0.2 }}
-            className="group rounded-2xl border border-border bg-surface/80 p-5 backdrop-blur hover:bg-surface/90 hover:shadow-[0_0_40px_rgba(var(--primary),0.1)] transition-all duration-300 cursor-pointer"
-            onMouseEnter={() => setOrb2Pos(prev => ({...prev, y: prev.y + 10}))}
-            onMouseLeave={() => setOrb2Pos({ x: 0, y: 0 })}
-          >
-            <div className="size-10 text-accent mb-2">🔐</div>
-            <h3 className="text-lg font-bold">Honest Answers</h3>
-            <p className="text-sm text-muted-foreground">Four safety layers, always grounded</p>
-          </motion.div>
-
-          {/* Interactive stat card 3 */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ type: "spring", stiffness: 380, damping: 32, delay: 0.3 }}
-            className="group rounded-2xl border border-border bg-surface/80 p-5 backdrop-blur hover:bg-surface/90 hover:shadow-[0_0_40px_rgba(var(--primary),0.1)] transition-all duration-300 cursor-pointer"
-          >
-            <div className="size-10 text-purple-600 mb-2">📊</div>
-            <h3 className="text-lg font-bold">FSRS Scheduling</h3>
-            <p className="text-sm text-muted-foreground">Real spaced repetition, per-card tracking</p>
-          </motion.div>
+      {/* ================= STATS SECTION ================= */}
+      <section className="mx-auto max-w-7xl px-6 py-16 sm:px-8 lg:px-12">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 max-w-4xl mx-auto">
+          {[
+            { icon: "📄", label: "Source-Powered", desc: "Chat with your PDFs, notes and docs", color: "text-primary" },
+            { icon: "🔐", label: "Honest Answers", desc: "Four safety layers, always grounded", color: "text-accent" },
+            { icon: "📊", label: "FSRS Scheduling", desc: "Real spaced repetition, per-card tracking", color: "text-purple-500" },
+          ].map((stat, i) => (
+            <motion.div
+              key={stat.label}
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true, amount: 0.3 }}
+              transition={{ delay: i * 0.1 }}
+              whileHover={{ y: -4 }}
+              className="group rounded-2xl border border-border bg-surface/80 p-5 backdrop-blur hover:bg-surface/90 hover:shadow-[0_0_30px_rgba(var(--primary),0.08)] transition-all duration-300 cursor-default"
+            >
+              <div className={cn("text-2xl mb-2", stat.color)}>{stat.icon}</div>
+              <h3 className="text-base font-bold">{stat.label}</h3>
+              <p className="text-sm text-muted-foreground mt-1">{stat.desc}</p>
+            </motion.div>
+          ))}
         </div>
       </section>
 
       {/* ================= FEATURES SECTION ================= */}
       <section className="mx-auto max-w-7xl px-6 py-16 sm:px-8 lg:px-12" aria-label="Features">
-        <motion.h2
-          initial={{ opacity: 0, y: 20, x: -20 }}
-          animate={{ opacity: 1, y: 0, x: 0 }}
-          transition={{ type: "spring", stiffness: 380, damping: 32, delay: 0.1 }}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
-          className="mb-12 text-3xl sm:text-4xl font-bold tracking-tight text-center"
+          className="text-center mb-12"
         >
-          Everything for a calmer, citable study habit
-        </motion.h2>
-        <motion.p
-          initial={{ opacity: 0, y: 20, x: -20 }}
-          animate={{ opacity: 1, y: 0, x: 0 }}
-          transition={{ type: "spring", stiffness: 380, damping: 32, delay: 0.12 }}
-          viewport={{ once: true }}
-          className="mb-10 max-w-2xl mx-auto text-base text-muted-foreground sm:text-center"
-        >
-          Seven core features, no filler. Every answer is source-grounded; every AI action is honest about what it does and doesn't know.
-        </motion.p>
+          <motion.h2 className="text-3xl sm:text-4xl font-bold tracking-tight">
+            Everything for a calmer, citable study habit
+          </motion.h2>
+          <motion.p
+            initial={{ opacity: 0 }}
+            whileInView={{ opacity: 1 }}
+            viewport={{ once: true }}
+            transition={{ delay: 0.1 }}
+            className="mt-4 max-w-2xl mx-auto text-base text-muted-foreground"
+          >
+            Seven core features, no filler. Every answer is source-grounded; every AI action is honest about what it does and doesn't know.
+          </motion.p>
+        </motion.div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {FEATURES.map(({ icon: Icon, title, body, tint }, i) => (
             <motion.div
               key={title}
@@ -413,12 +434,14 @@ export default function Landing() {
               initial="hidden"
               whileInView="show"
               viewport={{ once: true, amount: 0.25 }}
-              className="rounded-3xl border border-border bg-surface/80 p-5 hover:bg-surface/90 transition-all duration-500 hover:shadow-[0_0_40px_rgba(var(--primary),0.1)]"
+              whileHover={{ y: -6, scale: 1.01 }}
+              transition={{ type: "spring", stiffness: 300, damping: 25 }}
+              className="group rounded-2xl border border-border bg-surface/80 p-5 hover:bg-surface/90 transition-all duration-300 hover:shadow-[0_0_30px_rgba(var(--primary),0.08)]"
             >
-              <div className="mb-4 flex size-10 items-center justify-center rounded-2xl" style={{ backgroundColor: hexToRgba(tint, 0.15), color: tint }}>
+              <div className="mb-3 flex size-10 items-center justify-center rounded-xl transition-transform duration-300 group-hover:scale-110" style={{ backgroundColor: hexToRgba(tint, 0.15), color: tint }}>
                 <Icon className="size-5" />
               </div>
-              <h3 className="text-sm font-semibold mb-2">{title}</h3>
+              <h3 className="text-sm font-semibold mb-1.5">{title}</h3>
               <p className="text-sm leading-relaxed text-muted-foreground">{body}</p>
             </motion.div>
           ))}
@@ -427,26 +450,27 @@ export default function Landing() {
 
       {/* ================= HOW IT WORKS ================= */}
       <section className="mx-auto max-w-7xl px-6 py-16 sm:px-8 lg:px-12" aria-label="How it works">
-        <motion.h2
-          initial={{ x: -20, opacity: 0 }}
-          animate={{ x: 0, opacity: 1 }}
-          transition={{ type: "spring", stiffness: 380, damping: 32, delay: 0.1 }}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
-          className="mb-12 text-3xl sm:text-4xl font-bold tracking-tight text-center"
+          className="text-center mb-12"
         >
-          How it works
-        </motion.h2>
-        <motion.p
-          initial={{ x: 20, opacity: 0 }}
-          animate={{ x: 0, opacity: 1 }}
-          transition={{ type: "spring", stiffness: 380, damping: 32, delay: 0.12 }}
-          viewport={{ once: true }}
-          className="mb-12 max-w-2xl mx-auto text-base text-muted-foreground sm:text-center"
-        >
-          A three-step system to study smarter with AI-powered citation and review
-        </motion.p>
+          <motion.h2 className="text-3xl sm:text-4xl font-bold tracking-tight">
+            How it works
+          </motion.h2>
+          <motion.p
+            initial={{ opacity: 0 }}
+            whileInView={{ opacity: 1 }}
+            viewport={{ once: true }}
+            transition={{ delay: 0.1 }}
+            className="mt-4 max-w-2xl mx-auto text-base text-muted-foreground"
+          >
+            A three-step system to study smarter with AI-powered citation and review
+          </motion.p>
+        </motion.div>
 
-        <ol className="grid gap-6 sm:grid-cols-3">
+        <ol className="grid gap-4 sm:grid-cols-3 max-w-4xl mx-auto">
           {STEPS.map((s, i) => (
             <motion.li
               key={s.n}
@@ -455,24 +479,70 @@ export default function Landing() {
               initial="hidden"
               whileInView="show"
               viewport={{ once: true, amount: 0.3 }}
-              className="relative rounded-2xl border border-border bg-surface/80 p-6 flex items-start gap-4 transform hover:translate-y-[-4] transition-transform duration-300"
+              whileHover={{ y: -4 }}
+              className="relative rounded-2xl border border-border bg-surface/80 p-6 flex items-start gap-4 group"
             >
-              <span className="absolute left-0 top-1/2 -translate-y-1/2 brand-gradient flex size-9 items-center justify-center rounded-full text-xs font-bold text-white shadow">
+              <span className="brand-gradient flex size-8 items-center justify-center rounded-full text-xs font-bold text-white shadow group-hover:scale-110 transition-transform duration-300">
                 {s.n}
               </span>
-              <div className="flex-1 flex-initial">
-                <h3 className="mt-2 font-semibold">{s.title}</h3>
-                <p className="text-sm text-muted-foreground line-clamp-3">{s.body}</p>
+              <div className="flex-1">
+                <h3 className="font-semibold text-sm">{s.title}</h3>
+                <p className="text-sm text-muted-foreground mt-1 line-clamp-3">{s.body}</p>
               </div>
               {i < STEPS.length - 1 && (
-                <ArrowRight
-                  className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground text-sm opacity-40 transition-opacity hover:opacity-100"
-                />
+                <ArrowRight className="hidden sm:block absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground text-sm opacity-40 transition-opacity group-hover:opacity-100" />
               )}
             </motion.li>
           ))}
         </ol>
       </section>
+
+      {/* ================= CTA SECTION ================= */}
+      <section className="mx-auto max-w-7xl px-6 py-16 sm:px-8 lg:px-12">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          className="relative rounded-3xl border border-border bg-gradient-to-br from-primary/10 to-accent/10 p-8 sm:p-12 text-center overflow-hidden"
+        >
+          <FloatingOrb className="top-0 right-0" color="#4f5bd5" size={150} />
+          <FloatingOrb className="bottom-0 left-0" color="#e8749a" size={120} delay={1} />
+          <div className="relative z-10">
+            <h2 className="text-2xl sm:text-3xl font-bold tracking-tight text-white">
+              Ready to study smarter?
+            </h2>
+            <p className="mt-3 text-base text-muted-foreground max-w-xl mx-auto">
+              Join students who cite every answer and review with real spaced repetition.
+            </p>
+            <div className="mt-6 flex flex-col sm:flex-row gap-3 justify-center">
+              <Button variant="gradient" size="lg" onClick={() => launchDemo(false)} disabled={launching}>
+                <GraduationCap className="size-4" />
+                {launching ? "Preparing demo…" : "Start free demo"}
+              </Button>
+              <Link to="/auth">
+                <Button variant="outline" size="lg">
+                  Sign in <ChevronRight className="size-4" />
+                </Button>
+              </Link>
+            </div>
+          </div>
+        </motion.div>
+      </section>
+
+      {/* ================= FOOTER ================= */}
+      <footer className="border-t border-border py-8">
+        <div className="mx-auto max-w-7xl px-6 sm:px-8 flex flex-col sm:flex-row items-center justify-between gap-4">
+          <div className="flex items-center gap-2">
+            <span className="brand-gradient flex size-6 items-center justify-center rounded-lg text-xs font-bold text-white">SS</span>
+            <span className="text-sm font-bold">StudySpace</span>
+          </div>
+          <div className="flex items-center gap-4 text-xs text-muted-foreground">
+            <Link to="/privacy" className="hover:text-foreground transition-colors">Privacy</Link>
+            <Link to="/terms" className="hover:text-foreground transition-colors">Terms</Link>
+            <span>© 2026 StudySpace</span>
+          </div>
+        </div>
+      </footer>
     </div>
   );
 }
