@@ -477,24 +477,27 @@ export default function Landing() {
       <section className="mx-auto max-w-7xl px-6 py-16 sm:px-8 lg:px-12">
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 max-w-4xl mx-auto">
           {[
-            { icon: "📄", label: "Source-Powered", desc: "Chat with your PDFs, notes and docs", color: "text-primary" },
-            { icon: "🔐", label: "Honest Answers", desc: "Four safety layers, always grounded", color: "text-accent" },
-            { icon: "📊", label: "FSRS Scheduling", desc: "Real spaced repetition, per-card tracking", color: "text-purple-500" },
-          ].map((stat, i) => (
-            <motion.div
-              key={stat.label}
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true, amount: 0.3 }}
-              transition={{ delay: i * 0.1 }}
-              whileHover={{ y: -4 }}
-              className="group rounded-2xl border border-border bg-surface/80 p-5 backdrop-blur hover:bg-surface/90 hover:shadow-[0_0_30px_rgba(var(--primary),0.08)] transition-all duration-300 cursor-default"
-            >
-              <div className={cn("text-2xl mb-2", stat.color)}>{stat.icon}</div>
-              <h3 className="text-base font-bold">{stat.label}</h3>
-              <p className="text-sm text-muted-foreground mt-1">{stat.desc}</p>
-            </motion.div>
-          ))}
+            { icon: FileText, label: "Source-Powered", desc: "Chat with your PDFs, notes and docs", color: "text-primary" },
+            { icon: ShieldCheck, label: "Honest Answers", desc: "Four safety layers, always grounded", color: "text-accent" },
+            { icon: Layers, label: "FSRS Scheduling", desc: "Real spaced repetition, per-card tracking", color: "text-purple-500" },
+          ].map((stat, i) => {
+            const Icon = stat.icon;
+            return (
+              <motion.div
+                key={stat.label}
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true, amount: 0.3 }}
+                transition={{ delay: i * 0.1 }}
+                whileHover={{ y: -4 }}
+                className="group rounded-2xl border border-border bg-surface/80 p-5 backdrop-blur hover:bg-surface/90 hover:shadow-[0_0_30px_rgba(var(--primary),0.08)] transition-all duration-300 cursor-default"
+              >
+                <Icon className={cn("size-6 mb-2", stat.color)} />
+                <h3 className="text-base font-bold">{stat.label}</h3>
+                <p className="text-sm text-muted-foreground mt-1">{stat.desc}</p>
+              </motion.div>
+            );
+          })}
         </div>
       </section>
 
