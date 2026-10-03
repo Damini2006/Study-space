@@ -160,8 +160,9 @@ async def ingest_source(
                     vec_literal = "[" + ",".join(f"{float(v):.6f}" for v in emb) + "]"
                     await conn.execute(
                         "insert into public.chunks "
-                        "(source_id, space_id, content, position, page, token_count, embedding) "
-                        "values ($1, $2, $3, $4, $5, $6, $7::vector)",
+                        "(user_id, source_id, space_id, content, position, page, token_count, embedding) "
+                        "values ($1, $2, $3, $4, $5, $6, $7, $8::vector)",
+                        user_id,
                         source_id,
                         space_id,
                         chunk.content,
@@ -193,21 +194,6 @@ async def ingest_source(
             raise
 
 
-class WorkerSettings:
-    redis_settings = RedisSettings.from_dsn(settings.redis_url)
-    functions = [ingest_source]
-    cron_jobs = [
-        cron(
-            "cleanup_failed_ingestions",
-            "0 3 * * *",  # daily at 3 AM
-            max_tries=1,
-        ),
-    ]
-    max_tries = 3
-    job_timeout = 600
-    keep_result = 86400
-
-
 async def cleanup_failed_ingestions(ctx: dict) -> None:
     """Mark sources stuck in 'processing' for more than 1 hour as failed."""
     async with service_conn() as conn:
@@ -215,3 +201,15 @@ async def cleanup_failed_ingestions(ctx: dict) -> None:
             "update public.sources set status = 'failed', error = 'Timed out' "
             "where status = 'processing' and updated_at < now() - interval '1 hour'"
         )
+
+
+class WorkerSettings:
+    redis_settings = RedisSettings.from_dsn(settings.redis_url)
+    functions = [ingest_source]
+    cron_jobs = [
+        # daily at 3 AM
+        cron(cleanup_failed_ingestions, hour=3, minute=0, max_tries=1),
+    ]
+    max_tries = 3
+    job_timeout = 600
+    keep_result = 86400
