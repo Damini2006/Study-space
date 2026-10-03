@@ -372,6 +372,8 @@ export default function Landing() {
             <button type="button" onClick={() => launchDemo(true)} className="transition-colors hover:text-foreground">
               Reset demo
             </button>
+            <Link to="/privacy" className="transition-colors hover:text-foreground">Privacy</Link>
+            <Link to="/terms" className="transition-colors hover:text-foreground">Terms</Link>
             <a
               href="https://github.com/Damini2006/Study-space"
               target="_blank"
@@ -381,6 +383,9 @@ export default function Landing() {
               GitHub
             </a>
           </div>
+          <p className="mt-2 text-[11px] text-muted-foreground/70">
+            14 Innovation Drive, Bengaluru, Karnataka 560103, India · privacy@studyspace.app
+          </p>
         </div>
       </footer>
     </div>

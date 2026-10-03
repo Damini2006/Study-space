@@ -16,6 +16,11 @@ import Finance from "@/pages/Finance";
 import Settings from "@/pages/Settings";
 import AdminEvals from "@/pages/AdminEvals";
 import AuthCallback from "@/pages/AuthCallback";
+import NotFound from "@/pages/NotFound";
+import Privacy from "@/pages/Privacy";
+import Terms from "@/pages/Terms";
+import ThankYou from "@/pages/ThankYou";
+import CookieBanner from "@/components/layout/CookieBanner";
 
 function Protected({ children }) {
   const { isAuthenticated, initialising } = useAuth();
@@ -33,6 +38,37 @@ function Protected({ children }) {
   return children;
 }
 
+const PAGE_META = {
+  "/": { title: "StudySpace — source-grounded AI study workspace", desc: "Chat with your notes, generate study material, review with spaced repetition." },
+  "/auth": { title: "Sign in — StudySpace", desc: "Sign in to your StudySpace workspace." },
+  "/app/dashboard": { title: "Dashboard — StudySpace", desc: "Your today view: plan, streaks, spaces and habits." },
+  "/app/focus": { title: "Focus — StudySpace", desc: "Pomodoro, ambient sounds, habits and session history." },
+  "/app/vision": { title: "Vision Board — StudySpace", desc: "Drag stickies and images on your vision board." },
+  "/app/finance": { title: "Finance — StudySpace", desc: "Track spending and see your category breakdown." },
+  "/privacy": { title: "Privacy Policy — StudySpace", desc: "How StudySpace handles your data." },
+  "/terms": { title: "Terms of Service — StudySpace", desc: "StudySpace terms of service." },
+  "/thanks": { title: "Welcome — StudySpace", desc: "Your workspace is ready." },
+};
+
+function RouteMeta() {
+  const location = useLocation();
+  useEffect(() => {
+    const meta = PAGE_META[location.pathname] || {
+      title: "StudySpace",
+      desc: "Source-grounded AI study workspace.",
+    };
+    document.title = meta.title;
+    let tag = document.querySelector('meta[name="description"]');
+    if (!tag) {
+      tag = document.createElement("meta");
+      tag.setAttribute("name", "description");
+      document.head.appendChild(tag);
+    }
+    tag.setAttribute("content", meta.desc);
+  }, [location.pathname]);
+  return null;
+}
+
 export default function App() {
   const location = useLocation();
 
@@ -42,10 +78,16 @@ export default function App() {
   }, [location.pathname]);
 
   return (
+    <>
+    <RouteMeta />
+    <CookieBanner />
     <Routes>
       <Route path="/" element={<Landing />} />
       <Route path="/auth" element={<AuthPage />} />
       <Route path="/auth/callback" element={<AuthCallback />} />
+      <Route path="/privacy" element={<Privacy />} />
+      <Route path="/terms" element={<Terms />} />
+      <Route path="/thanks" element={<ThankYou />} />
       <Route
         path="/app"
         element={
@@ -67,7 +109,8 @@ export default function App() {
         <Route path="settings" element={<Settings />} />
         <Route path="admin" element={<AdminEvals />} />
       </Route>
-      <Route path="*" element={<Navigate to="/" replace />} />
+      <Route path="*" element={<NotFound />} />
     </Routes>
+    </>
   );
 }
