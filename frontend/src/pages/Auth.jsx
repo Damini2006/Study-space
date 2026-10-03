@@ -125,6 +125,26 @@ function ThreeDPanel() {
           transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
         />
       </motion.div>
+
+      {/* Feature highlights */}
+      <div className="absolute bottom-8 left-0 right-0 flex justify-center gap-6">
+        {[
+          { icon: "📄", label: "Cited" },
+          { icon: "🔐", label: "Safe" },
+          { icon: "📊", label: "Smart" },
+        ].map((f, i) => (
+          <motion.div
+            key={f.label}
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 1 + i * 0.2 }}
+            className="flex flex-col items-center gap-1"
+          >
+            <span className="text-lg">{f.icon}</span>
+            <span className="text-xs text-muted-foreground">{f.label}</span>
+          </motion.div>
+        ))}
+      </div>
     </div>
   );
 }

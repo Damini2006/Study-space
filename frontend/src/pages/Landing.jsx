@@ -168,6 +168,93 @@ function ParticleField() {
   );
 }
 
+function HeroVisual() {
+  return (
+    <div className="relative w-full h-full flex items-center justify-center" style={{ perspective: 1000 }}>
+      {/* Main document card */}
+      <motion.div
+        initial={{ opacity: 0, y: 40, rotateY: -15 }}
+        animate={{ opacity: 1, y: 0, rotateY: 0 }}
+        transition={{ delay: 0.4, duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
+        className="relative w-64 sm:w-72"
+        style={{ transformStyle: "preserve-3d" }}
+      >
+        {/* Document card */}
+        <motion.div
+          animate={{ y: [0, -8, 0] }}
+          transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
+          className="rounded-2xl border border-border bg-surface/90 backdrop-blur-xl p-5 shadow-[0_0_40px_rgba(79,91,213,0.15)]"
+        >
+          {/* Header */}
+          <div className="flex items-center gap-2 mb-3">
+            <div className="size-2 rounded-full bg-red-400" />
+            <div className="size-2 rounded-full bg-yellow-400" />
+            <div className="size-2 rounded-full bg-green-400" />
+          </div>
+          {/* Content lines */}
+          <div className="space-y-2">
+            <div className="h-2 rounded-full bg-primary/30 w-full" />
+            <div className="h-2 rounded-full bg-primary/20 w-4/5" />
+            <div className="h-2 rounded-full bg-primary/20 w-3/5" />
+          </div>
+          {/* Citation */}
+          <div className="mt-4 flex items-center gap-2 rounded-lg bg-primary/10 px-3 py-2">
+            <div className="size-4 rounded-full bg-primary/30" />
+            <div className="h-1.5 rounded-full bg-primary/40 w-16" />
+          </div>
+          {/* Answer */}
+          <div className="mt-3 space-y-1.5">
+            <div className="h-1.5 rounded-full bg-accent/30 w-full" />
+            <div className="h-1.5 rounded-full bg-accent/20 w-5/6" />
+            <div className="h-1.5 rounded-full bg-accent/20 w-4/6" />
+          </div>
+        </motion.div>
+
+        {/* Floating citation badge */}
+        <motion.div
+          initial={{ opacity: 0, scale: 0.8 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ delay: 0.8, type: "spring", stiffness: 300, damping: 20 }}
+          className="absolute -right-4 top-8"
+        >
+          <motion.div
+            animate={{ y: [0, -6, 0] }}
+            transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
+            className="rounded-xl border border-border bg-surface/90 backdrop-blur-xl px-3 py-2 shadow-lg flex items-center gap-2"
+          >
+            <CheckCircle2 className="size-4 text-green-400" />
+            <span className="text-xs font-medium">Verified</span>
+          </motion.div>
+        </motion.div>
+
+        {/* Floating score badge */}
+        <motion.div
+          initial={{ opacity: 0, scale: 0.8 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ delay: 1, type: "spring", stiffness: 300, damping: 20 }}
+          className="absolute -left-4 bottom-12"
+        >
+          <motion.div
+            animate={{ y: [0, -5, 0] }}
+            transition={{ duration: 3.5, repeat: Infinity, ease: "easeInOut", delay: 0.5 }}
+            className="rounded-xl border border-border bg-surface/90 backdrop-blur-xl px-3 py-2 shadow-lg"
+          >
+            <p className="text-xs text-muted-foreground">Confidence</p>
+            <p className="text-sm font-bold text-primary">98%</p>
+          </motion.div>
+        </motion.div>
+
+        {/* Decorative ring */}
+        <motion.div
+          className="absolute -inset-4 rounded-3xl border border-primary/10"
+          animate={{ scale: [1, 1.05, 1], opacity: [0.3, 0.6, 0.3] }}
+          transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
+        />
+      </motion.div>
+    </div>
+  );
+}
+
 export default function Landing() {
   const { startDemo } = useAuth();
   const { error } = useToast();
@@ -274,91 +361,99 @@ export default function Landing() {
 
         <motion.div
           style={{ y: heroY, opacity: heroOpacity }}
-          className="relative z-10 min-h-screen flex flex-col items-center justify-center py-16 px-4 sm:px-6 lg:px-8"
+          className="relative z-10 min-h-screen flex items-center py-16 px-4 sm:px-6 lg:px-8"
         >
-          <motion.div
-            initial={{ opacity: 0, y: 32 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
-            className="text-center"
-          >
+          <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-12 items-center w-full">
+            {/* Left: Quote + CTA */}
             <motion.div
-              initial={{ opacity: 0, scale: 0.9 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ type: "spring", stiffness: 380, damping: 32 }}
-              className="inline-flex items-center gap-2 rounded-full border border-border bg-surface/80 px-4 py-1.5 text-xs font-medium text-muted-foreground shadow-sm mb-6"
-            >
-              <Sparkles className="size-3 text-accent" />
-              Source-grounded AI study workspace
-            </motion.div>
-
-            <motion.h1
-              initial={{ opacity: 0, y: 20 }}
+              initial={{ opacity: 0, y: 32 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ type: "spring", stiffness: 380, damping: 32, delay: 0.1 }}
-              className="text-4xl sm:text-5xl lg:text-6xl font-extrabold leading-[1.1] tracking-tight text-white max-w-4xl mx-auto"
+              transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
+              className="text-center lg:text-left"
             >
-              Every answer,{" "}
-              <span className="relative inline-block">
-                <span className="bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">cited</span>
-                <motion.span
-                  className="absolute -bottom-1 left-0 right-0 h-0.5 bg-gradient-to-r from-primary to-accent rounded-full"
-                  initial={{ scaleX: 0 }}
-                  animate={{ scaleX: 1 }}
-                  transition={{ delay: 0.5, duration: 0.8, ease: "easeOut" }}
-                />
-              </span>
-              {" "}to your sources.
-            </motion.h1>
+              <motion.div
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ type: "spring", stiffness: 380, damping: 32 }}
+                className="inline-flex items-center gap-2 rounded-full border border-border bg-surface/80 px-4 py-1.5 text-xs font-medium text-muted-foreground shadow-sm mb-6"
+              >
+                <Sparkles className="size-3 text-accent" />
+                Source-grounded AI study workspace
+              </motion.div>
 
-            <motion.p
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ type: "spring", stiffness: 380, damping: 32, delay: 0.2 }}
-              className="mt-6 text-base sm:text-lg max-w-2xl text-pretty text-muted-foreground leading-relaxed mx-auto"
-            >
-              Upload documents, ask questions, get answers with exact citations. Generate study material, review with spaced repetition, and plan with an AI that asks permission first.
-            </motion.p>
+              <motion.h1
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ type: "spring", stiffness: 380, damping: 32, delay: 0.1 }}
+                className="text-4xl sm:text-5xl lg:text-6xl font-extrabold leading-[1.1] tracking-tight text-white"
+              >
+                Every answer,{" "}
+                <span className="relative inline-block">
+                  <span className="bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">cited</span>
+                  <motion.span
+                    className="absolute -bottom-1 left-0 right-0 h-0.5 bg-gradient-to-r from-primary to-accent rounded-full"
+                    initial={{ scaleX: 0 }}
+                    animate={{ scaleX: 1 }}
+                    transition={{ delay: 0.5, duration: 0.8, ease: "easeOut" }}
+                  />
+                </span>
+                {" "}to your sources.
+              </motion.h1>
 
-            {/* CTA Buttons */}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ type: "spring", stiffness: 380, damping: 32, delay: 0.3 }}
-              className="mt-8 flex flex-col sm:flex-row gap-3 justify-center"
-            >
-              <Button variant="gradient" size="lg" onClick={() => launchDemo(false)} disabled={launching}>
-                <GraduationCap className="size-4" />
-                {launching ? "Preparing demo…" : "Try the demo workspace"}
-              </Button>
-              <Link to="/auth">
-                <Button variant="outline" size="lg">
-                  Sign in <ChevronRight className="size-4" />
+              <motion.p
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ type: "spring", stiffness: 380, damping: 32, delay: 0.2 }}
+                className="mt-6 text-base sm:text-lg max-w-xl text-pretty text-muted-foreground leading-relaxed mx-auto lg:mx-0"
+              >
+                Upload documents, ask questions, get answers with exact citations. Generate study material, review with spaced repetition, and plan with an AI that asks permission first.
+              </motion.p>
+
+              {/* CTA Buttons */}
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ type: "spring", stiffness: 380, damping: 32, delay: 0.3 }}
+                className="mt-8 flex flex-col sm:flex-row gap-3 justify-center lg:justify-start"
+              >
+                <Button variant="gradient" size="lg" onClick={() => launchDemo(false)} disabled={launching}>
+                  <GraduationCap className="size-4" />
+                  {launching ? "Preparing demo…" : "Try the demo workspace"}
                 </Button>
-              </Link>
+                <Link to="/auth">
+                  <Button variant="outline" size="lg">
+                    Sign in <ChevronRight className="size-4" />
+                  </Button>
+                </Link>
+              </motion.div>
+
+              {/* Three Pillars */}
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ type: "spring", stiffness: 380, damping: 32, delay: 0.4 }}
+                className="mt-12 grid grid-cols-3 gap-3 sm:gap-4 max-w-lg w-full mx-auto lg:mx-0"
+              >
+                {PILLARS.map(({ icon: Icon, label, desc }) => (
+                  <motion.div
+                    key={label}
+                    whileHover={{ y: -4, scale: 1.02 }}
+                    transition={{ type: "spring", stiffness: 400, damping: 25 }}
+                    className="group rounded-2xl border border-border bg-surface/80 p-4 backdrop-blur cursor-default"
+                  >
+                    <Icon className="size-5 group-hover:text-primary mb-2 block transition-colors" />
+                    <p className="text-sm font-medium group-hover:text-primary transition-colors">{label}</p>
+                    <p className="text-xs text-muted-foreground line-clamp-2 mt-0.5">{desc}</p>
+                  </motion.div>
+                ))}
+              </motion.div>
             </motion.div>
 
-            {/* Three Pillars */}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ type: "spring", stiffness: 380, damping: 32, delay: 0.4 }}
-              className="mt-12 grid grid-cols-3 gap-3 sm:gap-4 max-w-lg w-full mx-auto"
-            >
-              {PILLARS.map(({ icon: Icon, label, desc }) => (
-                <motion.div
-                  key={label}
-                  whileHover={{ y: -4, scale: 1.02 }}
-                  transition={{ type: "spring", stiffness: 400, damping: 25 }}
-                  className="group rounded-2xl border border-border bg-surface/80 p-4 backdrop-blur cursor-default"
-                >
-                  <Icon className="size-5 group-hover:text-primary mb-2 block transition-colors" />
-                  <p className="text-sm font-medium group-hover:text-primary transition-colors">{label}</p>
-                  <p className="text-xs text-muted-foreground line-clamp-2 mt-0.5">{desc}</p>
-                </motion.div>
-              ))}
-            </motion.div>
-          </motion.div>
+            {/* Right: 3D Visual */}
+            <div className="hidden lg:block h-[500px]">
+              <HeroVisual />
+            </div>
+          </div>
         </motion.div>
 
         {/* Scroll indicator */}
@@ -495,6 +590,97 @@ export default function Landing() {
             </motion.li>
           ))}
         </ol>
+      </section>
+
+      {/* ================= TESTIMONIALS ================= */}
+      <section className="mx-auto max-w-7xl px-6 py-16 sm:px-8 lg:px-12">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          className="text-center mb-12"
+        >
+          <h2 className="text-3xl sm:text-4xl font-bold tracking-tight">
+            Loved by students
+          </h2>
+          <p className="mt-4 max-w-2xl mx-auto text-base text-muted-foreground">
+            See how StudySpace helps students study smarter with AI-powered citations
+          </p>
+        </motion.div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 max-w-4xl mx-auto">
+          {[
+            { name: "Priya S.", role: "Medical Student", quote: "The citation feature alone saved hours of my study time. Every answer links back to the exact passage." },
+            { name: "James K.", role: "CS Major", quote: "FSRS scheduling actually works. My retention improved 40% in the first month of using StudySpace." },
+            { name: "Aisha M.", role: "Law Student", quote: "The AI planner asks permission before committing to my schedule. Finally, an AI that respects my time." },
+          ].map((t, i) => (
+            <motion.div
+              key={t.name}
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ delay: i * 0.1 }}
+              whileHover={{ y: -4 }}
+              className="rounded-2xl border border-border bg-surface/80 p-5"
+            >
+              <p className="text-sm text-muted-foreground italic">"{t.quote}"</p>
+              <div className="mt-4 flex items-center gap-3">
+                <div className="brand-gradient flex size-8 items-center justify-center rounded-full text-xs font-bold text-white">
+                  {t.name[0]}
+                </div>
+                <div>
+                  <p className="text-sm font-semibold">{t.name}</p>
+                  <p className="text-xs text-muted-foreground">{t.role}</p>
+                </div>
+              </div>
+            </motion.div>
+          ))}
+        </div>
+      </section>
+
+      {/* ================= COMPARISON ================= */}
+      <section className="mx-auto max-w-7xl px-6 py-16 sm:px-8 lg:px-12">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          className="text-center mb-12"
+        >
+          <h2 className="text-3xl sm:text-4xl font-bold tracking-tight">
+            Why StudySpace?
+          </h2>
+          <p className="mt-4 max-w-2xl mx-auto text-base text-muted-foreground">
+            See how we compare to traditional study methods
+          </p>
+        </motion.div>
+
+        <div className="max-w-3xl mx-auto rounded-2xl border border-border overflow-hidden">
+          <div className="grid grid-cols-3 bg-surface/50 p-4 text-sm font-semibold">
+            <div>Feature</div>
+            <div className="text-center">Traditional</div>
+            <div className="text-center text-primary">StudySpace</div>
+          </div>
+          {[
+            { feature: "Source citations", traditional: "❌ Manual", study: "✅ Automatic" },
+            { feature: "Spaced repetition", traditional: "❌ Paper cards", study: "✅ FSRS algorithm" },
+            { feature: "AI planning", traditional: "❌ None", study: "✅ With approval" },
+            { feature: "Focus tracking", traditional: "❌ None", study: "✅ Built-in" },
+            { feature: "Progress insights", traditional: "❌ None", study: "✅ Real-time" },
+          ].map((row, i) => (
+            <motion.div
+              key={row.feature}
+              initial={{ opacity: 0, x: -20 }}
+              whileInView={{ opacity: 1, x: 0 }}
+              viewport={{ once: true }}
+              transition={{ delay: i * 0.05 }}
+              className="grid grid-cols-3 p-4 border-t border-border text-sm"
+            >
+              <div className="font-medium">{row.feature}</div>
+              <div className="text-center text-muted-foreground">{row.traditional}</div>
+              <div className="text-center text-primary font-medium">{row.study}</div>
+            </motion.div>
+          ))}
+        </div>
       </section>
 
       {/* ================= CTA SECTION ================= */}
