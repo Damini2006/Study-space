@@ -2,13 +2,48 @@
 
 from __future__ import annotations
 
+import hashlib
+import math
+import re
+
 import litellm
 
 from studyspace.config import get_settings
 
+# Offline fallback: no API key, no network, deterministic. Selected by setting
+# EMBEDDING_MODEL=local-hash.
+LOCAL_MODEL = "local-hash"
+
+_TOKEN_RE = re.compile(r"[a-z0-9]+")
+
 
 class EmbeddingError(RuntimeError):
     pass
+
+
+def _local_embed(text: str, dim: int) -> list[float]:
+    """Feature-hashed bag-of-n-grams embedding, L2-normalised.
+
+    Similar wording lands in the same buckets, so cosine similarity still ranks
+    related passages together — enough for retrieval when no embedding API is
+    reachable. Deterministic across processes/machines.
+    """
+    vec = [0.0] * dim
+    tokens = _TOKEN_RE.findall(text.lower())
+    grams = list(tokens)
+    grams += [f"{a} {b}" for a, b in zip(tokens, tokens[1:])]
+
+    for gram in grams:
+        digest = hashlib.md5(gram.encode("utf-8")).digest()
+        idx = int.from_bytes(digest[:4], "big") % dim
+        sign = 1.0 if digest[4] & 1 else -1.0
+        # Sub-linear term frequency damping keeps long passages from dominating.
+        vec[idx] += sign
+
+    norm = math.sqrt(sum(v * v for v in vec))
+    if norm:
+        vec = [v / norm for v in vec]
+    return vec
 
 
 async def embed_texts(texts: list[str]) -> list[list[float]]:
@@ -16,7 +51,11 @@ async def embed_texts(texts: list[str]) -> list[list[float]]:
     if not texts:
         return []
     settings = get_settings()
-    kwargs: dict = {"model": settings.embedding_model, "input": texts}
+
+    if settings.embedding_model == LOCAL_MODEL:
+        return [_local_embed(t, settings.embedding_dim) for t in texts]
+
+    kwargs: dict = {"model": settings.embedding_model}
     if settings.litellm_api_key:
         kwargs["api_key"] = settings.litellm_api_key
     if settings.litellm_base_url:
@@ -27,7 +66,7 @@ async def embed_texts(texts: list[str]) -> list[list[float]]:
     for start in range(0, len(texts), batch_size):
         batch = texts[start : start + batch_size]
         try:
-            response = await litellm.aembedding(**kwargs, input=batch)
+            response = await litellm.aembedding(**{**kwargs, "input": batch})
         except Exception as exc:
             raise EmbeddingError(f"Embedding request failed: {exc}") from exc
         items = sorted(response.data, key=lambda d: d["index"])
