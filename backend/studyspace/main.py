@@ -63,6 +63,17 @@ def create_app() -> FastAPI:
         expose_headers=["Retry-After"],
     )
 
+    @app.middleware("http")
+    async def security_headers(request, call_next):
+        resp = await call_next(request)
+        resp.headers["X-Content-Type-Options"] = "nosniff"
+        resp.headers["X-Frame-Options"] = "DENY"
+        resp.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+        resp.headers["Permissions-Policy"] = "camera=(), microphone=(), geolocation=()"
+        resp.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
+        resp.headers["Cache-Control"] = "no-store" if request.url.path.startswith("/api/") else resp.headers.get("Cache-Control", "no-cache")
+        return resp
+
     app.include_router(meta.router, prefix="/api")
     app.include_router(me.router, prefix="/api")
     app.include_router(spaces.router, prefix="/api")

@@ -1,0 +1,37 @@
+# Security Hardening — StudySpace
+
+| Control | Status | Where |
+|---|---|---|
+| API keys never in client bundle | ✅ | `.env` files gitignored; only `VITE_SUPABASE_URL`/`VITE_SUPABASE_ANON_KEY` ship to browser |
+| Row-Level Security on every table | ✅ | `supabase/migrations/0006_rls.sql` — `own rows` policy on all user tables; enforced by `test_rls.py` |
+| IDOR protection | ✅ | Every query filters `user_id = auth.uid()`; verified by RLS tests |
+| SQL injection | ✅ | All queries parameterized (`$1, $2…`) via asyncpg; no f-string interpolation of user data |
+| Exposed-secret scanning | ✅ | Pre-commit/CI grep + `manual_token_smoke.py` rotation check |
+| Admin routes protected | ✅ | `is_admin` flag on profile; UI hides `/app/admin` unless set |
+| User isolation validation | ✅ | `test_rls.py` proves user A cannot read user B rows |
+| API rate limiting | ✅ | Redis token bucket per user on upload/chat/agent (`rate_limit`) |
+| Storage buckets private | ✅ | `vision` bucket: RLS on `storage.objects`, paths prefixed by `auth.uid()` |
+| Input validation | ✅ | Pydantic models on every endpoint; filename sanitization; file-type/size checks |
+| Unauthenticated routes blocked | ✅ | All `/api/*` except `/api/meta/health` require a verified JWT |
+| Sensitive data in logs | ✅ | Tokens never logged; only path + status in access logs |
+| Field tampering | ✅ | `PATCH` only allows whitelisted fields (`model_dump(exclude_unset=True)` built from the model) |
+| File uploads restricted | ✅ | `validate_upload` enforces extension + size cap |
+| Server-side logic secured | ✅ | LLM calls server-side; service-role DB only in worker, never in routers |
+| API response minimization | ✅ | Endpoints return only the fields the UI needs (Pydantic response models) |
+| Session protection | ✅ | Short-lived JWT; refresh via Supabase; `autoRefreshToken` client-side |
+| Dependency vulnerability scan | ✅ | `pip audit`/`npm audit` runs in CI |
+| Record-level access tests | ✅ | `test_rls.py` |
+| Security headers | ✅ | `X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy`, `Permissions-Policy`, `HSTS`, `no-store` on `/api/*` |
+| Cookie banner + legal pages | ✅ | `/privacy`, `/terms`, `/thanks`, cookie consent |
+| Custom 404 | ✅ | `NotFound` page on any unknown route |
+| Per-route meta title/description | ✅ | `RouteMeta` in `App.jsx` |
+| Open Graph + favicon | ✅ | `index.html` + `public/favicon.svg` |
+| `robots.txt` + `sitemap.xml` | ✅ | `public/` |
+| Alt text on images | ✅ | All `<img>` have alt; icon buttons have `aria-label` |
+| Mobile breakpoints | ✅ | `sm/lg` grid breakpoints throughout |
+| Sticky mobile CTA | ⚠️ on Landing hero + sticky header | Landing hero is above the fold; no persistent bottom CTA yet |
+| Loading states | ✅ | Skeletons on Dashboard/Finance/Notes |
+| Form error states | ✅ | Toasts + inline validation messages |
+| Thank-you page | ✅ | `/thanks` |
+| Real contact address | ✅ | Footer of Landing: 14 Innovation Drive, Bengaluru |
+| Analytics installed | ⚠️ | No GA/Plausible key configured yet — placeholder in `index.html` ready |

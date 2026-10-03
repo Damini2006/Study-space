@@ -359,7 +359,15 @@ export default function Landing() {
         </section>
       </main>
 
-      <footer className="border-t border-border bg-surface py-10">
+      {/* sticky mobile CTA — always visible on small screens */}
+      <div className="fixed inset-x-0 bottom-0 z-40 border-t border-border bg-surface/95 px-4 py-3 backdrop-blur lg:hidden">
+        <Button variant="gradient" className="w-full" onClick={() => launchDemo(false)} disabled={launching}>
+          <GraduationCap className="size-4" />
+          {launching ? "Preparing…" : "Try the demo workspace"}
+        </Button>
+      </div>
+
+      <footer className="border-t border-border bg-surface py-10 pb-24 lg:pb-10">
         <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-4 px-4 text-xs text-muted-foreground sm:flex-row">
           <div className="flex items-center gap-2">
             <span className="brand-gradient flex size-6 items-center justify-center rounded-md text-[10px] font-extrabold text-white">
