@@ -155,6 +155,9 @@ export default function Landing() {
           {/* ambient gradient orbs */}
           <div className="pointer-events-none absolute -top-32 left-1/2 h-[520px] w-[820px] -translate-x-1/2 rounded-full bg-gradient-to-br from-primary/25 via-accent/15 to-transparent blur-3xl" />
           <div className="pointer-events-none absolute right-[10%] top-56 h-72 w-72 rounded-full bg-primary/10 blur-3xl" />
+          {/* 3D orbit orbs (inspired by indoor-tech landing) */}
+          <div className="orbit-orb orbit-orb-2 pointer-events-none absolute -inset-0 rounded-full opacity-55 animate-orbit" />
+          <div className="orbit-orb pointer-events-none absolute inset-0 rounded-full opacity-40 animate-drift" />
 
           <div className="relative mx-auto max-w-4xl px-4 pb-16 pt-16 text-center sm:px-6 sm:pt-24">
             <motion.span

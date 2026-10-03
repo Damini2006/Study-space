@@ -242,6 +242,45 @@
     z-index: -1;
   }
 
+  /* --- 3D orbit orbs (inspired by indoor-tech landing) --- */
+  .orbit-orb {
+    position: fixed;
+    border-radius: 50%;
+    filter: blur(80px);
+    opacity: 0.6;
+    animation: orbit 20s ease-in-out infinite;
+    pointer-events: none;
+  }
+  @keyframes orbit {
+    0%, 100% { transform: translate(0, 0) scale(1); }
+    33% { transform: translate(30px, -50px) scale(1.1); }
+    66% { transform: translate(-20px, 40px) scale(0.9); }
+  }
+
+  /* secondary slowdrift orb */
+  .orbit-orb-2 {
+    animation-name: drift;
+    animation-duration: 25s;
+    animation-timing-function: ease-in-out;
+    animation-iteration-count: infinite;
+  }
+  @keyframes drift {
+    0%, 100% { transform: translate(0, 0); }
+    50% { transform: translate(80px, -30px); }
+  }
+
+  /* secondary slowdrift orb */
+  .orbit-orb-2 {
+    animation-name: drift;
+    animation-duration: 25s;
+    animation-timing-function: ease-in-out;
+    animation-iteration-count: infinite;
+  }
+  @keyframes drift {
+    0%, 100% { transform: translate(0, 0); }
+    50% { transform: translate(80px, -30px); }
+  }
+
   /* cross-fade surfaces when the theme changes */
   header, aside, main, section, article, footer, nav {
     transition: background-color var(--motion-base) ease, border-color var(--motion-base) ease;
