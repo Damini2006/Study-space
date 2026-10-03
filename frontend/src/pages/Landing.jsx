@@ -242,9 +242,9 @@ export default function Landing() {
               initial={{ x: 20, opacity: 0 }}
               animate={{ x: 0, opacity: 1 }}
               transition={{ type: "spring", stiffness: 400, damping: 30, delay: 0.1 }}
-              className="inline-flex items-center gap-2 rounded-2xl border border-border bg-surface/80 px-4 py-2 text-sm font-medium text-primary shadow-sm mb-4"
+              className="inline-flex items-center gap-2 rounded-2xl border border-border bg-surface/80 px-3.5 py-1.5 text-xs font-medium text-primary shadow-sm mb-2"
             >
-              <Sparkles className="size-3.5 text-accent" />
+              <Sparkles className="size-2.5 text-accent" />
               Source-grounded AI
             </motion.div>
 
@@ -252,7 +252,7 @@ export default function Landing() {
               initial={{ x: -20, opacity: 0 }}
               animate={{ x: 0, opacity: 1 }}
               transition={{ type: "spring", stiffness: 380, damping: 32, delay: 0.2 }}
-              className="mt-6 text-4xl sm:text-5xl lg:text-6xl font-extrabold leading-[1.1] tracking-tight text-white sm:text-center"
+              className="mt-4 text-3xl sm:text-4xl lg:text-5xl font-extrabold leading-[1.1] tracking-tight text-white sm:text-center"
             >
               Study from
               <span className="relative">
