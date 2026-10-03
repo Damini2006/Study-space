@@ -54,7 +54,6 @@ async def enqueue_ingest(
         title,
         pasted_text,
         _job_id=f"ingest:{source_id}",
-        _job_timeout=600,
     )
 
 

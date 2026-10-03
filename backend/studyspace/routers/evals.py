@@ -36,7 +36,7 @@ async def start_run(body: EvalRunCreate, db: DbDep, admin: AdminDep) -> EvalRunO
         queue = await get_queue()
         await queue.enqueue_job(
             "run_evals", str(row["id"]), admin.id,
-            _job_id=f"evals:{row['id']}", _job_timeout=3600,
+            _job_id=f"evals:{row['id']}",
         )
     except Exception:
         await db.execute(
