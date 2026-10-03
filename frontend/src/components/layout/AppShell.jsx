@@ -23,6 +23,8 @@ import {
   X,
   BarChart3,
   Flame,
+  Image,
+  Wallet,
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useTheme, THEMES } from "@/hooks/useTheme";
@@ -37,6 +39,8 @@ const NAV = [
   { to: "/app/planner", label: "Planner", icon: CalendarRange },
   { to: "/app/notes", label: "Notes", icon: FileText },
   { to: "/app/focus", label: "Focus", icon: Timer },
+  { to: "/app/vision", label: "Vision Board", icon: Image },
+  { to: "/app/finance", label: "Finance", icon: Wallet },
   { to: "/app/analytics", label: "Analytics", icon: BarChart3 },
   { to: "/app/settings", label: "Settings", icon: Settings },
 ];
@@ -66,7 +70,16 @@ export default function AppShell() {
   const navigate = useNavigate();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [themeMenu, setThemeMenu] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
   const palette = useCommandPalette();
+
+  // header gains a border/shadow once the page scrolls
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 4);
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
 
   // close mobile nav on navigation
   useEffect(() => {
@@ -85,7 +98,10 @@ export default function AppShell() {
     return () => document.removeEventListener("mousedown", handler);
   }, [themeMenu]);
 
-  const navLinks = (
+  // `animated` — only the visible sidebar should own the sliding pill;
+  // the mobile drawer (mounted over the hidden desktop sidebar) uses a
+  // plain active style so two layoutId owners never coexist.
+  const buildNav = (animated) => (
     <nav className="flex flex-col gap-1" aria-label="Main navigation">
       {NAV.map(({ to, label, icon: Icon }) => (
         <NavLink
@@ -93,15 +109,31 @@ export default function AppShell() {
           to={to}
           className={({ isActive }) =>
             cn(
-              "flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
+              "relative flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
               isActive
-                ? "bg-primary/10 text-primary"
-                : "text-muted-foreground hover:bg-surface-2 hover:text-foreground"
+                ? animated
+                  ? "text-primary"
+                  : "bg-primary/10 text-primary"
+                : "text-muted-foreground hover:text-foreground"
             )
           }
         >
-          <Icon className="size-4" aria-hidden />
-          {label}
+          {({ isActive }) => (
+            <>
+              {isActive && animated && (
+                <motion.span
+                  layoutId="nav-active-pill"
+                  className="absolute inset-0 rounded-lg bg-primary/10"
+                  transition={{ type: "spring", stiffness: 420, damping: 34 }}
+                  aria-hidden
+                />
+              )}
+              <span className="relative flex items-center gap-2.5">
+                <Icon className="size-4" aria-hidden />
+                {label}
+              </span>
+            </>
+          )}
         </NavLink>
       ))}
       {profile?.is_admin && (
@@ -109,17 +141,37 @@ export default function AppShell() {
           to="/app/admin"
           className={({ isActive }) =>
             cn(
-              "flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
-              isActive ? "bg-primary/10 text-primary" : "text-muted-foreground hover:bg-surface-2 hover:text-foreground"
+              "relative flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
+              isActive
+                ? animated
+                  ? "text-primary"
+                  : "bg-primary/10 text-primary"
+                : "text-muted-foreground hover:text-foreground"
             )
           }
         >
-          <ShieldCheck className="size-4" aria-hidden />
-          Admin / Evals
+          {({ isActive }) => (
+            <>
+              {isActive && animated && (
+                <motion.span
+                  layoutId="nav-active-pill"
+                  className="absolute inset-0 rounded-lg bg-primary/10"
+                  transition={{ type: "spring", stiffness: 420, damping: 34 }}
+                  aria-hidden
+                />
+              )}
+              <span className="relative flex items-center gap-2.5">
+                <ShieldCheck className="size-4" aria-hidden />
+                Admin / Evals
+              </span>
+            </>
+          )}
         </NavLink>
       )}
     </nav>
   );
+
+  const navLinks = buildNav(true);
 
   return (
     <div className="min-h-screen bg-background lg:grid lg:grid-cols-[240px_1fr]">
@@ -204,7 +256,10 @@ export default function AppShell() {
       {/* Main column */}
       <div className="flex min-w-0 flex-col">
         {/* Mobile top bar */}
-        <header className="sticky top-0 z-30 flex items-center gap-2 border-b border-border bg-surface/85 px-3 py-2.5 backdrop-blur lg:hidden">
+        <header className={cn(
+          "sticky top-0 z-30 flex items-center gap-2 border-b px-3 py-2.5 backdrop-blur transition-shadow lg:hidden",
+          scrolled ? "border-border bg-surface/85 shadow-[var(--shadow-sm)]" : "border-transparent bg-surface/95"
+        )}>
           <button
             type="button"
             onClick={() => setMobileOpen(true)}
@@ -228,7 +283,10 @@ export default function AppShell() {
         </header>
 
         {/* Desktop title bar (subtle) */}
-        <header className="hidden items-center gap-3 border-b border-border bg-surface px-6 py-3 lg:flex">
+        <header className={cn(
+          "hidden items-center gap-3 border-b bg-surface px-6 py-3 backdrop-blur transition-all lg:flex",
+          scrolled ? "border-border shadow-[var(--shadow-sm)]" : "border-transparent"
+        )}>
           <div className="min-w-0 flex-1">
             <p className="text-xs text-muted-foreground">
               {isDemo ? (
@@ -260,7 +318,17 @@ export default function AppShell() {
         </header>
 
         <main className="min-w-0 flex-1 px-3 py-4 pb-24 lg:px-6 lg:pb-6">
-          <Outlet />
+          <AnimatePresence mode="wait" initial={false}>
+            <motion.div
+              key={location.pathname}
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -4 }}
+              transition={{ duration: 0.18, ease: "easeOut" }}
+            >
+              <Outlet />
+            </motion.div>
+          </AnimatePresence>
         </main>
 
         {/* Mobile bottom nav */}
@@ -316,7 +384,7 @@ export default function AppShell() {
                   <X className="size-4" />
                 </button>
               </div>
-              {navLinks}
+              {buildNav(false)}
               <div className="mt-4 border-t border-border pt-3">
                 <div className="text-xs font-medium text-muted-foreground">Theme</div>
                 <div className="mt-2 grid grid-cols-4 gap-1">
