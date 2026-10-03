@@ -11,6 +11,8 @@ import Planner from "@/pages/Planner";
 import Notes from "@/pages/Notes";
 import Focus from "@/pages/Focus";
 import Analytics from "@/pages/Analytics";
+import VisionBoard from "@/pages/VisionBoard";
+import Finance from "@/pages/Finance";
 import Settings from "@/pages/Settings";
 import AdminEvals from "@/pages/AdminEvals";
 import AuthCallback from "@/pages/AuthCallback";
@@ -59,6 +61,8 @@ export default function App() {
         <Route path="planner" element={<Planner />} />
         <Route path="notes" element={<Notes />} />
         <Route path="focus" element={<Focus />} />
+        <Route path="vision" element={<VisionBoard />} />
+        <Route path="finance" element={<Finance />} />
         <Route path="analytics" element={<Analytics />} />
         <Route path="settings" element={<Settings />} />
         <Route path="admin" element={<AdminEvals />} />

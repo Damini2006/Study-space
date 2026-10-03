@@ -81,6 +81,22 @@ export const habitsApi = {
   toggleLog: (id, body) => api.post(`/habits/${id}/logs`, body ?? {}),
 };
 
+export const visionApi = {
+  list: () => api.get("/vision"),
+  create: (body) => api.post("/vision", body),
+  upload: (formData) => api.upload("/vision/upload", formData),
+  update: (id, body) => api.patch(`/vision/${id}`, body),
+  delete: (id) => api.delete(`/vision/${id}`),
+};
+
+export const financeApi = {
+  transactions: (days = 90) => api.get(`/finance/transactions?days=${days}`),
+  create: (body) => api.post("/finance/transactions", body),
+  update: (id, body) => api.patch(`/finance/transactions/${id}`, body),
+  delete: (id) => api.delete(`/finance/transactions/${id}`),
+  summary: (days = 30) => api.get(`/finance/summary?days=${days}`),
+};
+
 export const analyticsApi = {
   summary: (days = 120) => api.get(`/analytics/summary?days=${days}`),
 };
