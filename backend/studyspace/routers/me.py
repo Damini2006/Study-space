@@ -17,6 +17,7 @@ _EXPORT_TABLES = [
     "claims", "studio_outputs", "cards", "card_state", "review_logs", "notes",
     "plans", "plan_tasks", "planner_runs", "focus_sessions", "habits",
     "habit_logs", "mcp_tokens", "eval_runs", "eval_results",
+    "vision_items", "transactions",
 ]
 
 
@@ -31,7 +32,7 @@ async def export_data(db: DbDep, user: UserDep) -> JSONResponse:
     for table in _EXPORT_TABLES:
         if table == "profiles":
             rows = await db.fetch(
-                "select * from public.profiles where user_id = auth.uid()"
+                "select * from public.profiles where id = auth.uid()"
             )
         else:
             rows = await db.fetch(f"select * from public.{table} where user_id = auth.uid()")

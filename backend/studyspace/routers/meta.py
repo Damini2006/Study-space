@@ -20,19 +20,19 @@ async def health() -> dict:
 @router.get("/me")
 async def me(user: UserDep, db: DbDep) -> dict:
     row = await db.fetchrow(
-        "select user_id, display_name, theme, settings, created_at from public.profiles where user_id = $1",
+        "select id, display_name, theme, settings, created_at from public.profiles where id = $1",
         user.id,
     )
     if row is None:
         # profile trigger may not have fired (e.g. seeded users) — create it
         row = await db.fetchrow(
-            "insert into public.profiles (user_id, display_name) values ($1, $2) "
-            "on conflict (user_id) do update set display_name = excluded.display_name "
-            "returning user_id, display_name, theme, settings, created_at",
+            "insert into public.profiles (id, display_name) values ($1, $2) "
+            "on conflict (id) do update set display_name = excluded.display_name "
+            "returning id, display_name, theme, settings, created_at",
             user.id, (user.email or "Student").split("@")[0][:40],
         )
     return {
-        "id": str(row["user_id"]),
+        "id": str(row["id"]),
         "display_name": row["display_name"],
         "theme": row["theme"],
         "settings": json.loads(row["settings"]) if isinstance(row["settings"], str) else row["settings"],
@@ -56,16 +56,16 @@ async def update_me(user: UserDep, db: DbDep, body: dict) -> dict:
     if allowed:
         sets = ", ".join(f"{k} = ${i + 2}" for i, k in enumerate(allowed))
         await db.execute(
-            f"update public.profiles set {sets} where user_id = $1",
+            f"update public.profiles set {sets} where id = $1",
             user.id,
             *allowed.values(),
         )
     row = await db.fetchrow(
-        "select user_id, display_name, theme, settings from public.profiles where user_id = $1",
+        "select id, display_name, theme, settings from public.profiles where id = $1",
         user.id,
     )
     return {
-        "id": str(row["user_id"]),
+        "id": str(row["id"]),
         "display_name": row["display_name"],
         "theme": row["theme"],
         "settings": json.loads(row["settings"]) if isinstance(row["settings"], str) else row["settings"],

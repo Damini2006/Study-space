@@ -271,6 +271,34 @@ async def seed_demo(user_id: str, conn) -> dict:
             minutes, space_id, order,
         )
 
+    # vision board (sticky goals) + finance history so the life modules demo well
+    vision_seed = [
+        ("Top 5 in class this term 🎯", "#FFF9B3", 40, 36),
+        ("Ship my first project", "#FFD6E7", 300, 84),
+        ("Study 25h / week", "#D9F5E5", 96, 220),
+    ]
+    for i, (text, color, x, y) in enumerate(vision_seed):
+        await conn.execute(
+            "insert into public.vision_items (user_id, kind, text, color, x, y, z_index) "
+            "values ($1, 'sticky', $2, $3, $4, $5, $6)",
+            user_id, text, color, x, y, i,
+        )
+
+    tx_seed = [
+        ("Cafecito latte", 180, "expense", "Food", 0),
+        ("Room rent share", 6500, "expense", "Housing", -2),
+        ("Tuition refund", 3000, "income", "Income", -4),
+        ("Bus pass", 450, "expense", "Transport", -6),
+        ("Notebook + pens", 220, "expense", "Supplies", -9),
+        ("Freelance logo gig", 2500, "income", "Income", -12),
+    ]
+    for title, amount, kind, category, offset in tx_seed:
+        await conn.execute(
+            "insert into public.transactions (user_id, title, amount, kind, category, spent_on) "
+            "values ($1, $2, $3, $4, $5, $6)",
+            user_id, title, amount, kind, category, date.today() + timedelta(days=offset),
+        )
+
     queued = 0
     for job in ingest_jobs:
         try:
@@ -298,5 +326,6 @@ async def reset_user_data(user_id: str, conn) -> None:
     for table in (
         "planner_runs", "plans", "notes", "habits", "focus_sessions",
         "studio_outputs", "chat_threads", "spaces", "cards", "eval_results",
+        "vision_items", "transactions",
     ):
         await conn.execute(f"delete from public.{table} where user_id = $1", user_id)
