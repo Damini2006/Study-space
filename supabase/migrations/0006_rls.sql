@@ -9,7 +9,7 @@ do $$
 declare
   tbl text;
   tables constant text[] := array[
-    'profiles', 'spaces', 'sources', 'chunks',
+    'spaces', 'sources', 'chunks',
     'chat_threads', 'messages', 'citations', 'claims',
     'studio_outputs', 'cards', 'card_state', 'review_logs',
     'notes', 'plans', 'plan_tasks', 'planner_runs',
@@ -26,6 +26,11 @@ begin
       tbl
     );
   end loop;
+
+  -- profiles is keyed by `id` (the auth.users uuid), not `user_id`.
+  execute 'alter table public.profiles enable row level security';
+  execute 'drop policy if exists "own rows" on public.profiles';
+  execute 'create policy "own rows" on public.profiles for all using (id = auth.uid()) with check (id = auth.uid())';
 end $$;
 
 -- The API layer connects as an unprivileged role and injects the verified
