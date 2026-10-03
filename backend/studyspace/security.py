@@ -40,6 +40,15 @@ def _expected_claims(settings: Settings) -> tuple[str, str]:
     return settings.jwt_issuer, settings.supabase_jwt_audience
 
 
+def _issuer_candidates(issuer: str) -> set[str]:
+    """Accept both loopback spellings — the browser may mint tokens from either."""
+    variants = {issuer}
+    for host in ("localhost", "127.0.0.1"):
+        variants.add(issuer.replace("//localhost:", f"//{host}:"))
+        variants.add(issuer.replace("//127.0.0.1:", f"//{host}:"))
+    return {v.rstrip("/") for v in variants}
+
+
 async def _fetch_jwks(settings: Settings) -> dict[str, Any]:
     """Fetch Supabase's public JWKS (RS256 projects) with a small in-process cache."""
     global _jwks_cache
@@ -85,7 +94,7 @@ async def verify_token(token: str, settings: Settings | None = None) -> Verified
         key = None
         for jwk_data in jwks.get("keys", []):
             if kid is None or jwk_data.get("kid") == kid:
-                key = jwk.construct(jwk_data)
+                key = jwk.import_key(jwk_data)
                 break
         if key is None:
             raise AuthError("No matching verification key")
@@ -93,7 +102,7 @@ async def verify_token(token: str, settings: Settings | None = None) -> Verified
         raise AuthError(f"Unsupported token algorithm: {alg}")
 
     try:
-        decoded = jose_jwt.decode(token, key)
+        decoded = jose_jwt.decode(token, key, algorithms=[alg])
     except JoseError as exc:
         raise AuthError("Invalid token") from exc
 
@@ -101,7 +110,7 @@ async def verify_token(token: str, settings: Settings | None = None) -> Verified
     now = int(time.time())
     if claims.get("exp", 0) < now:
         raise AuthError("Token expired")
-    if issuer and claims.get("iss") not in (issuer, issuer.rstrip("/") + "/"):
+    if issuer and claims.get("iss") not in _issuer_candidates(issuer):
         raise AuthError("Invalid token issuer")
     token_aud = claims.get("aud")
     if token_aud is not None:
