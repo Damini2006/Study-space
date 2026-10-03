@@ -78,13 +78,13 @@ export default function AuthPage() {
       <div className="w-full max-w-sm grid grid-cols-2 gap-6 items-start">
         {/* 3D Left Panel */}
         <motion.div
-          className="relative group flex-shrink-0 w-24 h-96 flex items-center justify-center rounded-2xl bg-gradient-to-b from-primary/20 to-secondary/10 border border-primary/20 perspective-1000 overflow-hidden transition-all duration-500"
+          className="relative group flex-shrink-0 w-24 h-96 flex items-center justify-center rounded-2xl bg-gradient-to-b from-primary/20 to-accent/10 border border-primary/20 perspective-1000 overflow-hidden transition-all duration-500"
           whileHover={{ rotateY: 180 }}
           whileTap={{ scale: 0.95 }}
         >
           <motion.span
             className="relative w-full h-full transform rotate-y-180 transition-transform duration-500 group-hover:hover-rotate-y-0"
-            style={{ fontSize: 48 }}
+            style={{ fontSize: 64 }}
             >SS</motion.span>
         </motion.div>
 

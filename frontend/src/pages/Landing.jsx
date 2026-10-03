@@ -252,7 +252,7 @@ export default function Landing() {
               initial={{ x: -20, opacity: 0 }}
               animate={{ x: 0, opacity: 1 }}
               transition={{ type: "spring", stiffness: 380, damping: 32, delay: 0.2 }}
-              className="mt-4 text-3xl sm:text-4xl lg:text-5xl font-extrabold leading-[1.1] tracking-tight text-white sm:text-center"
+              className="mt-4 text-4xl sm:text-5xl lg:text-6xl font-extrabold leading-[1.05] tracking-tight text-white sm:text-center"
             >
               Study from
               <span className="relative">
@@ -266,7 +266,7 @@ export default function Landing() {
             <motion.div
               whileInView={{ opacity: 1, x: 0 }}
               transition={{ type: "spring", stiffness: 300, damping: 20 }}
-              className="mt-8 flex h-0.5 w-full bg-gradient-to-r from-primary to-accent transition-all duration-500 sm:w-40 lg:w-60"
+              className="mt-6 flex h-0.5 w-full bg-gradient-to-r from-primary to-accent transition-all duration-500 sm:w-40 lg:w-60 opacity-0 sm:opacity-100"
             />
 
             <motion.p
