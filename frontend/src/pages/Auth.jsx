@@ -368,7 +368,8 @@ export default function AuthPage() {
       {/* ---------------- Content row: left scene + right form ---------------- */}
       <div className="flex min-h-0 flex-1">
       {/* ---------------- Left panel: 3D scene ---------------- */}
-      <aside className="relative hidden w-[46%] shrink-0 flex-col overflow-hidden border-r border-border lg:flex">
+      <aside className="relative hidden w-[46%] shrink-0 flex-col overflow-hidden lg:flex">
+        <div className="absolute inset-y-0 right-0 w-px bg-gradient-to-b from-transparent via-border to-transparent" />
         <div className="relative z-10 flex h-full min-h-0 flex-col gap-5 overflow-y-auto px-8 py-7 xl:px-11">
           {/* the citation scene — ScenePanel runs its own entrance, and the
               panel is CSS-only so there is never a chunk to wait for */}
