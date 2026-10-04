@@ -651,3 +651,30 @@
 @keyframes auth-shimmer {
   100% { transform: translateX(100%); }
 }
+
+/* Rule grid behind the hero. The 28px offset keeps a horizontal line from
+   landing on y=0, which was drawing a pale hairline across the very top
+   edge of the page. */
+.hero-grid {
+  background-position: 28px 28px;
+}
+
+/* Feature ticker: fade the edges with a mask instead of hard-clipping. */
+.marquee-fade {
+  --marquee-fade: clamp(56px, 9vw, 180px);
+  -webkit-mask-image: linear-gradient(
+    to right,
+    transparent 0,
+    #000 var(--marquee-fade),
+    #000 calc(100% - var(--marquee-fade)),
+    transparent 100%
+  );
+  mask-image: linear-gradient(
+    to right,
+    transparent 0,
+    #000 var(--marquee-fade),
+    #000 calc(100% - var(--marquee-fade)),
+    transparent 100%
+  );
+}
+

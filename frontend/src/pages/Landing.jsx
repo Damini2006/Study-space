@@ -65,8 +65,8 @@ const CAPABILITIES = [
   {
     icon: CalendarCheck,
     kicker: "Scheduling",
-    title: "FSRS, not a fake progress bar",
-    body: "Real spaced-repetition scheduling with per-card difficulty, retention targets and a due queue you can actually finish in a sitting.",
+    title: "Spaced repetition, not a fake progress bar",
+    body: "Real spaced-repetition scheduling — the FSRS algorithm, which works out when each card is about to be forgotten — with per-card difficulty, retention targets and a due queue you can actually finish in a sitting.",
     meta: "Per-card difficulty tracking",
   },
   {
@@ -101,7 +101,7 @@ const STEPS = [
   {
     n: "03",
     title: "Let the schedule do the remembering",
-    body: "Anything worth keeping becomes a card. FSRS decides when you see it again, and the dashboard tells you when the queue is genuinely clear.",
+    body: "Anything worth keeping becomes a card. Spaced repetition decides when you see it again, and the dashboard tells you when the queue is genuinely clear.",
     icon: Flame,
   },
 ];
@@ -159,12 +159,22 @@ const FAQS = [
 /*  Small pieces                                                       */
 /* ------------------------------------------------------------------ */
 
-function Kicker({ index, children, className }) {
+function Kicker({ index, children, className, rule = false }) {
   return (
-    <div className={cn("flex items-center gap-3 font-mono text-[11px] uppercase tracking-[0.18em] text-muted-foreground", className)}>
-      <span className="text-primary">{index}</span>
-      <span className="h-px w-8 bg-border" />
-      <span>{children}</span>
+    <div
+      className={cn(
+        "flex items-center gap-3 text-[15px] font-medium leading-none",
+        className
+      )}
+    >
+      <span className="font-semibold text-primary">{index}</span>
+      <span aria-hidden="true" className="text-muted-foreground/60">
+        &mdash;
+      </span>
+      <span className="text-foreground">{children}</span>
+      {rule && (
+        <span aria-hidden="true" className="h-px min-w-10 flex-1 bg-border" />
+      )}
     </div>
   );
 }
@@ -203,15 +213,15 @@ function ProductWindow() {
       ref={ref}
       onMouseMove={onMove}
       onMouseLeave={() => { mx.set(0); my.set(0); }}
-      style={{ perspective: 1200 }}
-      className="relative"
+      style={{ perspective: 1400 }}
+      className="relative flex h-full flex-col"
     >
       <motion.div
         style={{ rotateX: rx, rotateY: ry, transformStyle: "preserve-3d" }}
         initial={{ opacity: 0, y: 28 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.8, delay: 0.25, ease: [0.22, 1, 0.36, 1] }}
-        className="relative rounded-xl border border-border bg-card shadow-[0_28px_70px_-30px_rgba(15,23,42,0.45)]"
+        className="relative flex min-h-0 flex-1 flex-col rounded-2xl border border-border bg-card shadow-[0_28px_70px_-30px_rgba(15,23,42,0.45)]"
       >
         {/* chrome */}
         <div className="flex items-center gap-2 border-b border-border px-3.5 py-2.5">
@@ -229,45 +239,52 @@ function ProductWindow() {
         </div>
 
         {/* conversation */}
-        <div className="space-y-3 px-3.5 py-3.5">
-          <div className="flex justify-end">
-            <p className="max-w-[85%] rounded-lg rounded-br-sm bg-primary/10 px-3 py-2 text-[13px] leading-snug">
+        <div className="flex flex-1 flex-col justify-center gap-3.5 px-4 py-4 sm:px-5">
+          <div className="flex items-end justify-end gap-2.5">
+            <p className="max-w-[82%] rounded-2xl rounded-br-md bg-primary/12 px-3.5 py-2.5 text-[clamp(13px,0.78rem+0.2vw,15px)] leading-snug text-foreground">
               Why does entropy increase in an adiabatic expansion?
             </p>
+            <span className="flex size-8 shrink-0 items-center justify-center rounded-full border border-border bg-primary/10 text-primary">
+              <GraduationCap className="size-4" />
+            </span>
           </div>
 
-          <div className="rounded-lg rounded-bl-sm border border-border bg-background px-3 py-2.5">
-            <p className="text-[13px] leading-relaxed text-foreground/90">
+          <div className="rounded-2xl rounded-tl-md border border-border bg-background px-3.5 py-3">
+            <div className="mb-2.5 flex items-center gap-2">
+              <span className="flex size-6 items-center justify-center rounded-full border border-primary/30 bg-primary/10 text-primary">
+                <Sparkles className="size-3.5" />
+              </span>
+              <span className="text-[11px] font-medium text-muted-foreground">StudySpace</span>
+            </div>
+            <p className="text-[clamp(13px,0.78rem+0.2vw,15px)] leading-relaxed text-foreground/90">
               Because no heat crosses the boundary, any work the gas does comes from its own internal
               energy. For an ideal gas that drops the temperature, and the number of accessible
               microstates falls while the entropy of the surroundings stays fixed.
-              <span className="ml-1 inline-flex translate-y-[1px] items-center gap-0.5 rounded border border-primary/30 bg-primary/10 px-1 py-px font-mono text-[9px] font-medium text-primary">
+              <span className="mx-0.5 inline-flex translate-y-[1px] items-center rounded-md border border-primary/35 bg-primary/12 px-1.5 py-0.5 align-middle text-[11px] font-semibold text-primary">
                 1
               </span>
-              <span className="ml-0.5 inline-flex translate-y-[1px] items-center gap-0.5 rounded border border-primary/30 bg-primary/10 px-1 py-px font-mono text-[9px] font-medium text-primary">
+              <span className="ml-0.5 inline-flex translate-y-[1px] items-center rounded-md border border-primary/35 bg-primary/12 px-1.5 py-0.5 align-middle text-[11px] font-semibold text-primary">
                 2
               </span>
             </p>
-            <div className="mt-2.5 flex items-center gap-2 border-t border-border pt-2.5">
-              <span className="flex items-center gap-1 font-mono text-[9px] uppercase tracking-wider" style={{ color: "var(--success)" }}>
-                <CircleCheck className="size-3" /> coverage 100%
+            <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-border pt-2.5 text-[11px]">
+              <span className="flex items-center gap-1 font-medium" style={{ color: "var(--success)" }}>
+                <CircleCheck className="size-3.5" /> Coverage 100%
               </span>
               <span className="h-3 w-px bg-border" />
-              <span className="font-mono text-[9px] uppercase tracking-wider text-muted-foreground">
-                p.14 · p.21
-              </span>
+              <span className="font-medium text-muted-foreground">p.14 &middot; p.21</span>
             </div>
           </div>
 
           {/* source strip */}
-          <div className="grid grid-cols-2 gap-2">
+          <div className="grid grid-cols-2 gap-3">
             {[["Passage 1", "p.14 \u00B7 \u00A73.2", 88], ["Passage 2", "p.21 \u00B7 worked ex.", 64]].map(([t, s, w], i) => (
-              <div key={t} className="rounded-md border border-border bg-background px-2.5 py-2">
+              <div key={t} className="rounded-xl border border-border bg-background px-3 py-2.5">
                 <div className="flex items-center justify-between">
-                  <span className="font-mono text-[9px] uppercase tracking-wider text-muted-foreground">{t}</span>
-                  <FileText className="size-3 text-primary/70" />
+                  <span className="text-[12px] font-medium text-foreground/85">{t}</span>
+                  <FileText className="size-3.5 text-primary/70" />
                 </div>
-                <div className="mt-1.5 h-1 rounded-full bg-muted">
+                <div className="mt-2 h-1.5 rounded-full bg-muted">
                   <motion.div
                     className="h-full rounded-full bg-primary"
                     initial={{ width: 0 }}
@@ -275,32 +292,37 @@ function ProductWindow() {
                     transition={{ duration: 0.9, delay: 0.7 + i * 0.15, ease: "easeOut" }}
                   />
                 </div>
-                <p className="mt-1.5 font-mono text-[9px] text-muted-foreground">{s}</p>
+                <p className="mt-1.5 text-[11px] text-muted-foreground">{s}</p>
               </div>
             ))}
           </div>
         </div>
       </motion.div>
 
-      {/* stats below the window — in flow, never clipped */}
-      <div className="mt-4 grid grid-cols-2 gap-3">
+      {/* sample tiles below the window — in flow, never clipped */}
+      <div className="mt-4 grid grid-cols-2 gap-4">
         {[
-          { label: "Due today", value: "42", unit: "cards", delay: 0.75, bar: 68 },
-          { label: "Focus today", value: "2h 10m", unit: "3 sessions", delay: 0.9, bar: 54 },
+          { label: "Cards due today", value: "42", unit: "cards", delay: 0.75, bar: 68 },
+          { label: "Focus time today", value: "2h 10m", unit: "3 sessions", delay: 0.9, bar: 54 },
         ].map((s) => (
           <motion.div
             key={s.label}
             initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: s.delay, duration: 0.55, ease: [0.22, 1, 0.36, 1] }}
-            className="rounded-lg border border-border bg-card px-3.5 py-3"
+            className="rounded-xl border border-border bg-card px-3.5 py-3"
           >
-            <p className="font-mono text-[9px] uppercase tracking-[0.16em] text-muted-foreground">{s.label}</p>
-            <p className="mt-1 text-xl font-semibold leading-none tracking-tight">
+            <div className="flex items-center justify-between gap-2">
+              <p className="truncate text-[12px] font-medium text-foreground/85">{s.label}</p>
+              <span className="shrink-0 rounded-full border border-border bg-muted px-1.5 py-px text-[10px] font-medium text-muted-foreground">
+                Sample
+              </span>
+            </div>
+            <p className="mt-1.5 text-xl font-semibold leading-none tracking-tight">
               {s.value}
               <span className="ml-1.5 text-[11px] font-normal text-muted-foreground">{s.unit}</span>
             </p>
-            <div className="mt-2.5 h-1 rounded-full bg-muted">
+            <div className="mt-2.5 h-1.5 rounded-full bg-muted">
               <motion.div
                 className="h-full rounded-full bg-primary"
                 initial={{ width: 0 }}
@@ -314,7 +336,11 @@ function ProductWindow() {
 
       <div
         aria-hidden
-        className="absolute -inset-6 -z-10 rounded-3xl bg-primary/10 blur-3xl"
+        className="absolute -inset-8 -z-10 rounded-[32px] bg-primary/10 blur-3xl"
+      />
+      <div
+        aria-hidden
+        className="absolute -inset-5 -z-10 rounded-[32px] bg-accent/15 blur-3xl"
       />
     </div>
   );
@@ -370,11 +396,12 @@ export default function Landing() {
   const [scrolled, setScrolled] = useState(false);
   const [mobileCta, setMobileCta] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [activeSection, setActiveSection] = useState("capabilities");
 
   const heroRef = useRef(null);
   const { scrollYProgress } = useScroll({ target: heroRef, offset: ["start start", "end start"] });
-  const heroY = useTransform(scrollYProgress, [0, 1], [0, 120]);
-  const heroOpacity = useTransform(scrollYProgress, [0, 0.85], [1, 0]);
+  const heroY = useTransform(scrollYProgress, [0, 1], [0, 64]);
+  const heroOpacity = useTransform(scrollYProgress, [0, 0.8], [1, 0]);
 
   useEffect(() => {
     const onScroll = () => {
@@ -384,6 +411,23 @@ export default function Landing() {
     onScroll();
     window.addEventListener("scroll", onScroll, { passive: true });
     return () => window.removeEventListener("scroll", onScroll);
+  }, []);
+
+  /* Active nav link: whichever section the reader is actually in. */
+  useEffect(() => {
+    const ids = ["capabilities", "how", "security", "faq"];
+    const nodes = ids.map((id) => document.getElementById(id)).filter(Boolean);
+    if (!nodes.length || typeof IntersectionObserver === "undefined") return;
+    const io = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) setActiveSection(entry.target.id);
+        });
+      },
+      { rootMargin: "-20% 0px -65% 0px", threshold: 0 }
+    );
+    nodes.forEach((node) => io.observe(node));
+    return () => io.disconnect();
   }, []);
 
   const launchDemo = async () => {
@@ -411,26 +455,34 @@ export default function Landing() {
           scrolled ? "border-b border-border bg-background/85 backdrop-blur-xl" : "border-b border-transparent"
         )}
       >
-        <div className="mx-auto flex h-14 max-w-6xl items-center justify-between px-5 sm:px-6">
+        <div className="mx-auto flex h-14 max-w-[1400px] items-center justify-between px-5 sm:px-6">
           <Brand />
 
-          <nav className="hidden items-center gap-7 md:flex" aria-label="Primary">
+          <nav className="hidden items-center gap-1 md:flex" aria-label="Primary">
             {[
               ["Capabilities", "capabilities"],
               ["How it works", "how"],
               ["Security", "security"],
-              ["Pricing", "pricing"],
               ["FAQ", "faq"],
-            ].map(([label, id]) => (
-              <button
-                key={id}
-                type="button"
-                onClick={() => goto(id)}
-                className="text-[13px] text-muted-foreground transition-colors hover:text-foreground"
-              >
-                {label}
-              </button>
-            ))}
+            ].map(([label, id]) => {
+              const isActive = activeSection === id;
+              return (
+                <button
+                  key={id}
+                  type="button"
+                  onClick={() => goto(id)}
+                  aria-current={isActive ? "true" : undefined}
+                  className={cn(
+                    "rounded-full px-3 py-1.5 text-[13px] transition-colors",
+                    isActive
+                      ? "bg-primary/12 font-medium text-primary"
+                      : "text-muted-foreground hover:text-foreground"
+                  )}
+                >
+                  {label}
+                </button>
+              );
+            })}
           </nav>
 
           <div className="flex items-center gap-2">
@@ -469,14 +521,20 @@ export default function Landing() {
               className="overflow-hidden border-t border-border bg-background/95 backdrop-blur-xl md:hidden"
               aria-label="Mobile"
             >
-              <div className="mx-auto max-w-6xl px-5 py-3">
-                {[["Capabilities", "capabilities"], ["How it works", "how"], ["Security", "security"], ["Pricing", "pricing"], ["FAQ", "faq"]].map(
+              <div className="mx-auto max-w-[1400px] px-5 py-3">
+                {[["Capabilities", "capabilities"], ["How it works", "how"], ["Security", "security"], ["FAQ", "faq"]].map(
                   ([label, id]) => (
                     <button
                       key={id}
                       type="button"
                       onClick={() => goto(id)}
-                      className="block w-full border-b border-border/60 py-3 text-left text-sm text-muted-foreground"
+                      aria-current={activeSection === id ? "true" : undefined}
+                      className={cn(
+                        "block w-full border-b border-border/60 py-3 text-left text-sm transition-colors",
+                        activeSection === id
+                          ? "font-medium text-primary"
+                          : "text-muted-foreground"
+                      )}
                     >
                       {label}
                     </button>
@@ -496,19 +554,20 @@ export default function Landing() {
       </header>
 
       {/* ================= HERO ================= */}
-      <section ref={heroRef} className="relative overflow-hidden pt-14">
+      <section ref={heroRef} className="relative flex min-h-[100svh] flex-col overflow-hidden pt-14">
         {/* soft field */}
         <div aria-hidden className="pointer-events-none absolute inset-0 -z-10">
-          <div className="absolute inset-x-0 top-0 h-[420px] bg-[radial-gradient(60%_60%_at_50%_0%,rgba(79,91,213,0.10),transparent_70%)]" />
-          <div className="absolute inset-0 hero-grid [mask-image:radial-gradient(75%_55%_at_50%_25%,#000,transparent)]" />
+          <div className="absolute inset-x-0 top-0 h-[460px] bg-[radial-gradient(60%_60%_at_50%_0%,rgba(79,91,213,0.10),transparent_70%)]" />
+          <div className="absolute inset-0 hero-grid [mask-image:radial-gradient(85%_65%_at_50%_38%,#000,transparent)]" />
         </div>
 
         <motion.div
           style={{ y: heroY, opacity: heroOpacity }}
-          className="mx-auto grid max-w-6xl gap-12 px-5 pb-20 pt-16 sm:px-6 lg:grid-cols-12 lg:gap-10 lg:pb-28 lg:pt-24"
+          className="relative mx-auto flex w-full max-w-[1400px] flex-1 flex-col px-5 py-4 sm:px-6 lg:py-5"
         >
+          <div className="grid gap-8 md:my-auto md:grid-cols-12 md:items-stretch md:gap-8 lg:gap-12">
           {/* ---- left ---- */}
-          <div className="lg:col-span-7">
+          <div className="flex flex-col md:col-span-6 lg:col-span-7">
             <motion.div
               initial={{ opacity: 0, y: 14 }}
               animate={{ opacity: 1, y: 0 }}
@@ -521,7 +580,7 @@ export default function Landing() {
               initial={{ opacity: 0, y: 18 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6, delay: 0.06, ease: [0.22, 1, 0.36, 1] }}
-              className="mt-6 text-[2.4rem] font-semibold leading-[1.05] tracking-[-0.03em] sm:text-5xl lg:text-[3.4rem]"
+              className="mt-6 text-[clamp(2.15rem,1.05rem+2.7vw,3.9rem)] font-semibold leading-[1.05] tracking-[-0.03em]"
             >
               Every claim
               <span className="relative ml-3 inline-block">
@@ -542,7 +601,7 @@ export default function Landing() {
               initial={{ opacity: 0, y: 16 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6, delay: 0.14 }}
-              className="mt-6 max-w-xl text-[15px] leading-relaxed text-muted-foreground sm:text-base"
+              className="mt-6 max-w-xl text-[clamp(0.95rem,0.88rem+0.24vw,1.1rem)] leading-relaxed text-muted-foreground"
             >
               StudySpace reads the material you upload and answers strictly from it. Every sentence
               that leans on a source opens the passage it came from. Nothing is asserted without a
@@ -573,53 +632,65 @@ export default function Landing() {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ delay: 0.4, duration: 0.6 }}
-              className="mt-10 grid max-w-lg grid-cols-3 divide-x divide-border border-y border-border"
+              className="mt-8 grid w-full grid-cols-3 divide-x divide-border border-y border-border md:mt-auto"
             >
               {[
                 ["4", "grounding layers"],
-                ["0", "unsourced claims"],
-                ["FSRS", "scheduling"],
+                ["Spaced repetition", "scheduling"],
+                ["Free", "during beta"],
               ].map(([v, l]) => (
                 <div key={l} className="px-4 py-3.5 first:pl-0">
-                  <dt className="font-mono text-[10px] uppercase tracking-[0.14em] text-muted-foreground">{l}</dt>
-                  <dd className="mt-1 text-xl font-semibold tracking-tight">{v}</dd>
+                  <dt className="text-[13px] leading-tight text-muted-foreground">{l}</dt>
+                  <dd className="mt-1 text-[clamp(1rem,0.85rem+0.5vw,1.35rem)] font-semibold leading-tight tracking-tight">
+                    {v}
+                  </dd>
                 </div>
               ))}
             </motion.dl>
           </div>
 
           {/* ---- right ---- */}
-          <div className="lg:col-span-5">
+          <div className="flex flex-col md:col-span-6 lg:col-span-5">
             <ProductWindow />
           </div>
-        </motion.div>
-      </section>
+          </div>
 
-      {/* ================= MARQUEE ================= */}
-      <section aria-label="Feature summary" className="border-y border-border bg-card/60 py-3.5">
-        <div
-          className="overflow-hidden [-webkit-mask-image:linear-gradient(to_right,transparent,black_10%,black_90%,transparent)] [mask-image:linear-gradient(to_right,transparent,black_10%,black_90%,transparent)]"
-        >
+          {/* scroll cue — sits just above the feature strip */}
+          <a
+            href="#capabilities"
+            onClick={(e) => {
+              e.preventDefault();
+              goto("capabilities");
+            }}
+            className="mx-auto mt-4 hidden shrink-0 items-center gap-2 rounded-full border border-border bg-card/70 px-4 py-2 text-[13px] text-muted-foreground transition-colors hover:border-primary/40 hover:text-primary lg:flex"
+          >
+            Scroll to explore
+            <ChevronDown className="size-4" />
+          </a>
+        </motion.div>
+
+        {/* feature strip — pinned to the very bottom of the first screen */}
+        <div className="marquee-fade shrink-0 overflow-hidden border-y border-border bg-card/60 py-3.5">
           <div className="marquee-track flex w-max">
             {[0, 1].map((dup) => (
               <div key={dup} className="flex shrink-0" aria-hidden={dup === 1}>
                 {[
                   "Inline citations",
-                  "FSRS spaced repetition",
-                  "Refusal on low coverage",
-                  "Pomodoro + habits",
+                  "Spaced repetition",
+                  "Stops when a source is missing",
+                  "Focus timer and habits",
                   "Vision board",
                   "Budget tracking",
-                  "Approval-first planner",
-                  "Row-level security",
-                  "Export everything",
+                  "Asks before it plans",
+                  "Private by default",
+                  "Take your data with you",
                 ].map((t) => (
                   <span
                     key={t}
-                    className="flex shrink-0 items-center gap-5 whitespace-nowrap pr-5 font-mono text-[11px] uppercase tracking-[0.16em] text-muted-foreground"
+                    className="flex shrink-0 items-center gap-5 whitespace-nowrap pr-5 text-[17px] font-medium text-foreground/85"
                   >
                     {t}
-                    <span className="size-1 rounded-full bg-primary/60" />
+                    <span className="size-1.5 rounded-full bg-primary/70" />
                   </span>
                 ))}
               </div>
@@ -629,11 +700,15 @@ export default function Landing() {
       </section>
 
       {/* ================= CAPABILITIES ================= */}
-      <section id="capabilities" className="mx-auto max-w-6xl scroll-mt-20 px-5 py-20 sm:px-6 sm:py-24">
-        <div className="grid gap-8 lg:grid-cols-12">
+      <section id="capabilities" className="mx-auto max-w-[1400px] scroll-mt-20 px-5 pb-20 pt-24 sm:px-6 sm:pb-24 sm:pt-28">
+        {/* one continuous rule: the label starts it and it runs to the right edge */}
+        <Kicker index="02" rule>
+          Capabilities
+        </Kicker>
+
+        <div className="mt-8 grid gap-8 lg:grid-cols-12">
           <div className="lg:col-span-4">
-            <Kicker index="02">Capabilities</Kicker>
-            <h2 className="mt-5 text-3xl font-semibold leading-[1.1] tracking-[-0.02em] sm:text-4xl">
+            <h2 className="text-[clamp(1.7rem,1.15rem+1.6vw,2.5rem)] font-semibold leading-[1.1] tracking-[-0.02em]">
               Six things it does,
               <br />
               done properly.
@@ -652,7 +727,7 @@ export default function Landing() {
           </div>
 
           <div className="lg:col-span-8">
-            <div className="border-t border-border">
+            <div>
               {CAPABILITIES.map(({ icon: Icon, kicker, title, body, meta }, i) => (
                 <motion.article
                   key={title}
@@ -688,7 +763,7 @@ export default function Landing() {
 
       {/* ================= HOW IT WORKS ================= */}
       <section id="how" className="scroll-mt-20 border-y border-border bg-card/50">
-        <div className="mx-auto max-w-6xl px-5 py-20 sm:px-6 sm:py-24">
+        <div className="mx-auto max-w-[1400px] px-5 py-20 sm:px-6 sm:py-24">
           <div className="max-w-2xl">
             <Kicker index="03">The loop</Kicker>
             <h2 className="mt-5 text-3xl font-semibold leading-[1.1] tracking-[-0.02em] sm:text-4xl">
@@ -719,7 +794,7 @@ export default function Landing() {
       </section>
 
       {/* ================= SECURITY ================= */}
-      <section id="security" className="mx-auto max-w-6xl scroll-mt-20 px-5 py-20 sm:px-6 sm:py-24">
+      <section id="security" className="mx-auto max-w-[1400px] scroll-mt-20 px-5 py-20 sm:px-6 sm:py-24">
         <div className="grid gap-10 lg:grid-cols-12">
           <div className="lg:col-span-5">
             <Kicker index="04">Hardening</Kicker>
@@ -762,7 +837,7 @@ export default function Landing() {
 
       {/* ================= TESTIMONIALS ================= */}
       <section className="border-y border-border bg-card/50">
-        <div className="mx-auto max-w-6xl px-5 py-20 sm:px-6 sm:py-24">
+        <div className="mx-auto max-w-[1400px] px-5 py-20 sm:px-6 sm:py-24">
           <div className="flex flex-wrap items-end justify-between gap-6">
             <div>
               <Kicker index="05">In use</Kicker>
@@ -825,7 +900,7 @@ export default function Landing() {
       </section>
 
       {/* ================= PRICING ================= */}
-      <section id="pricing" className="mx-auto max-w-6xl scroll-mt-20 px-5 py-20 sm:px-6 sm:py-24">
+      <section id="pricing" className="mx-auto max-w-[1400px] scroll-mt-20 px-5 py-20 sm:px-6 sm:py-24">
         <div className="flex flex-wrap items-end justify-between gap-6">
           <div>
             <Kicker index="06">Pricing</Kicker>
@@ -899,7 +974,7 @@ export default function Landing() {
 
       {/* ================= FAQ ================= */}
       <section id="faq" className="scroll-mt-20 border-y border-border bg-card/50">
-        <div className="mx-auto max-w-6xl px-5 py-20 sm:px-6 sm:py-24">
+        <div className="mx-auto max-w-[1400px] px-5 py-20 sm:px-6 sm:py-24">
           <div className="grid gap-10 lg:grid-cols-12">
             <div className="lg:col-span-4">
               <Kicker index="07">Questions</Kicker>
@@ -927,7 +1002,7 @@ export default function Landing() {
       </section>
 
       {/* ================= CTA ================= */}
-      <section className="mx-auto max-w-6xl px-5 py-20 sm:px-6 sm:py-24">
+      <section className="mx-auto max-w-[1400px] px-5 py-20 sm:px-6 sm:py-24">
         <div className="cta-panel relative overflow-hidden rounded-2xl border border-border px-6 py-14 text-center sm:px-12">
           <div aria-hidden className="pointer-events-none absolute inset-0">
             <div className="absolute -top-24 left-1/4 h-64 w-64 rounded-full bg-primary/30 blur-3xl" />
@@ -978,7 +1053,7 @@ export default function Landing() {
 
       {/* ================= FOOTER ================= */}
       <footer className="border-t border-border">
-        <div className="mx-auto max-w-6xl px-5 py-12 sm:px-6">
+        <div className="mx-auto max-w-[1400px] px-5 py-12 sm:px-6">
           <div className="grid gap-10 sm:grid-cols-2 lg:grid-cols-4">
             <div>
               <Brand />
@@ -991,7 +1066,7 @@ export default function Landing() {
             <div>
               <h3 className="font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground">Product</h3>
               <ul className="mt-4 space-y-2.5 text-[13px]">
-                {[["Capabilities", "capabilities"], ["How it works", "how"], ["Pricing", "pricing"], ["FAQ", "faq"]].map(([l, id]) => (
+                {[["Capabilities", "capabilities"], ["How it works", "how"], ["FAQ", "faq"]].map(([l, id]) => (
                   <li key={id}>
                     <button type="button" onClick={() => goto(id)} className="text-muted-foreground transition-colors hover:text-foreground">
                       {l}
