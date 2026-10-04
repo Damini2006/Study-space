@@ -23,15 +23,15 @@
 | Record-level access tests | ✅ | `test_rls.py` |
 | Security headers | ✅ | `X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy`, `Permissions-Policy`, `HSTS`, `no-store` on `/api/*` |
 | Cookie banner + legal pages | ✅ | `/privacy`, `/terms`, `/thanks`, cookie consent |
-| Custom 404 | ✅ | `NotFound` page on any unknown route |
-| Per-route meta title/description | ✅ | `RouteMeta` in `App.jsx` |
-| Open Graph + favicon | ✅ | `index.html` + `public/favicon.svg` |
+| Custom 404 + Security + Contact pages | ✅ | NotFound on unknown routes; /security publishes the hardening checklist, /contact holds the real address and a validated form |
+| Per-route meta title + description + OG | ✅ | RouteMeta in App.jsx sets title, description, OG/Twitter tags and canonical URL on every route |
+| Open Graph image + favicon | ✅ | public/og-image.png (1200x630, generated) + public/favicon.svg; OG/Twitter tags set per route by RouteMeta |
 | `robots.txt` + `sitemap.xml` | ✅ | `public/` |
 | Alt text on images | ✅ | All `<img>` have alt; icon buttons have `aria-label` |
 | Mobile breakpoints | ✅ | `sm/lg` grid breakpoints throughout |
-| Sticky mobile CTA | ⚠️ on Landing hero + sticky header | Landing hero is above the fold; no persistent bottom CTA yet |
+| Sticky mobile CTA | ✅ | Fixed bottom bar on Landing below 512px, slides in after 520px of scroll; hidden on larger screens |
 | Loading states | ✅ | Skeletons on Dashboard/Finance/Notes |
 | Form error states | ✅ | Toasts + inline validation messages |
 | Thank-you page | ✅ | `/thanks` |
 | Real contact address | ✅ | Footer of Landing: 14 Innovation Drive, Bengaluru |
-| Analytics installed | ⚠️ | No GA/Plausible key configured yet — placeholder in `index.html` ready |
+| Analytics installed | ⚠️ | GA4 loader in index.html + SPA route views in main.jsx; inert until VITE_GA_ID is set in .env |
