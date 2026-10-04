@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { Eye, EyeOff, GraduationCap, Loader2 } from "lucide-react";
+import { Eye, EyeOff, GraduationCap, Loader2, FileText, ShieldCheck, Layers, Sparkles, ArrowRight } from "lucide-react";
 import { supabaseConfigured } from "@/lib/supabase";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/components/ui/toast";
@@ -64,6 +64,26 @@ function ThreeDPanel() {
         transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
       />
 
+      {/* Playful color blobs */}
+      <motion.div
+        className="absolute -top-16 -left-16 w-72 h-72 rounded-full blur-3xl"
+        style={{ background: "radial-gradient(circle, rgba(79,91,213,0.4), transparent 70%)" }}
+        animate={{ x: [0, 30, 0], y: [0, 25, 0], scale: [1, 1.15, 1] }}
+        transition={{ duration: 12, repeat: Infinity, ease: "easeInOut" }}
+      />
+      <motion.div
+        className="absolute -bottom-16 -right-16 w-72 h-72 rounded-full blur-3xl"
+        style={{ background: "radial-gradient(circle, rgba(232,116,154,0.35), transparent 70%)" }}
+        animate={{ x: [0, -25, 0], y: [0, -30, 0], scale: [1, 1.1, 1] }}
+        transition={{ duration: 14, repeat: Infinity, ease: "easeInOut", delay: 1 }}
+      />
+      <motion.div
+        className="absolute top-1/2 left-1/3 w-64 h-64 rounded-full blur-3xl"
+        style={{ background: "radial-gradient(circle, rgba(47,181,160,0.28), transparent 70%)" }}
+        animate={{ x: [0, 20, 0], y: [0, -20, 0] }}
+        transition={{ duration: 16, repeat: Infinity, ease: "easeInOut", delay: 2 }}
+      />
+
       {/* Floating particles */}
       <FloatingParticle delay={0} x={20} y={30} size={4} color="#4f5bd5" />
       <FloatingParticle delay={1} x={70} y={20} size={3} color="#e8749a" />
@@ -124,6 +144,23 @@ function ThreeDPanel() {
           }}
           transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
         />
+      </motion.div>
+
+      {/* Orbiting rings */}
+      <motion.div
+        className="absolute w-72 h-72 rounded-full border border-primary/15"
+        animate={{ rotate: 360 }}
+        transition={{ duration: 26, repeat: Infinity, ease: "linear" }}
+      >
+        <span className="absolute -top-1.5 left-1/2 size-3 rounded-full bg-primary shadow-[0_0_12px_rgba(79,91,213,0.9)]" />
+        <span className="absolute bottom-4 right-6 size-2 rounded-full bg-accent shadow-[0_0_10px_rgba(232,116,154,0.9)]" />
+      </motion.div>
+      <motion.div
+        className="absolute w-96 h-96 rounded-full border border-dashed border-accent/15"
+        animate={{ rotate: -360 }}
+        transition={{ duration: 40, repeat: Infinity, ease: "linear" }}
+      >
+        <span className="absolute top-1/2 -right-1.5 size-2.5 rounded-full bg-emerald-400 shadow-[0_0_10px_rgba(52,211,153,0.9)]" />
       </motion.div>
 
       {/* Feature highlights */}
@@ -326,6 +363,44 @@ export default function AuthPage() {
               )}
             </p>
           </Card>
+
+          {/* Trust strip */}
+          <motion.div
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.35 }}
+            className="mt-5 space-y-2"
+          >
+            {[
+              { icon: FileText, text: "Every answer cites your source" },
+              { icon: ShieldCheck, text: "Four safety layers, always grounded" },
+              { icon: Layers, text: "FSRS spaced repetition built in" },
+            ].map(({ icon: Icon, text }, i) => (
+              <motion.div
+                key={text}
+                initial={{ opacity: 0, x: -10 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: 0.45 + i * 0.1 }}
+                className="flex items-center gap-2 text-xs text-muted-foreground"
+              >
+                <span className="flex size-5 items-center justify-center rounded-md bg-primary/10">
+                  <Icon className="size-3 text-primary" />
+                </span>
+                {text}
+              </motion.div>
+            ))}
+          </motion.div>
+
+          <motion.p
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.8 }}
+            className="mt-5 flex items-center justify-center gap-1.5 text-xs text-muted-foreground"
+          >
+            <Sparkles className="size-3 text-accent" />
+            Join 12,000+ students studying smarter
+            <ArrowRight className="size-3" />
+          </motion.p>
         </motion.div>
       </div>
     </div>

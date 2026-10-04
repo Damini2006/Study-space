@@ -12,9 +12,16 @@ import {
   GraduationCap,
   Layers,
   MessageSquare,
+  MonitorPlay,
+  Play,
   ShieldCheck,
   Sparkles,
   Timer,
+  X,
+  Check,
+  Zap,
+  Palette,
+  Rocket,
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/components/ui/toast";
@@ -351,6 +358,25 @@ export default function Landing() {
       <section ref={heroRef} className="relative min-h-screen overflow-hidden">
         {/* === 3D Scene Background === */}
         <div className="absolute inset-0">
+          {/* Playful gradient washes */}
+          <motion.div
+            className="absolute -top-24 -left-24 w-96 h-96 rounded-full blur-3xl"
+            style={{ background: "radial-gradient(circle, rgba(79,91,213,0.35), transparent 70%)" }}
+            animate={{ x: [0, 40, 0], y: [0, 30, 0], scale: [1, 1.15, 1] }}
+            transition={{ duration: 14, repeat: Infinity, ease: "easeInOut" }}
+          />
+          <motion.div
+            className="absolute top-1/3 -right-24 w-80 h-80 rounded-full blur-3xl"
+            style={{ background: "radial-gradient(circle, rgba(232,116,154,0.3), transparent 70%)" }}
+            animate={{ x: [0, -30, 0], y: [0, 40, 0], scale: [1, 1.1, 1] }}
+            transition={{ duration: 16, repeat: Infinity, ease: "easeInOut", delay: 1 }}
+          />
+          <motion.div
+            className="absolute bottom-0 left-1/3 w-72 h-72 rounded-full blur-3xl"
+            style={{ background: "radial-gradient(circle, rgba(47,181,160,0.25), transparent 70%)" }}
+            animate={{ x: [0, 30, 0], y: [0, -30, 0] }}
+            transition={{ duration: 18, repeat: Infinity, ease: "easeInOut", delay: 2 }}
+          />
           <FloatingOrb className="top-1/4 left-1/4" color="#4f5bd5" size={200} />
           <FloatingOrb className="bottom-1/4 right-1/4" color="#e8749a" size={160} delay={1} />
           <FloatingOrb className="top-1/2 right-1/3" color="#2fb5a0" size={120} delay={2} />
@@ -469,6 +495,134 @@ export default function Landing() {
             className="w-6 h-10 rounded-full border-2 border-muted-foreground/30 flex items-start justify-center p-1.5"
           >
             <div className="w-1 h-2 rounded-full bg-muted-foreground/50" />
+          </motion.div>
+        </motion.div>
+      </section>
+
+      {/* ================= COLOR MARQUEE STRIP ================= */}
+      <section className="relative overflow-hidden border-y border-border bg-surface/40 py-4">
+        <motion.div
+          className="flex gap-10 whitespace-nowrap w-max"
+          animate={{ x: ["0%", "-50%"] }}
+          transition={{ duration: 28, repeat: Infinity, ease: "linear" }}
+        >
+          {[...Array(2)].map((_, dup) => (
+            <div key={dup} className="flex gap-10 items-center">
+              {[
+                { t: "Cited answers", c: "text-primary" },
+                { t: "FSRS spaced repetition", c: "text-accent" },
+                { t: "Focus timer", c: "text-purple-400" },
+                { t: "Vision board", c: "text-amber-400" },
+                { t: "Finance tracker", c: "text-emerald-400" },
+                { t: "AI planner", c: "text-sky-400" },
+                { t: "Source grounded", c: "text-rose-400" },
+                { t: "Flashcards", c: "text-primary" },
+              ].map((m) => (
+                <span key={m.t} className="flex items-center gap-3 text-sm font-semibold tracking-wide">
+                  <span className="size-1.5 rounded-full bg-current opacity-60" />
+                  <span className={m.c}>{m.t}</span>
+                </span>
+              ))}
+            </div>
+          ))}
+        </motion.div>
+      </section>
+
+      {/* ================= APP SHOWCASE ================= */}
+      <section className="mx-auto max-w-7xl px-6 py-20 sm:px-8 lg:px-12">
+        <motion.div
+          initial={{ opacity: 0, y: 24 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
+          className="text-center mb-10"
+        >
+          <span className="inline-flex items-center gap-2 rounded-full border border-border bg-surface/80 px-3 py-1 text-xs font-medium text-muted-foreground mb-4">
+            <MonitorPlay className="size-3 text-accent" />
+            Live workspace preview
+          </span>
+          <h2 className="text-3xl sm:text-4xl font-bold tracking-tight">
+            A workspace that feels <span className="bg-gradient-to-r from-primary via-accent to-purple-400 bg-clip-text text-transparent">alive</span>
+          </h2>
+          <p className="mt-4 max-w-2xl mx-auto text-base text-muted-foreground">
+            Chat, review, focus and plan — all in one calm, colorful interface.
+          </p>
+        </motion.div>
+
+        <motion.div
+          initial={{ opacity: 0, y: 40, rotateX: 8 }}
+          whileInView={{ opacity: 1, y: 0, rotateX: 0 }}
+          viewport={{ once: true, amount: 0.3 }}
+          transition={{ duration: 0.9, ease: [0.22, 1, 0.36, 1] }}
+          style={{ perspective: 1400 }}
+          className="relative mx-auto max-w-4xl"
+        >
+          <div className="rounded-3xl border border-border bg-surface/80 backdrop-blur-xl overflow-hidden shadow-[0_30px_80px_-20px_rgba(79,91,213,0.35)]">
+            {/* Window chrome */}
+            <div className="flex items-center gap-2 border-b border-border bg-surface/90 px-4 py-3">
+              <span className="size-2.5 rounded-full bg-rose-400" />
+              <span className="size-2.5 rounded-full bg-amber-400" />
+              <span className="size-2.5 rounded-full bg-emerald-400" />
+              <span className="ml-3 text-xs text-muted-foreground">studyspace.app/dashboard</span>
+            </div>
+            {/* Fake app body */}
+            <div className="grid grid-cols-3 gap-3 p-5">
+              <div className="col-span-2 space-y-3">
+                <div className="h-3 rounded-full bg-primary/40 w-2/5" />
+                {[90, 75, 85, 60, 70].map((w, i) => (
+                  <motion.div
+                    key={i}
+                    style={{ width: `${w}%` }}
+                    initial={{ scaleX: 0 }}
+                    whileInView={{ scaleX: 1 }}
+                    viewport={{ once: true }}
+                    transition={{ delay: 0.3 + i * 0.1, duration: 0.6, ease: "easeOut" }}
+                    className="h-2 rounded-full bg-muted/60 origin-left"
+                  />
+                ))}
+                <div className="flex gap-2 pt-2">
+                  <span className="rounded-lg bg-primary/15 px-2.5 py-1 text-[10px] font-medium text-primary">Citation [1]</span>
+                  <span className="rounded-lg bg-accent/15 px-2.5 py-1 text-[10px] font-medium text-accent">Citation [2]</span>
+                </div>
+              </div>
+              <div className="space-y-3">
+                <div className="rounded-xl border border-border bg-surface p-3">
+                  <div className="h-2 rounded-full bg-emerald-400/50 w-3/4 mb-2" />
+                  <div className="h-2 rounded-full bg-muted/60 w-1/2" />
+                </div>
+                <div className="rounded-xl border border-border bg-surface p-3">
+                  <div className="h-2 rounded-full bg-amber-400/50 w-2/3 mb-2" />
+                  <div className="h-2 rounded-full bg-muted/60 w-5/6" />
+                </div>
+                <motion.div
+                  className="rounded-xl border border-primary/30 bg-primary/10 p-3 text-center"
+                  animate={{ scale: [1, 1.03, 1] }}
+                  transition={{ duration: 2.4, repeat: Infinity, ease: "easeInOut" }}
+                >
+                  <span className="text-[10px] font-semibold text-primary">Streak: 12 days</span>
+                </motion.div>
+              </div>
+            </div>
+          </div>
+
+          {/* Floating badges around preview */}
+          <motion.div
+            className="absolute -left-4 top-8 hidden sm:block"
+            animate={{ y: [0, -10, 0] }}
+            transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
+          >
+            <span className="rounded-xl border border-border bg-surface/95 px-3 py-2 text-xs font-semibold shadow-lg flex items-center gap-2">
+              <Zap className="size-3.5 text-amber-400" /> Instant answers
+            </span>
+          </motion.div>
+          <motion.div
+            className="absolute -right-4 bottom-10 hidden sm:block"
+            animate={{ y: [0, 10, 0] }}
+            transition={{ duration: 4.5, repeat: Infinity, ease: "easeInOut", delay: 0.6 }}
+          >
+            <span className="rounded-xl border border-border bg-surface/95 px-3 py-2 text-xs font-semibold shadow-lg flex items-center gap-2">
+              <Palette className="size-3.5 text-accent" /> Your theme
+            </span>
           </motion.div>
         </motion.div>
       </section>
@@ -664,11 +818,11 @@ export default function Landing() {
             <div className="text-center text-primary">StudySpace</div>
           </div>
           {[
-            { feature: "Source citations", traditional: "❌ Manual", study: "✅ Automatic" },
-            { feature: "Spaced repetition", traditional: "❌ Paper cards", study: "✅ FSRS algorithm" },
-            { feature: "AI planning", traditional: "❌ None", study: "✅ With approval" },
-            { feature: "Focus tracking", traditional: "❌ None", study: "✅ Built-in" },
-            { feature: "Progress insights", traditional: "❌ None", study: "✅ Real-time" },
+            { feature: "Source citations", traditional: "Manual copy-paste", study: "Automatic, inline" },
+            { feature: "Spaced repetition", traditional: "Paper cards", study: "FSRS algorithm" },
+            { feature: "AI planning", traditional: "None", study: "With your approval" },
+            { feature: "Focus tracking", traditional: "None", study: "Built-in timer" },
+            { feature: "Progress insights", traditional: "Guesswork", study: "Real-time dashboards" },
           ].map((row, i) => (
             <motion.div
               key={row.feature}
@@ -676,11 +830,17 @@ export default function Landing() {
               whileInView={{ opacity: 1, x: 0 }}
               viewport={{ once: true }}
               transition={{ delay: i * 0.05 }}
-              className="grid grid-cols-3 p-4 border-t border-border text-sm"
+              className="grid grid-cols-3 p-4 border-t border-border text-sm items-center"
             >
               <div className="font-medium">{row.feature}</div>
-              <div className="text-center text-muted-foreground">{row.traditional}</div>
-              <div className="text-center text-primary font-medium">{row.study}</div>
+              <div className="flex items-center justify-center gap-1.5 text-muted-foreground">
+                <X className="size-3.5 text-rose-400" />
+                <span className="text-xs">{row.traditional}</span>
+              </div>
+              <div className="flex items-center justify-center gap-1.5 text-primary font-medium">
+                <Check className="size-3.5" />
+                <span className="text-xs">{row.study}</span>
+              </div>
             </motion.div>
           ))}
         </div>
