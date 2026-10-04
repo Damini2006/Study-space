@@ -2,18 +2,47 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="theme-color" content="#0d1526" media="(prefers-color-scheme: dark)" />
+    <meta name="theme-color" content="#f7f8fc" media="(prefers-color-scheme: light)" />
+
+    <title>StudySpace - source-grounded AI study workspace</title>
     <meta
       name="description"
-      content="StudySpace — source-grounded AI study workspace. Chat with your notes, generate study material, review with spaced repetition."
+      content="StudySpace is a source-grounded AI study workspace. Chat with your notes, generate study material and review with real FSRS spaced repetition."
     />
-    <title>StudySpace — source-grounded AI study workspace</title>
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <meta property="og:title" content="StudySpace — source-grounded AI study workspace" />
-    <meta property="og:description" content="Chat with your notes, generate study material, review with spaced repetition." />
+    <meta name="author" content="StudySpace" />
+    <meta name="robots" content="index, follow" />
+    <link rel="canonical" href="https://studyspace.app/" />
+
+    <!-- Open Graph -->
+    <meta property="og:site_name" content="StudySpace" />
+    <meta property="og:locale" content="en_IN" />
+    <meta property="og:title" content="StudySpace - source-grounded AI study workspace" />
+    <meta
+      property="og:description"
+      content="Chat with your notes, generate study material and review with real FSRS spaced repetition."
+    />
     <meta property="og:type" content="website" />
     <meta property="og:url" content="https://studyspace.app/" />
-    <meta property="og:image" content="/favicon.svg" />
+    <meta property="og:image" content="/og-image.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="StudySpace - every claim traceable" />
+
+    <!-- Twitter -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="StudySpace - source-grounded AI study workspace" />
+    <meta
+      name="twitter:description"
+      content="Chat with your notes, generate study material and review with real FSRS spaced repetition."
+    />
+    <meta name="twitter:image" content="/og-image.png" />
+    <meta name="twitter:image:alt" content="StudySpace - every claim traceable" />
+
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="apple-touch-icon" href="/favicon.svg" />
+
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
@@ -44,7 +73,7 @@
       })();
     </script>
     <script>
-      // Apply theme before first paint (no flash) — localStorage wins,
+      // Apply theme before first paint (no flash) - localStorage wins,
       // then falls back to the signed-in user's stored theme (hydrated later).
       (function () {
         try {
@@ -60,6 +89,10 @@
   </head>
   <body>
     <div id="root"></div>
+    <noscript>
+      StudySpace needs JavaScript to run. Please enable it, or read our
+      <a href="/privacy">privacy policy</a> and <a href="/terms">terms of service</a>.
+    </noscript>
     <script type="module" src="/src/main.jsx"></script>
   </body>
 </html>

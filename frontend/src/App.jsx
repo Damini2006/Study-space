@@ -20,6 +20,8 @@ import NotFound from "@/pages/NotFound";
 import Privacy from "@/pages/Privacy";
 import Terms from "@/pages/Terms";
 import ThankYou from "@/pages/ThankYou";
+import Security from "@/pages/Security";
+import Contact from "@/pages/Contact";
 import CookieBanner from "@/components/layout/CookieBanner";
 
 function Protected({ children }) {
@@ -39,32 +41,61 @@ function Protected({ children }) {
 }
 
 const PAGE_META = {
-  "/": { title: "StudySpace — source-grounded AI study workspace", desc: "Chat with your notes, generate study material, review with spaced repetition." },
-  "/auth": { title: "Sign in — StudySpace", desc: "Sign in to your StudySpace workspace." },
-  "/app/dashboard": { title: "Dashboard — StudySpace", desc: "Your today view: plan, streaks, spaces and habits." },
-  "/app/focus": { title: "Focus — StudySpace", desc: "Pomodoro, ambient sounds, habits and session history." },
-  "/app/vision": { title: "Vision Board — StudySpace", desc: "Drag stickies and images on your vision board." },
-  "/app/finance": { title: "Finance — StudySpace", desc: "Track spending and see your category breakdown." },
-  "/privacy": { title: "Privacy Policy — StudySpace", desc: "How StudySpace handles your data." },
-  "/terms": { title: "Terms of Service — StudySpace", desc: "StudySpace terms of service." },
-  "/thanks": { title: "Welcome — StudySpace", desc: "Your workspace is ready." },
+  "/": { title: "StudySpace \u2014 source-grounded AI study workspace", desc: "Chat with your notes, generate study material, review with spaced repetition." },
+  "/auth": { title: "Sign in \u2014 StudySpace", desc: "Sign in to your StudySpace workspace." },
+  "/app/dashboard": { title: "Dashboard \u2014 StudySpace", desc: "Your today view: plan, streaks, spaces and habits." },
+  "/app/focus": { title: "Focus \u2014 StudySpace", desc: "Pomodoro, ambient sounds, habits and session history." },
+  "/app/vision": { title: "Vision Board \u2014 StudySpace", desc: "Drag stickies and images on your vision board." },
+  "/app/finance": { title: "Finance \u2014 StudySpace", desc: "Track spending and see your category breakdown." },
+  "/privacy": { title: "Privacy Policy \u2014 StudySpace", desc: "How StudySpace handles your data." },
+  "/terms": { title: "Terms of Service \u2014 StudySpace", desc: "StudySpace terms of service." },
+  "/thanks": { title: "Welcome \u2014 StudySpace", desc: "Your workspace is ready." },
+  "/security": { title: "Security \u2014 StudySpace", desc: "Twenty security hardening controls protecting StudySpace: RLS, IDOR and injection testing, secret scanning, rate limiting and controlled attack testing." },
+  "/contact": { title: "Contact \u2014 StudySpace", desc: "E-mail the StudySpace team in Bengaluru, India. Bug reports, security disclosures and partnership enquiries." },
 };
+
+const FALLBACK_META = {
+  title: "StudySpace",
+  desc: "Source-grounded AI study workspace.",
+};
+
+function setMeta(name, attr, content) {
+  let tag = document.querySelector(`meta[${attr}="${name}"]`);
+  if (!tag) {
+    tag = document.createElement("meta");
+    tag.setAttribute(attr, name);
+    document.head.appendChild(tag);
+  }
+  tag.setAttribute("content", content);
+}
 
 function RouteMeta() {
   const location = useLocation();
   useEffect(() => {
-    const meta = PAGE_META[location.pathname] || {
-      title: "StudySpace",
-      desc: "Source-grounded AI study workspace.",
-    };
+    const path = location.pathname.replace(/\/$/, "") || "/";
+    const meta = PAGE_META[path] || FALLBACK_META;
+
     document.title = meta.title;
-    let tag = document.querySelector('meta[name="description"]');
-    if (!tag) {
-      tag = document.createElement("meta");
-      tag.setAttribute("name", "description");
-      document.head.appendChild(tag);
+    setMeta("description", "name", meta.desc);
+
+    // Open Graph + Twitter, per page
+    setMeta("og:title", "property", meta.title);
+    setMeta("og:description", "property", meta.desc);
+    setMeta("og:type", "property", "website");
+    setMeta("og:url", "property", window.location.href);
+    setMeta("og:image", "property", "/og-image.png");
+    setMeta("twitter:card", "name", "summary_large_image");
+    setMeta("twitter:title", "name", meta.title);
+    setMeta("twitter:description", "name", meta.desc);
+    setMeta("twitter:image", "name", "/og-image.png");
+
+    let canonical = document.querySelector('link[rel="canonical"]');
+    if (!canonical) {
+      canonical = document.createElement("link");
+      canonical.setAttribute("rel", "canonical");
+      document.head.appendChild(canonical);
     }
-    tag.setAttribute("content", meta.desc);
+    canonical.setAttribute("href", window.location.href);
   }, [location.pathname]);
   return null;
 }
@@ -88,6 +119,8 @@ export default function App() {
       <Route path="/privacy" element={<Privacy />} />
       <Route path="/terms" element={<Terms />} />
       <Route path="/thanks" element={<ThankYou />} />
+      <Route path="/security" element={<Security />} />
+      <Route path="/contact" element={<Contact />} />
       <Route
         path="/app"
         element={
