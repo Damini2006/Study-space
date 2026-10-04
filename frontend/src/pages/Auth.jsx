@@ -345,13 +345,13 @@ export default function AuthPage() {
 
   return (
     <motion.div
-      className="auth-page flex min-h-screen bg-background text-foreground"
+      className="auth-page flex min-h-screen flex-col bg-background text-foreground"
       animate={leaving ? { opacity: 0, scale: 1.035 } : { opacity: 1, scale: 1 }}
       transition={{ duration: 0.32, ease: EASE }}
       style={{ transformOrigin: "center center" }}
     >
       {/* ---------------- Top bar (single, full-width) ---------------- */}
-      <div className="flex items-center justify-between gap-3 border-b border-border/60 bg-card/40 px-5 py-3 backdrop-blur-md sm:px-8">
+      <div className="flex w-full shrink-0 items-center justify-between gap-3 border-b border-border/60 bg-card/40 px-5 py-3 backdrop-blur-md sm:px-8">
         <StudySpaceLogo size={28} />
         <div className="flex items-center gap-2">
           <Link
@@ -365,6 +365,8 @@ export default function AuthPage() {
         </div>
       </div>
 
+      {/* ---------------- Content row: left scene + right form ---------------- */}
+      <div className="flex min-h-0 flex-1">
       {/* ---------------- Left panel: 3D scene ---------------- */}
       <aside className="relative hidden w-[46%] shrink-0 flex-col overflow-hidden border-r border-border lg:flex">
         <div className="relative z-10 flex h-full min-h-0 flex-col gap-5 overflow-y-auto px-8 py-7 xl:px-11">
@@ -821,6 +823,7 @@ export default function AuthPage() {
           </div>
         </div>
       </main>
+      </div>
     </motion.div>
   );
 }
