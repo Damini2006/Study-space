@@ -1075,3 +1075,241 @@
   );
 }
 
+/* ==========================================================================
+   Landing page — one depth language for the whole document
+   ========================================================================== */
+
+/* --- Hero atmosphere ---------------------------------------------------- */
+/* Two gradient bodies drifting behind the first screen. `color-mix` keys
+   them to the live token, so light / dark / cozy / pastel each get their
+   own colouring from a single rule instead of four. */
+.hero-blob {
+  position: absolute;
+  width: min(46vw, 620px);
+  height: min(46vw, 620px);
+  border-radius: 50%;
+  filter: blur(92px);
+}
+.hero-blob-a {
+  left: -12%;
+  top: -20%;
+  background: radial-gradient(
+    circle,
+    color-mix(in srgb, var(--primary) 38%, transparent) 0%,
+    transparent 68%
+  );
+  animation: hero-drift-a 36s ease-in-out infinite;
+}
+.hero-blob-b {
+  right: -10%;
+  top: 6%;
+  background: radial-gradient(
+    circle,
+    color-mix(in srgb, var(--accent) 34%, transparent) 0%,
+    transparent 68%
+  );
+  animation: hero-drift-b 43s ease-in-out infinite;
+}
+@keyframes hero-drift-a {
+  0%, 100% { transform: translate3d(0, 0, 0) scale(1); }
+  50%      { transform: translate3d(8%, 10%, 0) scale(1.14); }
+}
+@keyframes hero-drift-b {
+  0%, 100% { transform: translate3d(0, 0, 0) scale(1); }
+  50%      { transform: translate3d(-9%, 13%, 0) scale(0.88); }
+}
+
+/* A pool of brand light that follows the pointer. Same idea as the sign-in
+   panel: it lights the grid and the blobs, never the content, so it reads
+   as a lamp in the room rather than a glare on glass. */
+.hero-spot {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(
+    460px 460px at var(--hx, 50%) var(--hy, 40%),
+    color-mix(in srgb, var(--primary) 13%, transparent),
+    transparent 70%
+  );
+  opacity: 0;
+  transition: opacity 0.5s ease;
+}
+.lp-hero:hover .hero-spot { opacity: 1; }
+
+/* --- Section washes ------------------------------------------------------
+   The banded sections alternate `bg-card / background` for rhythm; this is
+   the light that makes a band read as lit rather than merely grey. */
+.lp-wash {
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: min(50vh, 440px);
+  pointer-events: none;
+  background: radial-gradient(
+    72% 100% at var(--wash-x, 50%) 0%,
+    color-mix(in srgb, var(--primary) 11%, transparent),
+    transparent 74%
+  );
+}
+.lp-wash-accent {
+  background: radial-gradient(
+    72% 100% at var(--wash-x, 50%) 0%,
+    color-mix(in srgb, var(--accent) 15%, transparent),
+    transparent 74%
+  );
+}
+
+/* --- Cards ----------------------------------------------------------------
+   Three tiers, because the page has three different structures:
+
+   .lp-card  a free-standing bordered box, so it can rise off the page
+   .lp-cell  a cell in a `gap-px` table — the border belongs to the parent,
+             and lifting would tear a seam, so it lights instead
+   .lp-row   a divider row, which takes an accent rule down its edge
+
+   All three hover on `translate`, never `transform`: framer-motion writes
+   `transform` inline on every reveal wrapper, an inline value outranks any
+   stylesheet, and the two longhand properties compose with it anyway. A
+   lift declared on `transform` here would simply never fire. */
+.lp-card {
+  transition:
+    translate 0.35s cubic-bezier(0.22, 1, 0.36, 1),
+    border-color 0.35s ease,
+    box-shadow 0.35s ease;
+}
+.lp-card:hover {
+  translate: 0 -4px;
+  border-color: color-mix(in srgb, var(--primary) 42%, transparent);
+  box-shadow: 0 26px 50px -30px color-mix(in srgb, var(--primary) 75%, transparent);
+}
+
+.lp-cell {
+  position: relative;
+  overflow: hidden;
+  transition: background-color 0.3s ease;
+}
+.lp-cell::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 2px;
+  background: linear-gradient(90deg, var(--primary), var(--accent));
+  transform: scaleX(0);
+  transform-origin: left center;
+  transition: transform 0.45s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.lp-cell:hover {
+  /* opaque: these cells sit on a `bg-border` parent, so a transparent tint
+     would let the parent's rule colour bleed through the whole card */
+  background-color: color-mix(in srgb, var(--primary) 8%, var(--background));
+}
+.lp-cell:hover::before { transform: scaleX(1); }
+
+.lp-row {
+  position: relative;
+  transition:
+    background-color 0.3s ease,
+    border-color 0.3s ease;
+}
+.lp-row::before {
+  content: "";
+  position: absolute;
+  left: -13px;
+  top: 6px;
+  bottom: 6px;
+  width: 3px;
+  border-radius: 3px;
+  background: linear-gradient(180deg, var(--primary), var(--accent));
+  transform: scaleY(0);
+  transform-origin: top center;
+  transition: transform 0.45s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.lp-row:hover {
+  background-color: color-mix(in srgb, var(--primary) 6%, transparent);
+  border-color: color-mix(in srgb, var(--primary) 45%, transparent);
+}
+.lp-row:hover::before { transform: scaleY(1); }
+
+/* --- FAQ -----------------------------------------------------------------
+   The bar stays down for as long as the answer is open, so the list shows
+   where you are without the row having to change colour. */
+.faq-item { position: relative; }
+.faq-item::before {
+  content: "";
+  position: absolute;
+  left: -14px;
+  top: 4px;
+  bottom: 4px;
+  width: 2px;
+  border-radius: 2px;
+  background: linear-gradient(180deg, var(--primary), var(--accent));
+  transform: scaleY(0);
+  transform-origin: top center;
+  transition: transform 0.45s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.faq-item.is-open::before { transform: scaleY(1); }
+
+/* --- Pricing -------------------------------------------------------------
+   One rule to keep the featured plan feeling like the featured plan. */
+.plan-featured { position: relative; overflow: hidden; }
+.plan-featured::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 3px;
+  background: linear-gradient(90deg, var(--primary), var(--accent));
+}
+
+/* --- Call to action ------------------------------------------------------
+   A brand-coloured light running the edge of the inverted panel. Falls back
+   to a static arc where custom properties are not animatable. */
+@property --cta-angle {
+  syntax: "<angle>";
+  initial-value: 0deg;
+  inherits: false;
+}
+.cta-panel::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1.5px;
+  background: conic-gradient(
+    from var(--cta-angle),
+    transparent 0deg,
+    color-mix(in srgb, var(--primary) 85%, transparent) 40deg,
+    color-mix(in srgb, var(--accent) 85%, transparent) 66deg,
+    transparent 110deg,
+    transparent 186deg,
+    color-mix(in srgb, var(--primary) 70%, transparent) 226deg,
+    transparent 268deg
+  );
+  -webkit-mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  mask-composite: exclude;
+  animation: cta-edge 11s linear infinite;
+  pointer-events: none;
+}
+@keyframes cta-edge {
+  to { --cta-angle: 360deg; }
+}
+
+/* --- Ticker --------------------------------------------------------------- */
+.lp-tick { transition: color 0.25s ease; }
+.lp-tick:hover { color: var(--primary); }
+
+/* The landing page's own motion, all of it decorative: the ticker, the two
+   hero bodies and the edge light. None of it carries information, so
+   switching it off leaves a complete, static page. */
+@media (prefers-reduced-motion: reduce) {
+  .marquee-track,
+  .hero-blob-a,
+  .hero-blob-b,
+  .cta-panel::after {
+    animation: none !important;
+  }
+}
+

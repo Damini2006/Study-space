@@ -173,7 +173,14 @@ function Kicker({ index, children, className, rule = false }) {
       </span>
       <span className="text-foreground">{children}</span>
       {rule && (
-        <span aria-hidden="true" className="h-px min-w-10 flex-1 bg-border" />
+        <motion.span
+          aria-hidden
+          className="h-px min-w-10 flex-1 origin-left bg-border"
+          initial={{ scaleX: 0 }}
+          whileInView={{ scaleX: 1 }}
+          viewport={{ once: true, amount: 0.7 }}
+          transition={{ duration: 0.9, delay: 0.12, ease: [0.22, 1, 0.36, 1] }}
+        />
       )}
     </div>
   );
@@ -254,7 +261,11 @@ function ProductWindow() {
           <span className="ml-2 truncate font-mono text-[10px] text-muted-foreground">
             thermodynamics-lecture-04.pdf
           </span>
-          <span className="ml-auto rounded border border-border px-1.5 py-0.5 font-mono text-[9px] uppercase tracking-wider text-muted-foreground">
+          <span className="ml-auto inline-flex items-center gap-1.5 rounded border border-primary/30 bg-primary/10 px-1.5 py-0.5 font-mono text-[9px] uppercase tracking-wider text-primary">
+            <span className="relative flex size-1.5">
+              <span className="absolute inline-flex size-full animate-ping rounded-full bg-primary opacity-70" />
+              <span className="relative inline-flex size-1.5 rounded-full bg-primary" />
+            </span>
             grounded
           </span>
         </div>
@@ -373,7 +384,7 @@ function ProductWindow() {
 
 function FaqRow({ item, open, onToggle }) {
   return (
-    <div className="border-b border-border">
+    <div className={cn("faq-item border-b border-border", open && "is-open")}>
       <button
         type="button"
         onClick={onToggle}
@@ -423,6 +434,19 @@ export default function Landing() {
   const { scrollYProgress } = useScroll({ target: heroRef, offset: ["start start", "end start"] });
   const heroY = useTransform(scrollYProgress, [0, 1], [0, 64]);
   const heroOpacity = useTransform(scrollYProgress, [0, 0.8], [1, 0]);
+  /* whole-document progress, for the hairline under the header */
+  const { scrollYProgress: pageProgress } = useScroll();
+
+  /* Pointer light over the hero grid. Written straight to the node as CSS
+     custom properties, so it never waits on a frame to catch the cursor. */
+  const fieldRef = useRef(null);
+  const onHeroMove = (e) => {
+    const el = fieldRef.current;
+    if (!el) return;
+    const r = el.getBoundingClientRect();
+    el.style.setProperty("--hx", `${e.clientX - r.left}px`);
+    el.style.setProperty("--hy", `${e.clientY - r.top}px`);
+  };
 
   useEffect(() => {
     const onScroll = () => {
@@ -473,7 +497,9 @@ export default function Landing() {
       <header
         className={cn(
           "fixed inset-x-0 top-0 z-50 transition-all duration-300",
-          scrolled ? "border-b border-border bg-background/85 backdrop-blur-xl" : "border-b border-transparent"
+          scrolled
+            ? "border-b border-border bg-background/85 shadow-[0_16px_40px_-30px_rgba(15,23,42,0.7)] backdrop-blur-xl"
+            : "border-b border-transparent"
         )}
       >
         <div className="mx-auto flex h-14 max-w-[1400px] items-center justify-between px-5 sm:px-6">
@@ -574,12 +600,26 @@ export default function Landing() {
         </AnimatePresence>
       </header>
 
+      {/* reading progress — a 2px rule riding the very top edge of the window */}
+      <motion.div
+        aria-hidden
+        style={{ scaleX: pageProgress }}
+        className="fixed inset-x-0 top-0 z-[60] h-0.5 origin-left bg-gradient-to-r from-primary to-accent"
+      />
+
       {/* ================= HERO ================= */}
-      <section ref={heroRef} className="relative flex min-h-[100svh] flex-col overflow-hidden pt-14">
+      <section
+        ref={heroRef}
+        onMouseMove={onHeroMove}
+        className="lp-hero relative flex min-h-[100svh] flex-col overflow-hidden pt-14"
+      >
         {/* soft field */}
-        <div aria-hidden className="pointer-events-none absolute inset-0 -z-10">
+        <div aria-hidden ref={fieldRef} className="pointer-events-none absolute inset-0 -z-10">
           <div className="absolute inset-x-0 top-0 h-[460px] bg-[radial-gradient(60%_60%_at_50%_0%,rgba(79,91,213,0.10),transparent_70%)]" />
+          <span className="hero-blob hero-blob-a" />
+          <span className="hero-blob hero-blob-b" />
           <div className="absolute inset-0 hero-grid [mask-image:radial-gradient(85%_65%_at_50%_38%,#000,transparent)]" />
+          <div className="hero-spot" />
         </div>
 
         <motion.div
@@ -708,7 +748,7 @@ export default function Landing() {
                 ].map((t) => (
                   <span
                     key={t}
-                    className="flex shrink-0 items-center gap-5 whitespace-nowrap pr-5 text-[17px] font-medium text-foreground/85"
+                    className="lp-tick flex shrink-0 items-center gap-5 whitespace-nowrap pr-5 text-[17px] font-medium text-foreground/85"
                   >
                     {t}
                     <span className="size-1.5 rounded-full bg-primary/70" />
@@ -729,22 +769,25 @@ export default function Landing() {
 
         <div className="mt-8 grid gap-8 lg:grid-cols-12">
           <div className="lg:col-span-4">
-            <h2 className="text-[clamp(1.7rem,1.15rem+1.6vw,2.5rem)] font-semibold leading-[1.1] tracking-[-0.02em]">
-              Six things it does,
-              <br />
-              done properly.
-            </h2>
-            <p className="mt-4 max-w-xs text-sm leading-relaxed text-muted-foreground">
-              No feature exists to fill a grid. Each one solves a step in the loop between reading
-              something and still knowing it a month later.
-            </p>
-            <Link
-              to="/auth"
-              className="mt-6 inline-flex items-center gap-1.5 text-sm font-medium text-primary transition-colors hover:text-primary/80"
-            >
-              See it on your own files
-              <ArrowRight className="size-4" />
-            </Link>
+            {/* the argument holds still while the six items scroll past it */}
+            <div className="lg:sticky lg:top-24">
+              <h2 className="text-[clamp(1.7rem,1.15rem+1.6vw,2.5rem)] font-semibold leading-[1.1] tracking-[-0.02em]">
+                Six things it does,
+                <br />
+                done properly.
+              </h2>
+              <p className="mt-4 max-w-xs text-sm leading-relaxed text-muted-foreground">
+                No feature exists to fill a grid. Each one solves a step in the loop between reading
+                something and still knowing it a month later.
+              </p>
+              <Link
+                to="/auth"
+                className="mt-6 inline-flex items-center gap-1.5 text-sm font-medium text-primary transition-colors hover:text-primary/80"
+              >
+                See it on your own files
+                <ArrowRight className="size-4" />
+              </Link>
+            </div>
           </div>
 
           <div className="lg:col-span-8">
@@ -755,8 +798,8 @@ export default function Landing() {
                   initial={{ opacity: 0, y: 18 }}
                   whileInView={{ opacity: 1, y: 0 }}
                   viewport={{ once: true, amount: 0.4 }}
-                  transition={{ duration: 0.5, delay: (i % 3) * 0.06 }}
-                  className="group relative grid gap-3 border-b border-border py-6 transition-colors sm:grid-cols-[auto_1fr] sm:gap-6"
+                  transition={{ duration: 0.55, delay: (i % 3) * 0.06, ease: [0.22, 1, 0.36, 1] }}
+                  className="lp-row group grid gap-3 border-b border-border py-6 sm:grid-cols-[auto_1fr] sm:gap-6"
                 >
                   <div className="flex items-start gap-4 sm:w-40 sm:flex-col">
                     <span className="flex size-9 shrink-0 items-center justify-center rounded-md border border-border bg-card text-primary transition-all duration-300 group-hover:border-primary/40 group-hover:bg-primary/10">
@@ -783,8 +826,10 @@ export default function Landing() {
       </section>
 
       {/* ================= HOW IT WORKS ================= */}
-      <section id="how" className="scroll-mt-20 border-y border-border bg-card/50">
-        <div className="mx-auto max-w-[1400px] px-5 py-20 sm:px-6 sm:py-24">
+      <section id="how" className="relative scroll-mt-20 border-y border-border bg-card/50">
+        {/* the band is lit, not merely grey — wash sits behind the container */}
+        <div aria-hidden className="lp-wash" style={{ "--wash-x": "24%" }} />
+        <div className="relative mx-auto max-w-[1400px] px-5 py-20 sm:px-6 sm:py-24">
           <div className="max-w-2xl">
             <Kicker index="03">The loop</Kicker>
             <h2 className="mt-5 text-3xl font-semibold leading-[1.1] tracking-[-0.02em] sm:text-4xl">
@@ -799,9 +844,17 @@ export default function Landing() {
                 initial={{ opacity: 0, y: 20 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true, amount: 0.4 }}
-                transition={{ duration: 0.5, delay: i * 0.1 }}
-                className="group relative bg-background p-6 transition-colors hover:bg-card"
+                transition={{ duration: 0.55, delay: i * 0.1, ease: [0.22, 1, 0.36, 1] }}
+                className="lp-cell group isolate bg-background p-6"
               >
+                {/* the step number again, big and bleeding off the corner, so the
+                    three cells read as a sequence rather than three boxes */}
+                <span
+                  aria-hidden
+                  className="pointer-events-none absolute -bottom-4 right-3 -z-10 text-[86px] font-bold leading-none tracking-[-0.06em] text-primary/15 transition-transform duration-500 ease-out group-hover:-translate-y-1.5"
+                >
+                  {n}
+                </span>
                 <div className="flex items-center justify-between">
                   <span className="font-mono text-xs text-primary">{n}</span>
                   <Icon className="size-4 text-muted-foreground transition-colors group-hover:text-primary" />
@@ -818,23 +871,25 @@ export default function Landing() {
       <section id="security" className="mx-auto max-w-[1400px] scroll-mt-20 px-5 py-20 sm:px-6 sm:py-24">
         <div className="grid gap-10 lg:grid-cols-12">
           <div className="lg:col-span-5">
-            <Kicker index="04">Hardening</Kicker>
-            <h2 className="mt-5 text-3xl font-semibold leading-[1.1] tracking-[-0.02em] sm:text-4xl">
-              Built to be audited,
-              <br />
-              not just demoed.
-            </h2>
-            <p className="mt-4 max-w-md text-sm leading-relaxed text-muted-foreground">
-              Study material is personal. The stack is hardened end to end and the full checklist is
-              published rather than implied.
-            </p>
-            <Link
-              to="/security"
-              className="mt-6 inline-flex items-center gap-1.5 text-sm font-medium text-primary transition-colors hover:text-primary/80"
-            >
-              Read the security checklist
-              <ArrowUpRight className="size-4" />
-            </Link>
+            <div className="lg:sticky lg:top-24">
+              <Kicker index="04">Hardening</Kicker>
+              <h2 className="mt-5 text-3xl font-semibold leading-[1.1] tracking-[-0.02em] sm:text-4xl">
+                Built to be audited,
+                <br />
+                not just demoed.
+              </h2>
+              <p className="mt-4 max-w-md text-sm leading-relaxed text-muted-foreground">
+                Study material is personal. The stack is hardened end to end and the full checklist is
+                published rather than implied.
+              </p>
+              <Link
+                to="/security"
+                className="mt-6 inline-flex items-center gap-1.5 text-sm font-medium text-primary transition-colors hover:text-primary/80"
+              >
+                Read the security checklist
+                <ArrowUpRight className="size-4" />
+              </Link>
+            </div>
           </div>
 
           <div className="grid gap-px overflow-hidden rounded-xl border border-border bg-border sm:grid-cols-2 lg:col-span-7">
@@ -844,8 +899,8 @@ export default function Landing() {
                 initial={{ opacity: 0 }}
                 whileInView={{ opacity: 1 }}
                 viewport={{ once: true }}
-                transition={{ duration: 0.4, delay: i * 0.05 }}
-                className="group bg-background p-5 transition-colors hover:bg-card"
+                transition={{ duration: 0.45, delay: i * 0.05 }}
+                className="lp-cell group bg-background p-5"
               >
                 <Icon className="size-4 text-primary" />
                 <h3 className="mt-3 text-[13px] font-semibold leading-snug">{t}</h3>
@@ -857,8 +912,9 @@ export default function Landing() {
       </section>
 
       {/* ================= TESTIMONIALS ================= */}
-      <section className="border-y border-border bg-card/50">
-        <div className="mx-auto max-w-[1400px] px-5 py-20 sm:px-6 sm:py-24">
+      <section className="relative border-y border-border bg-card/50">
+        <div aria-hidden className="lp-wash lp-wash-accent" style={{ "--wash-x": "76%" }} />
+        <div className="relative mx-auto max-w-[1400px] px-5 py-20 sm:px-6 sm:py-24">
           <div className="flex flex-wrap items-end justify-between gap-6">
             <div>
               <Kicker index="05">In use</Kicker>
@@ -897,8 +953,8 @@ export default function Landing() {
                 initial={{ opacity: 0, y: 18 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true, amount: 0.4 }}
-                transition={{ duration: 0.5, delay: i * 0.08 }}
-                className="flex flex-col justify-between bg-background p-6"
+                transition={{ duration: 0.55, delay: i * 0.08, ease: [0.22, 1, 0.36, 1] }}
+                className="lp-cell flex flex-col justify-between bg-background p-6"
               >
                 <blockquote className="text-sm leading-relaxed text-foreground/90">
                   <span className="mr-0.5 font-serif text-primary">&ldquo;</span>
@@ -942,11 +998,11 @@ export default function Landing() {
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true, amount: 0.3 }}
-              transition={{ duration: 0.5, delay: i * 0.08 }}
+              transition={{ duration: 0.55, delay: i * 0.08, ease: [0.22, 1, 0.36, 1] }}
               className={cn(
-                "flex flex-col rounded-xl border p-6 transition-shadow",
+                "lp-card flex flex-col rounded-xl border p-6",
                 p.featured
-                  ? "border-primary/40 bg-card shadow-[0_20px_50px_-30px_rgba(79,91,213,0.7)]"
+                  ? "plan-featured border-primary/45 bg-card shadow-[0_24px_60px_-32px_rgba(79,91,213,0.85)]"
                   : "border-border bg-background"
               )}
             >
@@ -998,13 +1054,15 @@ export default function Landing() {
         <div className="mx-auto max-w-[1400px] px-5 py-20 sm:px-6 sm:py-24">
           <div className="grid gap-10 lg:grid-cols-12">
             <div className="lg:col-span-4">
-              <Kicker index="07">Questions</Kicker>
-              <h2 className="mt-5 text-3xl font-semibold tracking-[-0.02em] sm:text-4xl">
-                Straight answers
-              </h2>
-              <p className="mt-4 max-w-xs text-sm leading-relaxed text-muted-foreground">
-                Anything not covered here is in the privacy policy or the security checklist.
-              </p>
+              <div className="lg:sticky lg:top-24">
+                <Kicker index="07">Questions</Kicker>
+                <h2 className="mt-5 text-3xl font-semibold tracking-[-0.02em] sm:text-4xl">
+                  Straight answers
+                </h2>
+                <p className="mt-4 max-w-xs text-sm leading-relaxed text-muted-foreground">
+                  Anything not covered here is in the privacy policy or the security checklist.
+                </p>
+              </div>
             </div>
             <div className="lg:col-span-8">
               <div className="border-t border-border">
@@ -1073,7 +1131,12 @@ export default function Landing() {
       </section>
 
       {/* ================= FOOTER ================= */}
-      <footer className="border-t border-border">
+      <footer className="relative">
+        {/* the rule fades out at both ends instead of stopping dead */}
+        <span
+          aria-hidden
+          className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-primary/55 to-transparent"
+        />
         <div className="mx-auto max-w-[1400px] px-5 py-12 sm:px-6">
           <div className="grid gap-10 sm:grid-cols-2 lg:grid-cols-4">
             <div>
