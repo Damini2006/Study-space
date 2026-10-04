@@ -345,7 +345,7 @@ export default function AuthPage() {
 
   return (
     <motion.div
-      className="auth-page flex min-h-screen flex-col bg-background text-foreground"
+      className="auth-page flex h-screen flex-col overflow-hidden bg-background text-foreground"
       animate={leaving ? { opacity: 0, scale: 1.035 } : { opacity: 1, scale: 1 }}
       transition={{ duration: 0.32, ease: EASE }}
       style={{ transformOrigin: "center center" }}
@@ -370,7 +370,7 @@ export default function AuthPage() {
       {/* ---------------- Left panel: 3D scene ---------------- */}
       <aside className="relative hidden w-[46%] shrink-0 flex-col overflow-hidden lg:flex">
         <div className="absolute inset-y-0 right-0 w-px bg-gradient-to-b from-transparent via-border to-transparent" />
-        <div className="relative z-10 flex h-full min-h-0 flex-col gap-5 overflow-y-auto px-8 py-7 xl:px-11">
+        <div className="relative z-10 flex h-full min-h-0 flex-col gap-4 overflow-hidden px-8 py-5 xl:px-11">
           {/* the citation scene — ScenePanel runs its own entrance, and the
               panel is CSS-only so there is never a chunk to wait for */}
           <ScenePanel className="min-h-[240px] flex-1 rounded-[28px] border border-border/70" />
@@ -446,8 +446,8 @@ export default function AuthPage() {
       </aside>
 
       {/* ---------------- Right: the form ---------------- */}
-      <main className="flex flex-1 flex-col">
-        <div className="flex flex-1 items-center justify-center px-5 pb-10 pt-6 sm:px-8">
+      <main className="flex flex-1 flex-col overflow-hidden">
+        <div className="flex flex-1 items-center justify-center overflow-y-auto px-5 pb-6 pt-4 sm:px-8">
           <div className="w-full max-w-[380px]">
             {/* mobile: full logo centred above the form */}
             <div className="mb-6 flex justify-center lg:hidden">
