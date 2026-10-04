@@ -724,12 +724,17 @@
   color: var(--text);
 }
 
-/* the source, behind and slightly rotated away */
+/* the source, behind and slightly rotated away. The first two shadows have
+   no blur and a negative spread, so they read as two more pages of the same
+   stack peeking out bottom-left rather than as a drop shadow. */
 .src-doc {
   left: 7%;
   top: 9%;
   width: 60%;
-  box-shadow: 0 14px 34px color-mix(in srgb, var(--primary) 16%, transparent);
+  box-shadow:
+    -9px 11px 0 -3px var(--surface),
+    -9px 11px 0 -2px var(--border),
+    0 16px 36px color-mix(in srgb, var(--primary) 16%, transparent);
   transform: translateZ(10px) rotateY(10deg) rotateZ(-3deg);
   animation: src-doc-float 7s ease-in-out infinite;
 }
@@ -737,17 +742,44 @@
   50% { transform: translateZ(10px) rotateY(10deg) rotateZ(-3deg) translateY(-8px); }
 }
 
-/* the answer, closer to the viewer so it reads on top */
+/* the answer, closer to the viewer so it reads on top. overflow:hidden is
+   there for the shine sweep, which has to be clipped to the rounded card. */
 .src-ans {
   right: 6%;
   bottom: 8%;
   width: 70%;
+  overflow: hidden;
   box-shadow: 0 20px 44px color-mix(in srgb, var(--primary) 24%, transparent);
   transform: translateZ(70px);
   animation: src-ans-float 8s ease-in-out infinite;
 }
 @keyframes src-ans-float {
   50% { transform: translateZ(70px) translateY(-6px); }
+}
+/* one lavender shine across the card the moment its claims are verified */
+.src-ans::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  background: linear-gradient(
+    112deg,
+    transparent 36%,
+    color-mix(in srgb, var(--primary) 30%, transparent) 48%,
+    transparent 60%
+  );
+  transform: translateX(-130%);
+  opacity: 0;
+}
+.src-ans.verified::after {
+  animation: src-shine 1.15s cubic-bezier(0.4, 0, 0.2, 1) 1 both;
+}
+@keyframes src-shine {
+  0%      { transform: translateX(-130%); opacity: 0; }
+  15%     { opacity: 1; }
+  85%     { opacity: 1; }
+  100%    { transform: translateX(130%); opacity: 0; }
 }
 
 .src-doc-head,
@@ -775,28 +807,63 @@
   flex-shrink: 0;
 }
 
-/* skeleton lines standing in for unread paragraphs */
+/* skeleton lines standing in for unread paragraphs; a slow sheen keeps the
+   source looking like it is still being read without competing with the
+   rail below, which is the one that actually means something */
 .src-bar {
+  position: relative;
+  overflow: hidden;
   height: 7px;
   border-radius: 4px;
   background: color-mix(in srgb, var(--text) 9%, transparent);
   margin: 7px 0;
 }
+.src-bar::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    color-mix(in srgb, var(--surface) 88%, transparent) 50%,
+    transparent
+  );
+  transform: translateX(-100%);
+  animation: src-shimmer 2.6s ease-in-out infinite;
+}
+@keyframes src-shimmer {
+  0%      { transform: translateX(-100%); }
+  55%, 100% { transform: translateX(100%); }
+}
 
-/* a passage the answer is currently citing */
+/* A passage the answer is currently citing. The amber is a pseudo-element
+   rather than a background so it can wipe in from the left the way a
+   highlighter is actually drawn, instead of fading in like a state change. */
 .src-hl {
   position: relative;
+  isolation: isolate;
   margin: 8px -6px;
   padding: 3px 6px;
   border-radius: 6px;
   font-size: 12px;
   line-height: 1.5;
-  transition: background 0.4s, box-shadow 0.4s;
 }
-.src-hl.on {
+.src-hl::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: inherit;
   background: var(--src-hl);
   box-shadow: 0 0 0 3px var(--src-hl-ring);
+  transform: scaleX(0);
+  transform-origin: left center;
+  transition: transform 0.5s cubic-bezier(0.22, 1, 0.36, 1);
 }
+.src-hl.on::before {
+  transform: scaleX(1);
+}
+/* the page reference drops in from just above the line it belongs to */
 .src-pg {
   position: absolute;
   right: 4px;
@@ -809,12 +876,50 @@
   font-weight: 500;
   line-height: 1.5;
   opacity: 0;
-  transform: translateY(4px);
-  transition: opacity 0.3s, transform 0.3s;
+  transform: translateY(-7px) scale(0.85);
+  transition: opacity 0.25s, transform 0.4s cubic-bezier(0.3, 1.5, 0.5, 1);
 }
 .src-hl.on .src-pg {
   opacity: 1;
   transform: none;
+}
+
+/* typing caret — parks after whichever clause is being written */
+.src-caret {
+  display: inline-block;
+  width: 2px;
+  height: 0.95em;
+  margin-left: 1px;
+  vertical-align: -0.13em;
+  border-radius: 1px;
+  background: var(--primary);
+  animation: src-caret-blink 1.05s steps(1, end) infinite;
+}
+@keyframes src-caret-blink {
+  0%, 55%   { opacity: 1; }
+  56%, 100% { opacity: 0; }
+}
+
+/* how far into the answer we are — fills as the text types, turns green
+   when the last claim lands */
+.src-rail {
+  height: 2px;
+  margin-bottom: 10px;
+  border-radius: 2px;
+  overflow: hidden;
+  background: color-mix(in srgb, var(--text) 10%, transparent);
+}
+.src-rail span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--primary);
+  transform: scaleX(0);
+  transform-origin: left center;
+  transition: transform 0.2s linear, background 0.4s ease;
+}
+.src-rail span.done {
+  background: var(--success);
 }
 
 /* the answer. min-height is sized to the finished paragraph so the card
@@ -841,8 +946,10 @@
   transform: scale(1);
 }
 
-/* always occupies space, so revealing it cannot move anything */
+/* always occupies space, so revealing it cannot move anything. On reveal
+   the check snaps in and a ring breaks off the badge. */
 .src-verified {
+  position: relative;
   display: flex;
   width: fit-content;
   align-items: center;
@@ -862,6 +969,47 @@
 .src-verified.on {
   opacity: 1;
   transform: none;
+}
+.src-verified::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  opacity: 0;
+}
+.src-verified.on::after {
+  animation: src-pulse 0.9s ease-out 1 both;
+}
+@keyframes src-pulse {
+  0%   { box-shadow: 0 0 0 0 color-mix(in srgb, var(--success) 55%, transparent); opacity: 1; }
+  100% { box-shadow: 0 0 0 12px color-mix(in srgb, var(--success) 0%, transparent); opacity: 0; }
+}
+.src-verified.on svg {
+  animation: src-pop 0.5s cubic-bezier(0.3, 1.6, 0.5, 1) both;
+}
+@keyframes src-pop {
+  0%   { transform: scale(0.2) rotate(-30deg); }
+  100% { transform: none; }
+}
+
+/* a soft pool of brand light that follows the pointer across the panel —
+   it lights the grid and blooms, never the cards, so it reads as a lamp
+   in the room rather than a glare on glass */
+.src-spot {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(
+    260px 260px at var(--mx, 50%) var(--my, 45%),
+    color-mix(in srgb, var(--primary) 18%, transparent),
+    transparent 70%
+  );
+  opacity: 0;
+  transition: opacity 0.45s ease;
+}
+.src-scene:hover .src-spot {
+  opacity: 1;
 }
 
 /* One-pixel inner highlight — reads as a lit glass edge rather than a second
@@ -886,12 +1034,17 @@
 
 /* Under reduced motion the panel is a still illustration: React never starts
    the typing loop (it renders the finished frame instead) and nothing here
-   drifts. */
+   drifts, sweeps or blinks. */
 @media (prefers-reduced-motion: reduce) {
   .src-blob,
   .src-dot,
   .src-doc,
-  .src-ans {
+  .src-ans,
+  .src-caret,
+  .src-bar::after,
+  .src-ans::after,
+  .src-verified::after,
+  .src-verified svg {
     animation: none !important;
   }
 }

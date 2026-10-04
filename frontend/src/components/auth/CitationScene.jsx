@@ -110,12 +110,17 @@ export default function CitationScene() {
   }, [reduce]);
 
   /* Pointer tilt, written straight to the node so the typing loop and the
-     pointer never have to trade re-renders. */
+     pointer never have to trade re-renders. The same coordinates feed the
+     spotlight's `--mx`/`--my`, so light and depth track together. */
   const tilt = (event) => {
-    if (reduce || !stageRef.current) return;
     const box = event.currentTarget.getBoundingClientRect();
-    const x = (event.clientX - box.left) / box.width - 0.5;
-    const y = (event.clientY - box.top) / box.height - 0.5;
+    const px = event.clientX - box.left;
+    const py = event.clientY - box.top;
+    event.currentTarget.style.setProperty("--mx", `${px}px`);
+    event.currentTarget.style.setProperty("--my", `${py}px`);
+    if (reduce || !stageRef.current) return;
+    const x = px / box.width - 0.5;
+    const y = py / box.height - 0.5;
     stageRef.current.style.transform = `rotateY(${(x * 10).toFixed(2)}deg) rotateX(${(
       -y * 8
     ).toFixed(2)}deg)`;
@@ -126,6 +131,7 @@ export default function CitationScene() {
 
   const head = s.text.slice(0, CLAIM.length);
   const tail = s.text.slice(CLAIM.length);
+  const progress = Math.min(1, s.text.length / (CLAIM.length + CLAUSE.length));
 
   return (
     <div className="src-scene" onMouseMove={tilt} onMouseLeave={settle}>
@@ -148,6 +154,22 @@ export default function CitationScene() {
         className="src-dot"
         style={{ left: "90%", top: "56%", width: 9, height: 9, animationDelay: "-4s" }}
       />
+      <span
+        className="src-dot"
+        style={{
+          left: "16%",
+          top: "86%",
+          width: 6,
+          height: 6,
+          background: "var(--accent)",
+          animationDelay: "-3.4s",
+        }}
+      />
+      <span
+        className="src-dot"
+        style={{ left: "78%", top: "14%", width: 7, height: 7, animationDelay: "-1.2s" }}
+      />
+      <div className="src-spot" />
 
       <div className="src-stage" ref={stageRef}>
         {/* the source document, sitting a little behind and to the left */}
@@ -170,15 +192,23 @@ export default function CitationScene() {
         </div>
 
         {/* the answer, closer to the viewer, typing itself in */}
-        <div className="src-ans">
+        <div className={`src-ans${s.verified ? " verified" : ""}`}>
           <div className="src-ans-head">
             <Sparkles aria-hidden="true" />
             <span>Answer from your notes</span>
           </div>
+          <div className="src-rail" aria-hidden="true">
+            <span
+              className={s.verified ? "done" : ""}
+              style={{ transform: `scaleX(${progress})` }}
+            />
+          </div>
           <p className="src-t">
             {head}
+            {!s.chip1 && !s.verified && <span className="src-caret" />}
             <span className={`src-chip${s.chip1 ? " on" : ""}`}>1</span>
             {tail}
+            {s.chip1 && !s.verified && <span className="src-caret" />}
             <span className={`src-chip${s.chip2 ? " on" : ""}`}>2</span>
           </p>
           <div className={`src-verified${s.verified ? " on" : ""}`}>
