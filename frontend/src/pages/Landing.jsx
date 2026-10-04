@@ -186,19 +186,61 @@ function Kicker({ index, children, className, rule = false }) {
   );
 }
 
+/* Theme-aware bunny mark for header/footer use. */
+function BunnyMark({ className }) {
+  return (
+    <svg
+      viewBox="0 0 438 362"
+      width={438}
+      height={362}
+      className={cn("h-8 w-auto shrink-0", className)}
+      aria-hidden="true"
+    >
+      <defs>
+        <path id="heart" d="M0 8 C-16 -4 -9 -16 0 -7 C9 -16 16 -4 0 8Z" />
+        <path id="spark" d="M0 -1 C0.12 -0.3 0.3 -0.12 1 0 C0.3 0.12 0.12 0.3 0 1 C-0.12 0.3 -0.3 0.12 -1 0 C-0.3 -0.12 -0.12 -0.3 0 -1Z" />
+      </defs>
+      <rect width="438" height="362" rx="56" fill="var(--surface)" />
+      <g transform="translate(-4.3 16.72) scale(1.5 1.4)" strokeLinecap="round" strokeLinejoin="round">
+        <path
+          d="M128 205 C132 215 118 224 106 217 C94 209 98 194 112 190 C92 184 74 168 70 148 C66 126 76 106 96 96 C72 72 70 30 90 18 C108 8 126 26 132 56 C135 70 138 80 150 90 C162 80 165 70 168 56 C174 26 192 8 210 18 C230 30 228 72 204 96 C224 106 234 126 230 148 C226 168 208 184 188 190 C202 194 206 209 194 217 C182 224 168 215 172 205"
+          fill="var(--surface)"
+          stroke="var(--primary)"
+          strokeWidth="9"
+        />
+        <ellipse cx="106" cy="58" rx="11" ry="24" transform="rotate(-12 106 58)" fill="var(--accent)" />
+        <ellipse cx="194" cy="58" rx="11" ry="24" transform="rotate(12 194 58)" fill="var(--accent)" />
+        <path d="M110 134 Q120 122 130 134" fill="none" stroke="var(--primary)" strokeWidth="5" />
+        <path d="M170 134 Q180 122 190 134" fill="none" stroke="var(--primary)" strokeWidth="5" />
+        <circle cx="98" cy="148" r="9" fill="var(--accent)" />
+        <circle cx="202" cy="148" r="9" fill="var(--accent)" />
+        <path
+          d="M145 140 Q150 136 155 140 Q153 145 150 146 Q147 145 145 140Z"
+          fill="var(--primary)"
+          stroke="var(--primary)"
+          strokeWidth="2"
+        />
+        <path
+          d="M150 147 V150 M150 150 Q143 157 136 150 M150 150 Q157 157 164 150"
+          fill="none"
+          stroke="var(--primary)"
+          strokeWidth="4"
+        />
+        <use href="#heart" transform="translate(40 108) scale(1.5)" fill="var(--primary)" />
+        <use href="#spark" transform="translate(258 112) scale(14)" fill="var(--primary)" />
+      </g>
+    </svg>
+  );
+}
+
 /* Header lockup: the bunny mark cropped out of the full artwork (a full
    1200x700 lockup is unreadable at navbar size) + the live wordmark. */
 function Brand({ className }) {
   return (
     <Link to="/" className={cn("group flex items-center gap-2.5", className)} aria-label="StudySpace home">
-      <img
-        src="/logo-mark.svg"
-        alt=""
-        aria-hidden="true"
-        width={438}
-        height={362}
-        className="h-8 w-auto shrink-0 drop-shadow-sm transition-transform duration-300 group-hover:-rotate-6"
-      />
+      <span className="drop-shadow-sm transition-transform duration-300 group-hover:-rotate-6">
+        <BunnyMark />
+      </span>
       <span className="text-[15px] font-semibold tracking-tight">StudySpace</span>
     </Link>
   );
@@ -207,14 +249,63 @@ function Brand({ className }) {
 /* Footer shows the whole artwork: bunny + wordmark + tagline. */
 function FooterLogo({ className }) {
   return (
-    <img
-      src="/logo-full.svg"
-      alt="StudySpace — where studying finally clicks"
-      width={1200}
-      height={700}
-      loading="lazy"
-      className={cn("h-20 w-auto drop-shadow-sm sm:h-24", className)}
-    />
+    <div className={cn("flex flex-col items-center gap-3", className)}>
+      <svg
+        viewBox="0 0 1200 700"
+        width={1200}
+        height={700}
+        className="h-20 w-auto drop-shadow-sm sm:h-24"
+        role="img"
+        aria-label="StudySpace — where studying finally clicks"
+      >
+        <defs>
+          <path id="heart" d="M0 8 C-16 -4 -9 -16 0 -7 C9 -16 16 -4 0 8Z" />
+          <path id="spark" d="M0 -1 C0.12 -0.3 0.3 -0.12 1 0 C0.3 0.12 0.12 0.3 0 1 C-0.12 0.3 -0.3 0.12 -1 0 C-0.3 -0.12 -0.12 -0.3 0 -1Z" />
+        </defs>
+        <rect width="1200" height="700" rx="48" fill="var(--surface)" />
+        <g transform="translate(375 10) scale(1.5 1.4)" strokeLinecap="round" strokeLinejoin="round">
+          <path
+            d="M128 205 C132 215 118 224 106 217 C94 209 98 194 112 190 C92 184 74 168 70 148 C66 126 76 106 96 96 C72 72 70 30 90 18 C108 8 126 26 132 56 C135 70 138 80 150 90 C162 80 165 70 168 56 C174 26 192 8 210 18 C230 30 228 72 204 96 C224 106 234 126 230 148 C226 168 208 184 188 190 C202 194 206 209 194 217 C182 224 168 215 172 205"
+            fill="var(--surface)"
+            stroke="var(--primary)"
+            strokeWidth="9"
+          />
+          <ellipse cx="106" cy="58" rx="11" ry="24" transform="rotate(-12 106 58)" fill="var(--accent)" />
+          <ellipse cx="194" cy="58" rx="11" ry="24" transform="rotate(12 194 58)" fill="var(--accent)" />
+          <path d="M110 134 Q120 122 130 134" fill="none" stroke="var(--primary)" strokeWidth="5" />
+          <path d="M170 134 Q180 122 190 134" fill="none" stroke="var(--primary)" strokeWidth="5" />
+          <circle cx="98" cy="148" r="9" fill="var(--accent)" />
+          <circle cx="202" cy="148" r="9" fill="var(--accent)" />
+          <path
+            d="M145 140 Q150 136 155 140 Q153 145 150 146 Q147 145 145 140Z"
+            fill="var(--primary)"
+            stroke="var(--primary)"
+            strokeWidth="2"
+          />
+          <path
+            d="M150 147 V150 M150 150 Q143 157 136 150 M150 150 Q157 157 164 150"
+            fill="none"
+            stroke="var(--primary)"
+            strokeWidth="4"
+          />
+          <use href="#heart" transform="translate(40 108) scale(1.5)" fill="var(--primary)" />
+          <use href="#spark" transform="translate(258 112) scale(14)" fill="var(--primary)" />
+        </g>
+        <text
+          x="600"
+          y="590"
+          textAnchor="middle"
+          fontFamily="Nunito, Quicksand, 'Arial Rounded MT Bold', 'Trebuchet MS', sans-serif"
+          fontWeight="700"
+          fontSize="30"
+          letterSpacing="5"
+          fill="var(--primary)"
+          opacity="0.8"
+        >
+          where studying finally clicks
+        </text>
+      </svg>
+    </div>
   );
 }
 
