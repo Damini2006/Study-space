@@ -591,9 +591,16 @@
 .auth-page {
   /* placeholders must read lighter than typed text, never as real input */
   --auth-placeholder: #7d8598;
+  /* light-mode page wash: a faint brand tint so the background never reads
+     as flat white */
+  background:
+    radial-gradient(1100px 500px at 12% -8%, color-mix(in srgb, var(--primary) 7%, transparent), transparent 60%),
+    radial-gradient(900px 480px at 96% 108%, color-mix(in srgb, var(--accent) 6%, transparent), transparent 55%),
+    var(--bg);
 }
 [data-theme="dark"] .auth-page {
   --auth-placeholder: #7b839a;
+  background: var(--bg);
 }
 
 .auth-page input::placeholder {

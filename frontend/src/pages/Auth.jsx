@@ -439,17 +439,19 @@ export default function AuthPage() {
 
       {/* ---------------- Right: the form ---------------- */}
       <main className="flex flex-1 flex-col">
-        <div className="flex items-center justify-between gap-3 px-5 pt-5 sm:px-8">
-          {/* explicit way home — the logo does this too, but only one of
-              them is visible on a phone, and neither says so */}
-          <Link
-            to="/"
-            className="group inline-flex items-center gap-2 rounded-full border border-border bg-card/70 px-3.5 py-1.5 text-[13px] font-medium text-foreground/80 shadow-sm backdrop-blur transition-colors hover:border-primary/45 hover:text-foreground"
-          >
-            <ArrowLeft className="size-3.5 transition-transform duration-200 group-hover:-translate-x-0.5" />
-            Back to home
-          </Link>
-          <ThemeToggle size="sm" />
+        {/* Top bar */}
+        <div className="flex items-center justify-between gap-3 border-b border-border/60 bg-card/40 px-5 py-3 backdrop-blur-md sm:px-8">
+          <StudySpaceLogo size={26} />
+          <div className="flex items-center gap-2">
+            <Link
+              to="/"
+              className="group inline-flex items-center gap-1.5 rounded-full border border-border bg-card/70 px-3 py-1.5 text-[12.5px] font-medium text-foreground/80 shadow-sm backdrop-blur transition-colors hover:border-primary/45 hover:text-foreground"
+            >
+              <ArrowLeft className="size-3 transition-transform duration-200 group-hover:-translate-x-0.5" />
+              Home
+            </Link>
+            <ThemeToggle size="sm" />
+          </div>
         </div>
 
         <div className="flex flex-1 items-center justify-center px-5 pb-10 pt-2 sm:px-8">
@@ -464,7 +466,7 @@ export default function AuthPage() {
             </h1>
             <p className="mt-2 text-[13.5px] leading-relaxed text-foreground/80">{form[1]}</p>
 
-            <div className="mt-6 rounded-xl border border-border bg-card p-5 shadow-sm">
+            <div className="mt-6 rounded-2xl border border-border/80 bg-card p-5 shadow-[0_2px_8px_color-mix(in_srgb,var(--primary)_5%,transparent),0_12px_32px_color-mix(in_srgb,var(--primary)_8%,transparent)] ring-1 ring-primary/5 sm:p-6">
               {sent ? (
                 <motion.div
                   initial={{ opacity: 0, y: 10 }}
