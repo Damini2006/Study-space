@@ -1,23 +1,30 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400" width="400" height="400">
-  <!-- StudySpace favicon: the bunny mark from logo-full.svg on a square
-       cream tile so it reads in both the tab strip and the home screen. -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 438 362" width="438" height="362">
+  <!-- StudySpace mascot mark, cropped out of logo-full.svg so it stays
+       legible at navbar size. Cream card + bunny only, no wordmark. -->
   <defs>
     <path id="heart" d="M0 8 C-16 -4 -9 -16 0 -7 C9 -16 16 -4 0 8Z"/>
     <path id="spark" d="M0 -1 C0.12 -0.3 0.3 -0.12 1 0 C0.3 0.12 0.12 0.3 0 1 C-0.12 0.3 -0.3 0.12 -1 0 C-0.3 -0.12 -0.12 -0.3 0 -1Z"/>
   </defs>
-  <rect width="400" height="400" rx="84" fill="#FCF4E8"/>
-  <!-- same artwork at 0.9x, centred: ≈28px side margin, ≈66px top/bottom
-       once the stroke is counted (a wide subject in a square frame). -->
-  <g transform="translate(-1 52.15) scale(1.35 1.26)" stroke-linecap="round" stroke-linejoin="round">
+  <rect width="438" height="362" rx="56" fill="#FCF4E8"/>
+  <!-- measured bbox of the artwork group is x 25.7..272, y 15.2..219.5;
+       this placement centres it (≈27px side margin, ≈32px top/bottom once
+       the 9px stroke is counted) without altering the original aspect. -->
+  <g transform="translate(-4.3 16.72) scale(1.5 1.4)" stroke-linecap="round" stroke-linejoin="round">
+    <!-- head, ears and tucked arms as one outline -->
     <path d="M128 205 C132 215 118 224 106 217 C94 209 98 194 112 190 C92 184 74 168 70 148 C66 126 76 106 96 96 C72 72 70 30 90 18 C108 8 126 26 132 56 C135 70 138 80 150 90 C162 80 165 70 168 56 C174 26 192 8 210 18 C230 30 228 72 204 96 C224 106 234 126 230 148 C226 168 208 184 188 190 C202 194 206 209 194 217 C182 224 168 215 172 205" fill="#FCF4E8" stroke="#8E7CC8" stroke-width="9"/>
+    <!-- inner ears -->
     <ellipse cx="106" cy="58" rx="11" ry="24" transform="rotate(-12 106 58)" fill="#B8A8E2"/>
     <ellipse cx="194" cy="58" rx="11" ry="24" transform="rotate(12 194 58)" fill="#B8A8E2"/>
+    <!-- happy closed eyes -->
     <path d="M110 134 Q120 122 130 134" fill="none" stroke="#8E7CC8" stroke-width="5"/>
     <path d="M170 134 Q180 122 190 134" fill="none" stroke="#8E7CC8" stroke-width="5"/>
+    <!-- blush -->
     <circle cx="98" cy="148" r="9" fill="#B8A8E2"/>
     <circle cx="202" cy="148" r="9" fill="#B8A8E2"/>
+    <!-- nose + mouth -->
     <path d="M145 140 Q150 136 155 140 Q153 145 150 146 Q147 145 145 140Z" fill="#8E7CC8" stroke="#8E7CC8" stroke-width="2"/>
     <path d="M150 147 V150 M150 150 Q143 157 136 150 M150 150 Q157 157 164 150" fill="none" stroke="#8E7CC8" stroke-width="4"/>
+    <!-- heart + sparkle -->
     <use href="#heart" transform="translate(40 108) scale(1.5)" fill="#8E7CC8"/>
     <use href="#spark" transform="translate(258 112) scale(14)" fill="#8E7CC8"/>
   </g>

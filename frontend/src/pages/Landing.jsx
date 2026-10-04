@@ -179,14 +179,35 @@ function Kicker({ index, children, className, rule = false }) {
   );
 }
 
+/* Header lockup: the bunny mark cropped out of the full artwork (a full
+   1200x700 lockup is unreadable at navbar size) + the live wordmark. */
 function Brand({ className }) {
   return (
     <Link to="/" className={cn("group flex items-center gap-2.5", className)} aria-label="StudySpace home">
-      <span className="brand-gradient flex size-7 items-center justify-center rounded-md text-[11px] font-bold tracking-tight text-white shadow-sm transition-transform duration-300 group-hover:-rotate-6">
-        SS
-      </span>
+      <img
+        src="/logo-mark.svg"
+        alt=""
+        aria-hidden="true"
+        width={438}
+        height={362}
+        className="h-8 w-auto shrink-0 drop-shadow-sm transition-transform duration-300 group-hover:-rotate-6"
+      />
       <span className="text-[15px] font-semibold tracking-tight">StudySpace</span>
     </Link>
+  );
+}
+
+/* Footer shows the whole artwork: bunny + wordmark + tagline. */
+function FooterLogo({ className }) {
+  return (
+    <img
+      src="/logo-full.svg"
+      alt="StudySpace — where studying finally clicks"
+      width={1200}
+      height={700}
+      loading="lazy"
+      className={cn("h-20 w-auto drop-shadow-sm sm:h-24", className)}
+    />
   );
 }
 
@@ -1056,7 +1077,7 @@ export default function Landing() {
         <div className="mx-auto max-w-[1400px] px-5 py-12 sm:px-6">
           <div className="grid gap-10 sm:grid-cols-2 lg:grid-cols-4">
             <div>
-              <Brand />
+              <FooterLogo />
               <p className="mt-4 max-w-xs text-[13px] leading-relaxed text-muted-foreground">
                 A source-grounded study workspace. Answers you can check, a schedule that respects
                 your week.
