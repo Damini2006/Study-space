@@ -1032,24 +1032,6 @@
     inset 0 0 0 1px rgba(255, 255, 255, 0.05);
 }
 
-/* --------------------------------------------------------------------------
-   Logo colour-coordination
-   The logo assets use cream (#FCF4E8) and bunny-purple (#8E7CC8).
-   In dark mode we shift the hue toward the live primary so the mark
-   feels part of the palette rather than a fixed asset. */
-@media (prefers-color-scheme: dark) {
-  img[src$="logo-mark.svg"],
-  img[src$="logo-full.svg"],
-  img[src$="favicon.svg"] {
-    filter: hue-rotate(-20deg);
-  }
-}
-[data-theme="dark"] img[src$="logo-mark.svg"],
-[data-theme="dark"] img[src$="logo-full.svg"],
-[data-theme="dark"] img[src$="favicon.svg"] {
-  filter: hue-rotate(-20deg);
-}
-
 /* Under reduced motion the panel is a still illustration: React never starts
    the typing loop (it renders the finished frame instead) and nothing here
    drifts, sweeps or blinks. */
