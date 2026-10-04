@@ -601,124 +601,297 @@
   opacity: 1;
 }
 
-/* Decorative backdrop behind the 3D scene: a slow brand-coloured wash. */
-.auth-wash {
+/* ==========================================================================
+   The auth panel's scene: a source document and an answer card floating over
+   a ruled grid. The answer types itself out, lighting the passage it is
+   citing as it goes, then reports how many claims it verified.
+
+   Panel, cards, rules and highlights all read the same variables as the rest
+   of the app, so dark mode is not a second stylesheet.
+   ========================================================================== */
+.src-scene {
   position: absolute;
-  inset: -12%;
-  background:
-    radial-gradient(46% 40% at 24% 26%, color-mix(in srgb, var(--primary) 30%, transparent), transparent 70%),
-    radial-gradient(44% 40% at 78% 72%, color-mix(in srgb, var(--accent) 26%, transparent), transparent 72%),
-    radial-gradient(60% 55% at 55% 48%, color-mix(in srgb, var(--surface) 72%, transparent), transparent 75%);
-  filter: blur(34px) saturate(1.05);
-  animation: auth-wash-drift 22s ease-in-out infinite alternate;
-  will-change: transform;
-}
-@keyframes auth-wash-drift {
-  0%   { transform: translate3d(-2%, -1%, 0) scale(1); }
-  50%  { transform: translate3d(3%, 2%, 0) scale(1.06); }
-  100% { transform: translate3d(-1%, 3%, 0) scale(1.02); }
-}
-
-/* Fine rule grid behind the scene. */
-.auth-grid {
-  background-image:
-    linear-gradient(to right, color-mix(in srgb, var(--text) 11%, transparent) 1px, transparent 1px),
-    linear-gradient(to bottom, color-mix(in srgb, var(--text) 11%, transparent) 1px, transparent 1px);
-  background-size: 52px 52px;
-}
-[data-theme="dark"] .auth-grid {
-  background-image:
-    linear-gradient(to right, rgba(255, 255, 255, 0.09) 1px, transparent 1px),
-    linear-gradient(to bottom, rgba(255, 255, 255, 0.09) 1px, transparent 1px);
-}
-
-/* Skeleton shown while the lazy 3D chunk arrives. */
-.auth-scene-skeleton {
-  background:
-    radial-gradient(40% 40% at 50% 45%, color-mix(in srgb, var(--primary) 22%, transparent), transparent 70%),
-    var(--surface-2);
+  inset: 0;
   overflow: hidden;
-  position: relative;
+  background: var(--bg);
+  perspective: 1000px;
+  /* The "you are reading this passage" wash. It has to be alpha rather than
+     a flat colour: the card under it is white in light themes and navy in
+     dark, and one yellow cannot stay legible on both. */
+  --src-hl: rgba(255, 241, 168, 0.9);
+  --src-hl-ring: rgba(255, 241, 168, 0.55);
 }
-.auth-scene-skeleton::after {
+[data-theme="dark"] .src-scene {
+  --src-hl: rgba(255, 224, 102, 0.26);
+  --src-hl-ring: rgba(255, 224, 102, 0.18);
+}
+
+/* Ruled grid, radially masked so it dissolves instead of ending on a
+   rectangle. Offset half a cell so no line lands on a panel edge. */
+.src-grid {
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(to right, color-mix(in srgb, var(--primary) 13%, transparent) 1px, transparent 1px),
+    linear-gradient(to bottom, color-mix(in srgb, var(--primary) 13%, transparent) 1px, transparent 1px);
+  background-size: 36px 36px;
+  background-position: 18px 18px;
+  -webkit-mask-image: radial-gradient(78% 74% at 50% 48%, #000 0%, rgba(0, 0, 0, 0.5) 58%, transparent 100%);
+  mask-image: radial-gradient(78% 74% at 50% 48%, #000 0%, rgba(0, 0, 0, 0.5) 58%, transparent 100%);
+}
+
+/* Two out-of-focus colour blooms, one per corner, on different clocks. */
+.src-blob {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(42px);
+  opacity: 0.55;
+  animation: src-drift 10s ease-in-out infinite;
+}
+.src-blob-a {
+  width: 230px;
+  height: 230px;
+  left: -50px;
+  top: -40px;
+  background: color-mix(in srgb, var(--primary) 62%, var(--bg));
+}
+.src-blob-b {
+  width: 250px;
+  height: 250px;
+  right: -70px;
+  bottom: -60px;
+  background: color-mix(in srgb, var(--accent) 62%, var(--bg));
+  animation-delay: -4s;
+}
+@keyframes src-drift {
+  50% { transform: translate(24px, 18px) scale(1.08); }
+}
+
+/* On dark the blooms have to stay close to their source colour — mixed part
+   way toward the background they stop reading as light and start reading as
+   a stain. The two selectors below are the ones that turn `--bg` dark, so
+   these tints can never disagree with the card they sit on. */
+[data-theme="dark"] .src-blob-a {
+  background: color-mix(in srgb, var(--primary) 86%, var(--bg));
+}
+[data-theme="dark"] .src-blob-b {
+  background: color-mix(in srgb, var(--accent) 84%, var(--bg));
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme]):not([data-theme="light"]) .src-scene {
+    --src-hl: rgba(255, 224, 102, 0.26);
+    --src-hl-ring: rgba(255, 224, 102, 0.18);
+  }
+  :root:not([data-theme]):not([data-theme="light"]) .src-blob-a {
+    background: color-mix(in srgb, var(--primary) 86%, var(--bg));
+  }
+  :root:not([data-theme]):not([data-theme="light"]) .src-blob-b {
+    background: color-mix(in srgb, var(--accent) 84%, var(--bg));
+  }
+}
+
+.src-dot {
+  position: absolute;
+  border-radius: 50%;
+  background: var(--primary);
+  opacity: 0.35;
+  animation: src-dot-drift 6s ease-in-out infinite;
+}
+@keyframes src-dot-drift {
+  50% { transform: translate(8px, -14px); }
+}
+
+/* The 3D stage. Capped at the card's natural width so a wide aside gets more
+   grid rather than bigger type; the auto margins centre it. The pointer tilt
+   is written straight onto this node's `transform`. */
+.src-stage {
+  position: absolute;
+  inset: 0;
+  max-width: 480px;
+  margin-inline: auto;
+  transform-style: preserve-3d;
+  transition: transform 0.2s ease-out;
+}
+
+/* --- the two cards ------------------------------------------------------ */
+.src-doc,
+.src-ans {
+  position: absolute;
+  padding: 14px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  color: var(--text);
+}
+
+/* the source, behind and slightly rotated away */
+.src-doc {
+  left: 7%;
+  top: 9%;
+  width: 60%;
+  box-shadow: 0 14px 34px color-mix(in srgb, var(--primary) 16%, transparent);
+  transform: translateZ(10px) rotateY(10deg) rotateZ(-3deg);
+  animation: src-doc-float 7s ease-in-out infinite;
+}
+@keyframes src-doc-float {
+  50% { transform: translateZ(10px) rotateY(10deg) rotateZ(-3deg) translateY(-8px); }
+}
+
+/* the answer, closer to the viewer so it reads on top */
+.src-ans {
+  right: 6%;
+  bottom: 8%;
+  width: 70%;
+  box-shadow: 0 20px 44px color-mix(in srgb, var(--primary) 24%, transparent);
+  transform: translateZ(70px);
+  animation: src-ans-float 8s ease-in-out infinite;
+}
+@keyframes src-ans-float {
+  50% { transform: translateZ(70px) translateY(-6px); }
+}
+
+.src-doc-head,
+.src-ans-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11.5px;
+  line-height: 1.4;
+}
+.src-doc-head {
+  margin-bottom: 10px;
+  color: color-mix(in srgb, var(--text) 62%, transparent);
+}
+.src-ans-head {
+  margin-bottom: 8px;
+  font-weight: 500;
+  color: var(--primary);
+}
+.src-doc-head svg,
+.src-ans-head svg,
+.src-verified svg {
+  width: 13px;
+  height: 13px;
+  flex-shrink: 0;
+}
+
+/* skeleton lines standing in for unread paragraphs */
+.src-bar {
+  height: 7px;
+  border-radius: 4px;
+  background: color-mix(in srgb, var(--text) 9%, transparent);
+  margin: 7px 0;
+}
+
+/* a passage the answer is currently citing */
+.src-hl {
+  position: relative;
+  margin: 8px -6px;
+  padding: 3px 6px;
+  border-radius: 6px;
+  font-size: 12px;
+  line-height: 1.5;
+  transition: background 0.4s, box-shadow 0.4s;
+}
+.src-hl.on {
+  background: var(--src-hl);
+  box-shadow: 0 0 0 3px var(--src-hl-ring);
+}
+.src-pg {
+  position: absolute;
+  right: 4px;
+  top: -9px;
+  padding: 0 7px;
+  border-radius: 999px;
+  background: var(--primary);
+  color: var(--bg);
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 1.5;
+  opacity: 0;
+  transform: translateY(4px);
+  transition: opacity 0.3s, transform 0.3s;
+}
+.src-hl.on .src-pg {
+  opacity: 1;
+  transform: none;
+}
+
+/* the answer. min-height is sized to the finished paragraph so the card
+   never grows while it types. */
+.src-t {
+  margin: 0;
+  min-height: 84px;
+  font-size: 13px;
+  line-height: 1.55;
+}
+.src-chip {
+  display: inline-block;
+  margin-left: 3px;
+  padding: 0 5px;
+  border-radius: 5px;
+  background: color-mix(in srgb, var(--primary) 18%, var(--surface));
+  color: color-mix(in srgb, var(--primary) 82%, var(--text));
+  font-size: 11px;
+  font-weight: 500;
+  transform: scale(0);
+  transition: transform 0.28s cubic-bezier(0.3, 1.6, 0.5, 1);
+}
+.src-chip.on {
+  transform: scale(1);
+}
+
+/* always occupies space, so revealing it cannot move anything */
+.src-verified {
+  display: flex;
+  width: fit-content;
+  align-items: center;
+  gap: 6px;
+  margin-top: 10px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--success) 14%, transparent);
+  color: var(--success);
+  font-size: 11.5px;
+  font-weight: 500;
+  line-height: 1.4;
+  opacity: 0;
+  transform: translateY(4px);
+  transition: opacity 0.35s, transform 0.35s;
+}
+.src-verified.on {
+  opacity: 1;
+  transform: none;
+}
+
+/* One-pixel inner highlight — reads as a lit glass edge rather than a second
+   border. It has to be a pseudo-element: an inset box-shadow paints below an
+   element's children, and the scene would bury it. */
+.auth-lit-edge::after {
   content: "";
   position: absolute;
   inset: 0;
-  transform: translateX(-100%);
-  background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--surface) 72%, transparent), transparent);
-  animation: auth-shimmer 1.4s ease-in-out infinite;
-}
-@keyframes auth-shimmer {
-  100% { transform: translateX(100%); }
-}
-
-/* Companion wash. The first blob drifts on a 22s clock; this one runs a
-   different shape, direction and duration so the backdrop breathes on two
-   clocks at once instead of pulsing in lockstep with itself. */
-.auth-wash-b {
-  position: absolute;
-  inset: -14%;
-  background:
-    radial-gradient(44% 46% at 76% 24%, color-mix(in srgb, var(--accent) 32%, transparent), transparent 70%),
-    radial-gradient(50% 44% at 20% 76%, color-mix(in srgb, var(--primary) 24%, transparent), transparent 72%);
-  filter: blur(46px) saturate(1.06);
-  opacity: 0.9;
-  animation: auth-wash-drift-b 27s ease-in-out infinite alternate;
-  will-change: transform;
-}
-@keyframes auth-wash-drift-b {
-  0%   { transform: translate3d(3%, 2%, 0) scale(1.04); }
-  50%  { transform: translate3d(-3%, -2%, 0) scale(0.96); }
-  100% { transform: translate3d(1%, -4%, 0) scale(1.05); }
-}
-
-/* Edges of the scene card: a vignette plus a top/bottom fade so the 3D
-   dissolves into the page instead of ending on a hard rectangle. */
-.auth-vignette {
-  position: absolute;
-  inset: 0;
+  border-radius: inherit;
   pointer-events: none;
-  background:
-    radial-gradient(118% 96% at 50% 46%, transparent 38%, color-mix(in srgb, var(--bg) 62%, transparent) 100%),
-    linear-gradient(
-      to bottom,
-      color-mix(in srgb, var(--bg) 58%, transparent) 0%,
-      transparent 17%,
-      transparent 82%,
-      color-mix(in srgb, var(--bg) 66%, transparent) 100%
-    );
-}
-
-/* One-pixel inner highlight — reads as a lit glass edge rather than a
-   second border, which is what the scene card actually needs. */
-.auth-lit-edge {
   box-shadow:
     inset 0 1px 0 color-mix(in srgb, #ffffff 55%, transparent),
     inset 0 0 0 1px color-mix(in srgb, #ffffff 9%, transparent),
     inset 0 -1px 0 color-mix(in srgb, var(--text) 7%, transparent);
 }
-[data-theme="dark"] .auth-lit-edge {
+[data-theme="dark"] .auth-lit-edge::after {
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.13),
     inset 0 0 0 1px rgba(255, 255, 255, 0.05);
 }
 
-/* Slow bob used by the static fallback's chips and card, so the no-WebGL
-   path still has some life without needing a canvas. Animates the
-   standalone `translate` property, not `transform`, so Tailwind's own
-   translate utilities (the card's -translate-x/y-1/2) keep working. */
-.auth-float {
-  animation: auth-float 7s ease-in-out infinite;
-}
-@keyframes auth-float {
-  0%, 100% { translate: 0 0; }
-  50%      { translate: 0 -9px; }
-}
-
+/* Under reduced motion the panel is a still illustration: React never starts
+   the typing loop (it renders the finished frame instead) and nothing here
+   drifts. */
 @media (prefers-reduced-motion: reduce) {
-  .auth-wash,
-  .auth-wash-b,
-  .auth-float {
+  .src-blob,
+  .src-dot,
+  .src-doc,
+  .src-ans {
     animation: none !important;
   }
 }

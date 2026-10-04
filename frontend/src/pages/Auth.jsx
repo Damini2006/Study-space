@@ -16,7 +16,6 @@ import {
 } from "lucide-react";
 import { supabaseConfigured } from "@/lib/supabase";
 import { useAuth } from "@/hooks/useAuth";
-import { useTheme } from "@/hooks/useTheme";
 import { useToast } from "@/components/ui/toast";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -192,9 +191,7 @@ export default function AuthPage() {
   const { signIn, signUp, signInWithGoogle, startDemo, resetPassword, updatePassword } =
     useAuth();
   const { error, success } = useToast();
-  const { theme } = useTheme();
   const navigate = useNavigate();
-  const dark = theme === "dark";
 
   useEffect(() => {
     setMode(initialMode);
@@ -366,13 +363,9 @@ export default function AuthPage() {
             <StudySpaceLogo size={30} />
           </motion.div>
 
-          {/* the 3D scene (lazy, with a static fallback) — ScenePanel runs
-              its own entrance so the canvas is only ever scaled once */}
-          <ScenePanel
-            mode={mode}
-            dark={dark}
-            className="min-h-[240px] flex-1 rounded-[28px] border border-border/70"
-          />
+          {/* the citation scene — ScenePanel runs its own entrance, and the
+              panel is CSS-only so there is never a chunk to wait for */}
+          <ScenePanel className="min-h-[240px] flex-1 rounded-[28px] border border-border/70" />
 
           {/* caption — slides out and in when the mode changes */}
           <motion.div
