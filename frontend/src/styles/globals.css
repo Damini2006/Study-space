@@ -580,3 +580,74 @@
   will-change: transform;
 }
 .marquee-track:hover { animation-play-state: paused; }
+
+
+
+/* ==========================================================================
+   Sign-in / sign-up page surface.
+   The page keeps the application's existing light and dark themes; only the
+   placeholder colour and the decorative scene backdrop live here.
+   ========================================================================== */
+.auth-page {
+  /* placeholders must read lighter than typed text, never as real input */
+  --auth-placeholder: #7d8598;
+}
+[data-theme="dark"] .auth-page {
+  --auth-placeholder: #7b839a;
+}
+
+.auth-page input::placeholder {
+  color: var(--auth-placeholder);
+  opacity: 1;
+}
+
+/* Decorative backdrop behind the 3D scene: a slow brand-coloured wash. */
+.auth-wash {
+  position: absolute;
+  inset: -12%;
+  background:
+    radial-gradient(46% 40% at 24% 26%, color-mix(in srgb, var(--primary) 30%, transparent), transparent 70%),
+    radial-gradient(44% 40% at 78% 72%, color-mix(in srgb, var(--accent) 26%, transparent), transparent 72%),
+    radial-gradient(60% 55% at 55% 48%, color-mix(in srgb, var(--surface) 72%, transparent), transparent 75%);
+  filter: blur(34px) saturate(1.05);
+  animation: auth-wash-drift 22s ease-in-out infinite alternate;
+  will-change: transform;
+}
+@keyframes auth-wash-drift {
+  0%   { transform: translate3d(-2%, -1%, 0) scale(1); }
+  50%  { transform: translate3d(3%, 2%, 0) scale(1.06); }
+  100% { transform: translate3d(-1%, 3%, 0) scale(1.02); }
+}
+
+/* Fine rule grid behind the scene. */
+.auth-grid {
+  background-image:
+    linear-gradient(to right, color-mix(in srgb, var(--text) 11%, transparent) 1px, transparent 1px),
+    linear-gradient(to bottom, color-mix(in srgb, var(--text) 11%, transparent) 1px, transparent 1px);
+  background-size: 52px 52px;
+}
+[data-theme="dark"] .auth-grid {
+  background-image:
+    linear-gradient(to right, rgba(255, 255, 255, 0.09) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(255, 255, 255, 0.09) 1px, transparent 1px);
+}
+
+/* Skeleton shown while the lazy 3D chunk arrives. */
+.auth-scene-skeleton {
+  background:
+    radial-gradient(40% 40% at 50% 45%, color-mix(in srgb, var(--primary) 22%, transparent), transparent 70%),
+    var(--surface-2);
+  overflow: hidden;
+  position: relative;
+}
+.auth-scene-skeleton::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--surface) 72%, transparent), transparent);
+  animation: auth-shimmer 1.4s ease-in-out infinite;
+}
+@keyframes auth-shimmer {
+  100% { transform: translateX(100%); }
+}
