@@ -1,6 +1,7 @@
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import { ArrowLeft, Check } from "lucide-react";
+import ThemeToggle from "@/components/ui/theme-toggle";
 
 const CONTROLS = [
   ["Hide API keys", "Server credentials are injected through server-side environment variables only. The browser bundle is built without them and checked in CI for literal key patterns."],
@@ -41,7 +42,10 @@ export default function Security() {
             <ArrowLeft className="size-4" />
             Back to home
           </Link>
-          <span className="font-mono text-[11px] uppercase tracking-[0.16em] text-muted-foreground">Security</span>
+          <div className="flex items-center gap-3">
+            <ThemeToggle size="sm" />
+            <span className="font-mono text-[11px] uppercase tracking-[0.16em] text-muted-foreground">Security</span>
+          </div>
         </div>
       </header>
 

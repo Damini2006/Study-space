@@ -19,6 +19,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input, Label } from "@/components/ui/input";
 import { motion, AnimatePresence } from "framer-motion";
+import ThemeToggle from "@/components/ui/theme-toggle";
 import { cn } from "@/lib/utils";
 
 /* ------------------------------------------------------------------ */
@@ -295,15 +296,18 @@ export default function AuthPage() {
 
       {/* Right form panel */}
       <main className="flex flex-1 flex-col">
-        <div className="flex items-center justify-between px-5 pt-6 sm:px-8 lg:hidden">
+        <div className="flex items-center justify-between gap-3 px-5 pt-6 sm:px-8">
           <Link to="/" className="flex items-center gap-2.5" aria-label="StudySpace home">
             <span className="brand-gradient flex size-7 items-center justify-center rounded-md text-[11px] font-bold text-white">SS</span>
             <span className="text-[15px] font-semibold tracking-tight">StudySpace</span>
           </Link>
-          <Link to="/" className="flex items-center gap-1.5 text-[13px] text-muted-foreground">
-            <ArrowLeft className="size-3.5" />
-            Home
-          </Link>
+          <div className="flex items-center gap-2">
+            <ThemeToggle size="sm" />
+            <Link to="/" className="flex items-center gap-1.5 rounded-md px-2 py-1.5 text-[13px] text-muted-foreground hover:text-foreground">
+              <ArrowLeft className="size-3.5" />
+              Home
+            </Link>
+          </div>
         </div>
 
         <div className="flex flex-1 items-center justify-center px-5 py-10 sm:px-8">

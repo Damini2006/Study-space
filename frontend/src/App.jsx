@@ -1,5 +1,6 @@
 import { Navigate, Route, Routes, useLocation } from "react-router-dom";
 import { useEffect } from "react";
+import { motion } from "framer-motion";
 import { useAuth } from "@/hooks/useAuth";
 import AppShell from "@/components/layout/AppShell";
 import Landing from "@/pages/Landing";
@@ -112,7 +113,13 @@ export default function App() {
     <>
     <RouteMeta />
     <CookieBanner />
-    <Routes>
+    <motion.div
+      key={location.pathname}
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
+    >
+    <Routes location={location}>
       <Route path="/" element={<Landing />} />
       <Route path="/auth" element={<AuthPage />} />
       <Route path="/auth/callback" element={<AuthCallback />} />
@@ -144,6 +151,7 @@ export default function App() {
       </Route>
       <Route path="*" element={<NotFound />} />
     </Routes>
+    </motion.div>
     </>
   );
 }

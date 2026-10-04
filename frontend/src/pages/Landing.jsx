@@ -33,6 +33,7 @@ import {
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/components/ui/toast";
 import { Button } from "@/components/ui/button";
+import ThemeToggle from "@/components/ui/theme-toggle";
 import { cn } from "@/lib/utils";
 
 /* ------------------------------------------------------------------ */
@@ -248,7 +249,7 @@ function ProductWindow() {
               </span>
             </p>
             <div className="mt-2.5 flex items-center gap-2 border-t border-border pt-2.5">
-              <span className="flex items-center gap-1 font-mono text-[9px] uppercase tracking-wider text-emerald-600 dark:text-emerald-400">
+              <span className="flex items-center gap-1 font-mono text-[9px] uppercase tracking-wider" style={{ color: "var(--success)" }}>
                 <CircleCheck className="size-3" /> coverage 100%
               </span>
               <span className="h-3 w-px bg-border" />
@@ -281,30 +282,35 @@ function ProductWindow() {
         </div>
       </motion.div>
 
-      {/* floating side cards */}
-      <motion.div
-        initial={{ opacity: 0, x: -18 }}
-        animate={{ opacity: 1, x: 0 }}
-        transition={{ delay: 0.75, duration: 0.6 }}
-        className="absolute -left-6 top-14 hidden rounded-lg border border-border bg-card px-3 py-2 shadow-md xl:block"
-      >
-        <p className="font-mono text-[9px] uppercase tracking-wider text-muted-foreground">Due today</p>
-        <p className="text-lg font-semibold leading-none">
-          42<span className="ml-1 text-xs font-normal text-muted-foreground">cards</span>
-        </p>
-      </motion.div>
-
-      <motion.div
-        initial={{ opacity: 0, x: 18 }}
-        animate={{ opacity: 1, x: 0 }}
-        transition={{ delay: 0.9, duration: 0.6 }}
-        className="absolute -right-5 bottom-10 hidden rounded-lg border border-border bg-card px-3 py-2 shadow-md xl:block"
-      >
-        <p className="font-mono text-[9px] uppercase tracking-wider text-muted-foreground">Focus today</p>
-        <p className="text-lg font-semibold leading-none">
-          2h 10m
-        </p>
-      </motion.div>
+      {/* stats below the window — in flow, never clipped */}
+      <div className="mt-4 grid grid-cols-2 gap-3">
+        {[
+          { label: "Due today", value: "42", unit: "cards", delay: 0.75, bar: 68 },
+          { label: "Focus today", value: "2h 10m", unit: "3 sessions", delay: 0.9, bar: 54 },
+        ].map((s) => (
+          <motion.div
+            key={s.label}
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: s.delay, duration: 0.55, ease: [0.22, 1, 0.36, 1] }}
+            className="rounded-lg border border-border bg-card px-3.5 py-3"
+          >
+            <p className="font-mono text-[9px] uppercase tracking-[0.16em] text-muted-foreground">{s.label}</p>
+            <p className="mt-1 text-xl font-semibold leading-none tracking-tight">
+              {s.value}
+              <span className="ml-1.5 text-[11px] font-normal text-muted-foreground">{s.unit}</span>
+            </p>
+            <div className="mt-2.5 h-1 rounded-full bg-muted">
+              <motion.div
+                className="h-full rounded-full bg-primary"
+                initial={{ width: 0 }}
+                animate={{ width: `${s.bar}%` }}
+                transition={{ delay: s.delay + 0.2, duration: 0.8, ease: "easeOut" }}
+              />
+            </div>
+          </motion.div>
+        ))}
+      </div>
 
       <div
         aria-hidden
@@ -428,6 +434,7 @@ export default function Landing() {
           </nav>
 
           <div className="flex items-center gap-2">
+            <ThemeToggle size="sm" className="hidden sm:inline-flex" />
             <Link to="/auth" className="hidden sm:block">
               <Button variant="ghost" size="sm" className="text-[13px]">
                 Sign in
@@ -478,6 +485,10 @@ export default function Landing() {
                 <Link to="/auth" className="block py-3 text-sm text-primary" onClick={() => setMenuOpen(false)}>
                   Sign in
                 </Link>
+                <div className="flex items-center justify-between py-3">
+                  <span className="text-sm text-muted-foreground">Appearance</span>
+                  <ThemeToggle />
+                </div>
               </div>
             </motion.nav>
           )}
@@ -489,7 +500,7 @@ export default function Landing() {
         {/* soft field */}
         <div aria-hidden className="pointer-events-none absolute inset-0 -z-10">
           <div className="absolute inset-x-0 top-0 h-[420px] bg-[radial-gradient(60%_60%_at_50%_0%,rgba(79,91,213,0.10),transparent_70%)]" />
-          <div className="absolute inset-0 bg-[linear-gradient(to_right,rgba(15,23,42,0.045)_1px,transparent_1px),linear-gradient(to_bottom,rgba(15,23,42,0.045)_1px,transparent_1px)] bg-[size:56px_56px] [mask-image:radial-gradient(75%_55%_at_50%_25%,#000,transparent)] dark:bg-[linear-gradient(to_right,rgba(255,255,255,0.04)_1px,transparent_1px),linear-gradient(to_bottom,rgba(255,255,255,0.04)_1px,transparent_1px)]" />
+          <div className="absolute inset-0 hero-grid [mask-image:radial-gradient(75%_55%_at_50%_25%,#000,transparent)]" />
         </div>
 
         <motion.div
@@ -914,7 +925,7 @@ export default function Landing() {
 
       {/* ================= CTA ================= */}
       <section className="mx-auto max-w-6xl px-5 py-20 sm:px-6 sm:py-24">
-        <div className="relative overflow-hidden rounded-2xl border border-border bg-[#0d1526] px-6 py-14 text-center sm:px-12">
+        <div className="cta-panel relative overflow-hidden rounded-2xl border border-border px-6 py-14 text-center sm:px-12">
           <div aria-hidden className="pointer-events-none absolute inset-0">
             <div className="absolute -top-24 left-1/4 h-64 w-64 rounded-full bg-primary/30 blur-3xl" />
             <div className="absolute -bottom-24 right-1/4 h-64 w-64 rounded-full bg-accent/25 blur-3xl" />
@@ -928,13 +939,13 @@ export default function Landing() {
             transition={{ duration: 0.5 }}
             className="relative"
           >
-            <Kicker index="08" className="justify-center text-white/60">
+            <Kicker index="08" className="cta-muted justify-center">
               Start
             </Kicker>
-            <h2 className="mx-auto mt-5 max-w-xl text-3xl font-semibold leading-tight tracking-[-0.02em] text-white sm:text-4xl">
+            <h2 className="mx-auto mt-5 max-w-xl text-3xl font-semibold leading-tight tracking-[-0.02em] sm:text-4xl">
               Open a workspace and upload one file
             </h2>
-            <p className="mx-auto mt-4 max-w-md text-sm leading-relaxed text-white/60">
+            <p className="cta-muted mx-auto mt-4 max-w-md text-sm leading-relaxed">
               The demo preloads a reading set so you can see citations working before you trust it
               with your own material.
             </p>
@@ -943,7 +954,7 @@ export default function Landing() {
                 size="lg"
                 onClick={launchDemo}
                 disabled={launching}
-                className="h-11 bg-white px-6 text-sm text-[#0d1526] hover:bg-white/90"
+                className="h-11 px-6 text-sm"
               >
                 {launching ? "Preparing\u2026" : "Try the demo workspace"}
                 <ArrowRight className="size-4" />
@@ -952,7 +963,7 @@ export default function Landing() {
                 <Button
                   size="lg"
                   variant="outline"
-                  className="h-11 border-white/25 bg-transparent px-6 text-sm text-white hover:bg-white/10 hover:text-white"
+                  className="h-11 border-current bg-transparent px-6 text-sm opacity-80 hover:border-primary hover:bg-primary hover:text-on-primary hover:opacity-100"
                 >
                   Create an account
                 </Button>

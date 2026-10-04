@@ -4,6 +4,7 @@ import { motion } from "framer-motion";
 import { ArrowLeft, ArrowRight, Check, Loader2, Mail, MapPin, MessageSquare } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input, Label } from "@/components/ui/input";
+import ThemeToggle from "@/components/ui/theme-toggle";
 import { useToast } from "@/components/ui/toast";
 
 const TOPICS = ["Bug report", "Security report", "Partnership", "Press", "Something else"];
@@ -53,7 +54,10 @@ export default function Contact() {
             <ArrowLeft className="size-4" />
             Back to home
           </Link>
-          <span className="font-mono text-[11px] uppercase tracking-[0.16em] text-muted-foreground">Contact</span>
+          <div className="flex items-center gap-3">
+            <ThemeToggle size="sm" />
+            <span className="font-mono text-[11px] uppercase tracking-[0.16em] text-muted-foreground">Contact</span>
+          </div>
         </div>
       </header>
 
