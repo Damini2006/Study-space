@@ -16,22 +16,22 @@ export default function SceneFallback({ mode = "signin" }) {
     <div className="absolute inset-0 overflow-hidden" aria-hidden="true">
       <div className={`absolute inset-0 bg-gradient-to-br ${tint} opacity-90`} />
 
-      {/* floating feature chips */}
-      <div className="absolute left-[6%] top-[16%] rounded-full border border-primary/45 bg-surface px-3 py-1.5 font-mono text-[11px] uppercase tracking-[0.16em] text-foreground/80 shadow-sm">
+      {/* floating feature chips — staggered so they drift out of phase */}
+      <div className="auth-float absolute left-[6%] top-[16%] rounded-full border border-primary/45 bg-surface px-3 py-1.5 font-mono text-[11px] uppercase tracking-[0.16em] text-foreground/80 shadow-sm" style={{ animationDelay: "-1.4s" }}>
         Notes
       </div>
-      <div className="absolute right-[8%] top-[26%] rounded-full border border-accent/60 bg-surface px-3 py-1.5 font-mono text-[11px] uppercase tracking-[0.16em] text-foreground/80 shadow-sm">
+      <div className="auth-float absolute right-[8%] top-[26%] rounded-full border border-accent/60 bg-surface px-3 py-1.5 font-mono text-[11px] uppercase tracking-[0.16em] text-foreground/80 shadow-sm" style={{ animationDelay: "-3.1s" }}>
         Quiz
       </div>
-      <div className="absolute bottom-[22%] left-[10%] rounded-full border border-primary/45 bg-surface px-3 py-1.5 font-mono text-[11px] uppercase tracking-[0.16em] text-foreground/80 shadow-sm">
+      <div className="auth-float absolute bottom-[22%] left-[10%] rounded-full border border-primary/45 bg-surface px-3 py-1.5 font-mono text-[11px] uppercase tracking-[0.16em] text-foreground/80 shadow-sm" style={{ animationDelay: "-4.6s" }}>
         Planner
       </div>
-      <div className="absolute bottom-[15%] right-[12%] rounded-full border border-accent/60 bg-surface px-3 py-1.5 font-mono text-[11px] uppercase tracking-[0.16em] text-foreground/80 shadow-sm">
+      <div className="auth-float absolute bottom-[15%] right-[12%] rounded-full border border-accent/60 bg-surface px-3 py-1.5 font-mono text-[11px] uppercase tracking-[0.16em] text-foreground/80 shadow-sm" style={{ animationDelay: "-0.6s" }}>
         Focus
       </div>
 
       {/* the flashcard, centred in the panel */}
-      <div className="absolute left-1/2 top-1/2 w-[76%] max-w-[420px] -translate-x-1/2 -translate-y-1/2">
+      <div className="auth-float absolute left-1/2 top-1/2 w-[76%] max-w-[420px] -translate-x-1/2 -translate-y-1/2" style={{ animationDelay: "-2.2s", animationDuration: "9s" }}>
         <div className="rounded-3xl border border-primary/40 bg-surface p-5 shadow-[0_24px_60px_-30px_rgba(42,39,64,0.55)]">
           <div className="flex items-center gap-2">
             <span className="rounded-full bg-primary px-2.5 py-1 font-mono text-[10px] font-semibold uppercase tracking-[0.14em] text-primary-foreground">

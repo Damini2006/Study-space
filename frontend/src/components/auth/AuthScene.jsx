@@ -66,10 +66,56 @@ function blurCanvas(src, px) {
   return c;
 }
 
+/* Soft dark ellipse the flashcard sits on. Offset down-right so the card
+   reads as lifted off the backdrop rather than floating in a void. */
+function makeShadow() {
+  const c = document.createElement("canvas");
+  c.width = c.height = 256;
+  const ctx = c.getContext("2d");
+  const g = ctx.createRadialGradient(128, 128, 0, 128, 128, 128);
+  g.addColorStop(0, "rgba(8,7,28,0.9)");
+  g.addColorStop(0.5, "rgba(8,7,28,0.4)");
+  g.addColorStop(1, "rgba(8,7,28,0)");
+  ctx.fillStyle = g;
+  ctx.fillRect(0, 0, 256, 256);
+  return new THREE.CanvasTexture(c);
+}
+
+/* ------------------------------------------------------------------ */
+/*  Breathing brand bloom — fades up on entry, then pulses forever      */
+/* ------------------------------------------------------------------ */
+function GlowSprite({ map, position, scale, opacity, speed = 1, phase = 0 }) {
+  const ref = useRef();
+
+  useFrame((state) => {
+    const m = ref.current;
+    if (!m) return;
+    const t = state.clock.elapsedTime;
+    const intro = Math.min(1, t / 1.3);
+    const pulse = 0.84 + Math.sin(t * speed + phase) * 0.16;
+    const grow = 0.95 + Math.sin(t * speed * 0.63 + phase) * 0.07;
+    m.material.opacity = opacity * pulse * intro;
+    m.scale.set(scale[0] * grow, scale[1] * grow, 1);
+  });
+
+  return (
+    <sprite ref={ref} position={position} scale={scale}>
+      <spriteMaterial
+        map={map}
+        transparent
+        opacity={0}
+        depthWrite={false}
+        blending={THREE.AdditiveBlending}
+      />
+    </sprite>
+  );
+}
+
 /* ------------------------------------------------------------------ */
 /*  Central flashcard — question <-> cited answer                       */
 /* ------------------------------------------------------------------ */
 function Flashcard({ mode, dark, lit }) {
+  const root = useRef();
   const group = useRef();
   const phase = useRef(0);
   const timer = useRef(0);
@@ -110,7 +156,7 @@ function Flashcard({ mode, dark, lit }) {
     [frontTex, backTex]
   );
 
-  useFrame((_, delta) => {
+  useFrame((state, delta) => {
     const dt = Math.min(delta, 0.05);
     timer.current += dt;
     if (phase.current === 0 && timer.current > 3.6) {
@@ -121,12 +167,26 @@ function Flashcard({ mode, dark, lit }) {
       timer.current = 0;
     }
     const target = phase.current === 1 ? Math.PI : 0;
-    angle.current = THREE.MathUtils.damp(angle.current, target, 3.1, dt);
+    angle.current = THREE.MathUtils.damp(angle.current, target, 3.4, dt);
     if (group.current) group.current.rotation.y = angle.current;
+
+    // Idle life: a slow bob with a hint of tilt, and the card stepping
+    // forward through the middle of its own flip so the turn reads as a
+    // real move through space instead of a spinning decal.
+    const t = state.clock.elapsedTime;
+    const r = root.current;
+    if (r) {
+      r.position.y = Math.sin(t * 0.62) * 0.07;
+      r.position.z = Math.sin(Math.min(angle.current, Math.PI)) * 0.3;
+      r.rotation.z = Math.sin(t * 0.41) * 0.022;
+      r.rotation.x = Math.sin(t * 0.53 + 1.1) * 0.03;
+    }
   });
 
+  // No declarative position on the root group: everything on it is driven
+  // from useFrame, so nothing can snap it back to zero mid-animation.
   return (
-    <group position={[0, 0, 0]}>
+    <group ref={root}>
       {/* the card's body — gives the sheet real thickness */}
       <RoundedBox args={[CARD_W + 0.06, CARD_H + 0.06, 0.1]} radius={0.04} smoothness={3}>
         <meshStandardMaterial color={dark ? "#171532" : "#ffffff"} roughness={0.72} />
@@ -186,6 +246,8 @@ function OrbitCard({ index, total, dark, phaseRef }) {
       m.material.map = levels[next];
       m.material.needsUpdate = true;
     }
+    // distance fade sells the depth that the blur levels only hint at
+    m.material.opacity = THREE.MathUtils.clamp(1.1 - d * 0.34, 0.48, 1);
   });
 
   return (
@@ -199,7 +261,7 @@ function OrbitCard({ index, total, dark, phaseRef }) {
 /* ------------------------------------------------------------------ */
 /*  Floating particles                                                  */
 /* ------------------------------------------------------------------ */
-function Particles({ count = 120 }) {
+function Particles({ count = 120, size = 0.06, opacity = 0.55, speed = 1, rise = 0.12, zMin = -0.6, zDepth = 3.2 }) {
   const dot = useMemo(makeDot, []);
 
   const geometry = useMemo(() => {
@@ -208,11 +270,11 @@ function Particles({ count = 120 }) {
     for (let i = 0; i < count; i++) {
       arr[i * 3] = (Math.random() - 0.5) * 10;
       arr[i * 3 + 1] = (Math.random() - 0.5) * 6;
-      arr[i * 3 + 2] = -0.6 - Math.random() * 3.2;
+      arr[i * 3 + 2] = zMin - Math.random() * zDepth;
     }
     g.setAttribute("position", new THREE.BufferAttribute(arr, 3));
     return g;
-  }, [count]);
+  }, [count, zMin, zDepth]);
 
   const seeds = useMemo(
     () => Float32Array.from({ length: count }, () => Math.random() * Math.PI * 2),
@@ -222,15 +284,15 @@ function Particles({ count = 120 }) {
   const material = useMemo(
     () =>
       new THREE.PointsMaterial({
-        size: 0.06,
+        size,
         map: dot,
         transparent: true,
-        opacity: 0.55,
+        opacity,
         depthWrite: false,
         blending: THREE.AdditiveBlending,
         sizeAttenuation: true,
       }),
-    [dot]
+    [dot, size, opacity]
   );
 
   useEffect(
@@ -242,12 +304,16 @@ function Particles({ count = 120 }) {
     [geometry, material, dot]
   );
 
-  useFrame((state) => {
+  useFrame((state, delta) => {
+    const dt = Math.min(delta, 0.05);
     const t = state.clock.elapsedTime;
     const attr = geometry.getAttribute("position");
+    const a = attr.array;
     for (let i = 0; i < count; i++) {
-      attr.array[i * 3 + 1] += Math.sin(t * 0.35 + seeds[i]) * 0.0015;
-      attr.array[i * 3] += Math.cos(t * 0.27 + seeds[i]) * 0.0011;
+      const j = i * 3;
+      a[j] += Math.cos(t * 0.27 + seeds[i]) * 0.0011 * speed;
+      a[j + 1] += Math.sin(t * 0.35 + seeds[i]) * 0.0015 * speed + rise * dt;
+      if (a[j + 1] > 3.2) a[j + 1] = -3.2; // recycle off the top edge
     }
     attr.needsUpdate = true;
   });
@@ -269,12 +335,16 @@ function Rig({ mode, speedRef }) {
     return { dx: x, dz: z };
   }, [mode]);
 
-  useFrame((_, delta) => {
+  useFrame((state, delta) => {
     const dt = Math.min(delta, 0.05);
     const aspect = Math.max(0.35, size.width / Math.max(1, size.height));
     // fit: horizontal half-extent >= 2.35 world units, vertical >= 1.30
     const base = Math.max(1.3 / HALF_TAN, 2.35 / (HALF_TAN * aspect));
-    const wantZ = base + dz;
+    // Entrance: start pulled back and ease in on a cubic-out over 1.8s, so
+    // the panel arrives rather than simply appearing.
+    const k = Math.min(1, state.clock.elapsedTime / 1.8);
+    const intro = 1 - Math.pow(1 - k, 3);
+    const wantZ = base + dz + (1 - intro) * 5;
 
     camera.position.x = THREE.MathUtils.damp(
       camera.position.x,
@@ -311,7 +381,7 @@ function Scene({ mode, dark }) {
   }, [mode]);
 
   useFrame((_, delta) => {
-    phaseRef.current += Math.min(delta, 0.05) * 0.22 * speedRef.value;
+    phaseRef.current += Math.min(delta, 0.05) * 0.26 * speedRef.value;
   });
 
   // hover lives on the canvas element — an empty group is never hit-tested
@@ -349,12 +419,14 @@ function Scene({ mode, dark }) {
       ]),
     []
   );
+  const shadowTex = useMemo(makeShadow, []);
   useEffect(
     () => () => {
       glowA.dispose();
       glowB.dispose();
+      shadowTex.dispose();
     },
-    [glowA, glowB]
+    [glowA, glowB, shadowTex]
   );
 
   return (
@@ -364,23 +436,32 @@ function Scene({ mode, dark }) {
       <pointLight position={[-3.4, 2.2, 3]} intensity={28} distance={16} color="#7c79cc" />
       <pointLight position={[3.4, -1.8, 2.4]} intensity={24} distance={16} color="#ffa3c6" />
 
-      {/* soft brand-coloured bloom behind everything */}
-      <sprite position={[-1.7, 0.55, -3]} scale={[7, 7, 1]}>
+      {/* soft brand-coloured bloom behind everything, breathing on two clocks */}
+      <GlowSprite
+        map={glowA}
+        position={[-1.7, 0.55, -3]}
+        scale={[7, 7, 1]}
+        opacity={0.58}
+        speed={0.55}
+      />
+      <GlowSprite
+        map={glowB}
+        position={[1.9, -0.9, -3]}
+        scale={[6, 6, 1]}
+        opacity={0.46}
+        speed={0.43}
+        phase={1.9}
+      />
+
+      {/* Contact shadow: sits in front of the blooms so it darkens them
+          exactly where the card would block the light, and spills past the
+          card's right and bottom edges to lift it off the backdrop. */}
+      <sprite position={[0.35, -0.6, -0.5]} scale={[4.4, 3, 1]}>
         <spriteMaterial
-          map={glowA}
+          map={shadowTex}
           transparent
-          opacity={0.58}
+          opacity={dark ? 0.5 : 0.26}
           depthWrite={false}
-          blending={THREE.AdditiveBlending}
-        />
-      </sprite>
-      <sprite position={[1.9, -0.9, -3]} scale={[6, 6, 1]}>
-        <spriteMaterial
-          map={glowB}
-          transparent
-          opacity={0.46}
-          depthWrite={false}
-          blending={THREE.AdditiveBlending}
         />
       </sprite>
 
@@ -396,7 +477,16 @@ function Scene({ mode, dark }) {
         />
       ))}
 
-      <Particles />
+      <Particles count={110} size={0.05} opacity={0.4} speed={0.8} rise={0.1} />
+      <Particles
+        count={42}
+        size={0.115}
+        opacity={0.46}
+        speed={1.4}
+        rise={0.2}
+        zMin={-0.2}
+        zDepth={1.4}
+      />
       <Rig mode={mode} speedRef={speedRef} />
     </group>
   );

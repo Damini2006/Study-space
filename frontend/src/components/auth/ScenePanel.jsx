@@ -1,8 +1,11 @@
 import { Suspense, lazy, useEffect, useState } from "react";
+import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
 import SceneFallback from "./SceneFallback";
 
 const AuthScene = lazy(() => import("./AuthScene"));
+
+const EASE = [0.22, 1, 0.36, 1];
 
 function hasWebGL() {
   try {
@@ -24,6 +27,14 @@ function Skeleton() {
  *  - the React Three Fiber scene when it is safe to run,
  *  - a static illustration on mobile / low-power / reduced-motion,
  *  - a shimmering skeleton while the 3D chunk is still arriving.
+ *
+ * The decorative stack behind it, back to front:
+ *   wash + wash-b  two brand glows on different clocks
+ *   auth-grid      rule grid, radially masked
+ *   the scene
+ *   vignette       melts the card's edges into the page
+ *   lit edge       one-pixel inner highlight on top of everything
+ *
  * Everything inside is decorative, so the wrapper is aria-hidden.
  */
 export default function ScenePanel({ mode = "signin", dark = false, className }) {
@@ -44,8 +55,15 @@ export default function ScenePanel({ mode = "signin", dark = false, className })
   }, []);
 
   return (
-    <div aria-hidden="true" className={cn("relative isolate overflow-hidden", className)}>
+    <motion.div
+      aria-hidden="true"
+      initial={{ opacity: 0, y: 20, scale: 0.985 }}
+      animate={{ opacity: 1, y: 0, scale: 1 }}
+      transition={{ duration: 0.75, delay: 0.12, ease: EASE }}
+      className={cn("relative isolate overflow-hidden auth-lit-edge", className)}
+    >
       <div className="auth-wash" />
+      <div className="auth-wash-b" />
       <div
         className="auth-grid absolute inset-0"
         style={{
@@ -64,6 +82,7 @@ export default function ScenePanel({ mode = "signin", dark = false, className })
       ) : (
         <Skeleton />
       )}
-    </div>
+      <div className="auth-vignette" />
+    </motion.div>
   );
 }

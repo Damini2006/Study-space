@@ -357,9 +357,17 @@ export default function AuthPage() {
       <aside className="relative hidden w-[46%] shrink-0 flex-col overflow-hidden border-r border-border lg:flex">
         <div className="relative z-10 flex h-full min-h-0 flex-col gap-5 overflow-y-auto px-8 py-7 xl:px-11">
           {/* StudySpace logo, top of the panel, links home */}
-          <StudySpaceLogo size={30} />
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, ease: EASE }}
+            className="shrink-0"
+          >
+            <StudySpaceLogo size={30} />
+          </motion.div>
 
-          {/* the 3D scene (lazy, with a static fallback) */}
+          {/* the 3D scene (lazy, with a static fallback) — ScenePanel runs
+              its own entrance so the canvas is only ever scaled once */}
           <ScenePanel
             mode={mode}
             dark={dark}
@@ -367,27 +375,45 @@ export default function AuthPage() {
           />
 
           {/* caption — slides out and in when the mode changes */}
-          <div className="min-h-[74px] shrink-0 overflow-hidden">
+          <motion.div
+            className="min-h-[96px] shrink-0 overflow-hidden"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.4, delay: 0.3 }}
+          >
             <AnimatePresence mode="wait" initial={false}>
               <motion.div
                 key={mode}
-                initial={{ opacity: 0, x: -22 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: 22 }}
-                transition={{ duration: 0.28, ease: EASE }}
+                initial={{ opacity: 0, x: -22, filter: "blur(6px)" }}
+                animate={{ opacity: 1, x: 0, filter: "blur(0px)" }}
+                exit={{ opacity: 0, x: 22, filter: "blur(6px)" }}
+                transition={{ duration: 0.3, ease: EASE }}
               >
                 <p className="text-[17px] font-semibold leading-snug tracking-[-0.01em] text-foreground">
                   {scene[0]}
                 </p>
-                <p className="mt-1.5 max-w-[54ch] text-[13px] leading-relaxed text-foreground/80">
+                {/* rule redraws from the left on every mode change */}
+                <motion.span
+                  aria-hidden="true"
+                  className="mt-2 block h-px w-full origin-left bg-gradient-to-r from-primary via-accent to-transparent"
+                  initial={{ scaleX: 0 }}
+                  animate={{ scaleX: 1 }}
+                  transition={{ duration: 0.6, delay: 0.12, ease: EASE }}
+                />
+                <p className="mt-2.5 max-w-[54ch] text-[13px] leading-relaxed text-foreground/80">
                   {scene[1]}
                 </p>
               </motion.div>
             </AnimatePresence>
-          </div>
+          </motion.div>
 
           {/* measured eval numbers, full width of the panel grid */}
-          <div className="shrink-0 border-y border-foreground/25">
+          <motion.div
+            className="shrink-0 border-y border-foreground/25"
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 0.42, ease: EASE }}
+          >
             <dl className="grid grid-cols-3">
               {EVAL_STATS.map((s, i) => (
                 <div
@@ -406,16 +432,30 @@ export default function AuthPage() {
                 </div>
               ))}
             </dl>
-          </div>
-          <p className="-mt-3 shrink-0 font-mono text-[11px] uppercase tracking-[0.13em] text-foreground/70">
+          </motion.div>
+          <motion.p
+            className="-mt-3 shrink-0 font-mono text-[11px] uppercase tracking-[0.13em] text-foreground/70"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.45, delay: 0.52 }}
+          >
             Measured on a 100-question eval set
-          </p>
+          </motion.p>
         </div>
       </aside>
 
       {/* ---------------- Right: the form ---------------- */}
       <main className="flex flex-1 flex-col">
-        <div className="flex items-center justify-end gap-3 px-5 pt-5 sm:px-8">
+        <div className="flex items-center justify-between gap-3 px-5 pt-5 sm:px-8">
+          {/* explicit way home — the logo does this too, but only one of
+              them is visible on a phone, and neither says so */}
+          <Link
+            to="/"
+            className="group inline-flex items-center gap-2 rounded-full border border-border bg-card/70 px-3.5 py-1.5 text-[13px] font-medium text-foreground/80 shadow-sm backdrop-blur transition-colors hover:border-primary/45 hover:text-foreground"
+          >
+            <ArrowLeft className="size-3.5 transition-transform duration-200 group-hover:-translate-x-0.5" />
+            Back to home
+          </Link>
           <ThemeToggle size="sm" />
         </div>
 
