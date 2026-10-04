@@ -567,3 +567,16 @@
 
 /* Focus visibility, consistent across themes */
 :focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+
+/* --------------------------------------------------------------------------
+   Feature ticker — CSS keyframes (deterministic, GPU-composited)
+   -------------------------------------------------------------------------- */
+@keyframes marquee-run {
+  from { transform: translate3d(0, 0, 0); }
+  to   { transform: translate3d(-50%, 0, 0); }
+}
+.marquee-track {
+  animation: marquee-run 38s linear infinite;
+  will-change: transform;
+}
+.marquee-track:hover { animation-play-state: paused; }

@@ -596,33 +596,36 @@ export default function Landing() {
       </section>
 
       {/* ================= MARQUEE ================= */}
-      <section aria-label="Feature summary" className="border-y border-border bg-card/60 py-3.5 overflow-hidden">
-        <motion.div
-          className="flex w-max gap-8"
-          animate={{ x: ["0%", "-50%"] }}
-          transition={{ duration: 34, repeat: Infinity, ease: "linear" }}
+      <section aria-label="Feature summary" className="border-y border-border bg-card/60 py-3.5">
+        <div
+          className="overflow-hidden [-webkit-mask-image:linear-gradient(to_right,transparent,black_10%,black_90%,transparent)] [mask-image:linear-gradient(to_right,transparent,black_10%,black_90%,transparent)]"
         >
-          {[0, 1].map((dup) => (
-            <div key={dup} className="flex gap-8" aria-hidden={dup === 1}>
-              {[
-                "Inline citations",
-                "FSRS spaced repetition",
-                "Refusal on low coverage",
-                "Pomodoro + habits",
-                "Vision board",
-                "Budget tracking",
-                "Approval-first planner",
-                "Row-level security",
-                "Export everything",
-              ].map((t) => (
-                <span key={t} className="flex items-center gap-8 font-mono text-[11px] uppercase tracking-[0.16em] text-muted-foreground">
-                  {t}
-                  <span className="size-1 rounded-full bg-primary/50" />
-                </span>
-              ))}
-            </div>
-          ))}
-        </motion.div>
+          <div className="marquee-track flex w-max">
+            {[0, 1].map((dup) => (
+              <div key={dup} className="flex shrink-0" aria-hidden={dup === 1}>
+                {[
+                  "Inline citations",
+                  "FSRS spaced repetition",
+                  "Refusal on low coverage",
+                  "Pomodoro + habits",
+                  "Vision board",
+                  "Budget tracking",
+                  "Approval-first planner",
+                  "Row-level security",
+                  "Export everything",
+                ].map((t) => (
+                  <span
+                    key={t}
+                    className="flex shrink-0 items-center gap-5 whitespace-nowrap pr-5 font-mono text-[11px] uppercase tracking-[0.16em] text-muted-foreground"
+                  >
+                    {t}
+                    <span className="size-1 rounded-full bg-primary/60" />
+                  </span>
+                ))}
+              </div>
+            ))}
+          </div>
+        </div>
       </section>
 
       {/* ================= CAPABILITIES ================= */}

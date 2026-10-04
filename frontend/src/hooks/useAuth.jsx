@@ -86,6 +86,20 @@ export function AuthProvider({ children }) {
     if (error) throw error;
   }, []);
 
+  /** Sends a password-reset link to the given address. */
+  const resetPassword = useCallback(async (email) => {
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${window.location.origin}/auth?mode=reset`,
+    });
+    if (error) throw error;
+  }, []);
+
+  /** Sets a new password while the recovery session is live. */
+  const updatePassword = useCallback(async (password) => {
+    const { error } = await supabase.auth.updateUser({ password });
+    if (error) throw error;
+  }, []);
+
   const signOut = useCallback(async () => {
     await supabase.auth.signOut();
     setProfile(null);
@@ -160,11 +174,13 @@ export function AuthProvider({ children }) {
       signUp,
       signIn,
       signInWithGoogle,
+      resetPassword,
+      updatePassword,
       signOut,
       startDemo,
       setProfile,
     }),
-    [session, profile, initialising, loadProfile, signUp, signIn, signInWithGoogle, signOut, startDemo]
+    [session, profile, initialising, loadProfile, signUp, signIn, signInWithGoogle, resetPassword, updatePassword, signOut, startDemo]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

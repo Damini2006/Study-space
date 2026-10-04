@@ -15,7 +15,10 @@ export default function AuthCallback() {
         if (code) {
           await supabase.auth.exchangeCodeForSession(code);
         }
-        if (alive) navigate("/app/dashboard", { replace: true });
+        // Password-recovery links land here with a hash fragment.
+        const hash = window.location.hash || "";
+        const isRecovery = /type=recovery|recovery/.test(hash) || url.searchParams.get("type") === "recovery";
+        if (alive) navigate(isRecovery ? "/auth?mode=reset" : "/app/dashboard", { replace: true });
       } catch (err) {
         if (alive) setMessage(err.message || "Sign-in failed. Please try again.");
       }

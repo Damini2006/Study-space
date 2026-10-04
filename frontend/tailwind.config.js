@@ -1,83 +1,98 @@
 /** @type {import('tailwindcss').Config} */
+
+/**
+ * Colour helper: wraps a CSS variable so Tailwind can apply opacity
+ * modifiers (bg-primary/60, border-border/70, from-primary/12 ...).
+ * A bare `var(--x)` value makes Tailwind skip those utilities entirely,
+ * so every translucent tint in the app rendered as fully transparent.
+ */
+const v = (name) => `color-mix(in srgb, var(--${name}) calc(<alpha-value> * 100%), transparent)`;
+
 export default {
   content: ["./index.html", "./src/**/*.{js,jsx}"],
   theme: {
     extend: {
       colors: {
-        background: "var(--background)",
-        foreground: "var(--foreground)",
-        surface: "var(--surface)",
-        "surface-2": "var(--surface-2)",
-        card: "var(--card)",
-        "card-foreground": "var(--card-foreground)",
-        popover: "var(--popover)",
-        "popover-foreground": "var(--popover-foreground)",
+        background: v("background"),
+        foreground: v("foreground"),
+        surface: v("surface"),
+        "surface-2": v("surface-2"),
+        card: v("card"),
+        "card-foreground": v("card-foreground"),
+        popover: v("popover"),
+        "popover-foreground": v("popover-foreground"),
         primary: {
-          DEFAULT: "var(--primary)",
-          foreground: "var(--primary-foreground)",
-          soft: "var(--primary-soft)",
+          DEFAULT: v("primary"),
+          foreground: v("primary-foreground"),
+          soft: v("primary-soft"),
         },
         secondary: {
-          DEFAULT: "var(--secondary)",
-          foreground: "var(--secondary-foreground)",
+          DEFAULT: v("secondary"),
+          foreground: v("secondary-foreground"),
         },
         muted: {
-          DEFAULT: "var(--muted)",
-          foreground: "var(--muted-foreground)",
+          DEFAULT: v("muted"),
+          foreground: v("muted-foreground"),
         },
         accent: {
-          DEFAULT: "var(--accent)",
-          foreground: "var(--accent-foreground)",
+          DEFAULT: v("accent"),
+          foreground: v("accent-foreground"),
         },
         destructive: {
-          DEFAULT: "var(--destructive)",
-          foreground: "var(--destructive-foreground)",
+          DEFAULT: v("destructive"),
+          foreground: v("destructive-foreground"),
         },
         success: {
-          DEFAULT: "var(--success)",
-          foreground: "var(--success-foreground)",
-          bg: "var(--success-bg)",
+          DEFAULT: v("success"),
+          foreground: v("success-foreground"),
+          bg: v("success-bg"),
         },
         warning: {
-          DEFAULT: "var(--warning)",
-          foreground: "var(--warning-foreground)",
-          bg: "var(--warning-bg)",
+          DEFAULT: v("warning"),
+          foreground: v("warning-foreground"),
+          bg: v("warning-bg"),
         },
         info: {
-          DEFAULT: "var(--info)",
-          foreground: "var(--info-foreground)",
-          bg: "var(--info-bg)",
+          DEFAULT: v("info"),
+          foreground: v("info-foreground"),
+          bg: v("info-bg"),
         },
-        border: "var(--border)",
-        input: "var(--input)",
-        ring: "var(--ring)",
-        "on-primary": "var(--on-primary)",
+        border: v("border"),
+        input: v("input"),
+        ring: v("ring"),
+        "on-primary": v("on-primary"),
         citation: {
-          DEFAULT: "var(--citation-bg)",
-          foreground: "var(--citation-text)",
+          DEFAULT: v("citation-bg"),
+          foreground: v("citation-text"),
         },
         chart: {
-          1: "var(--chart-1)",
-          2: "var(--chart-2)",
-          3: "var(--chart-3)",
-          4: "var(--chart-4)",
-          5: "var(--chart-5)",
-          6: "var(--chart-6)",
+          1: v("chart-1"),
+          2: v("chart-2"),
+          3: v("chart-3"),
+          4: v("chart-4"),
+          5: v("chart-5"),
+          6: v("chart-6"),
         },
         heatmap: {
-          1: "var(--heat-1)",
-          2: "var(--heat-2)",
-          3: "var(--heat-3)",
-          4: "var(--heat-4)",
-          5: "var(--heat-5)",
+          1: v("heat-1"),
+          2: v("heat-2"),
+          3: v("heat-3"),
+          4: v("heat-4"),
+          5: v("heat-5"),
         },
         rating: {
-          again: "var(--rating-again)",
-          hard: "var(--rating-hard)",
-          good: "var(--rating-good)",
-          easy: "var(--rating-easy)",
+          again: v("rating-again"),
+          hard: v("rating-hard"),
+          good: v("rating-good"),
+          easy: v("rating-easy"),
         },
       },
+      // Explicit 0-100 table so ANY `/NN` tint in the source compiles.
+      // Tailwind's default scale skips 12, 15, 35, 45 …, and merging a
+      // bare array leaves raw integers (12) which resolve to 1200% alpha.
+      opacity: Object.fromEntries(
+        Array.from({ length: 101 }, (_, i) => [String(i), (i / 100).toString()])
+      ),
       borderRadius: {
         lg: "var(--radius)",
         md: "calc(var(--radius) - 4px)",
