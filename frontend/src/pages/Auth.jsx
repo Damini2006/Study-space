@@ -350,19 +350,24 @@ export default function AuthPage() {
       transition={{ duration: 0.32, ease: EASE }}
       style={{ transformOrigin: "center center" }}
     >
+      {/* ---------------- Top bar (single, full-width) ---------------- */}
+      <div className="flex items-center justify-between gap-3 border-b border-border/60 bg-card/40 px-5 py-3 backdrop-blur-md sm:px-8">
+        <StudySpaceLogo size={28} />
+        <div className="flex items-center gap-2">
+          <Link
+            to="/"
+            className="group inline-flex items-center gap-1.5 rounded-full border border-border bg-card/70 px-3 py-1.5 text-[12.5px] font-medium text-foreground/80 shadow-sm backdrop-blur transition-colors hover:border-primary/45 hover:text-foreground"
+          >
+            <ArrowLeft className="size-3 transition-transform duration-200 group-hover:-translate-x-0.5" />
+            Home
+          </Link>
+          <ThemeToggle size="sm" />
+        </div>
+      </div>
+
       {/* ---------------- Left panel: 3D scene ---------------- */}
       <aside className="relative hidden w-[46%] shrink-0 flex-col overflow-hidden border-r border-border lg:flex">
         <div className="relative z-10 flex h-full min-h-0 flex-col gap-5 overflow-y-auto px-8 py-7 xl:px-11">
-          {/* StudySpace logo, top of the panel, links home */}
-          <motion.div
-            initial={{ opacity: 0, y: -10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, ease: EASE }}
-            className="shrink-0"
-          >
-            <StudySpaceLogo size={30} />
-          </motion.div>
-
           {/* the citation scene — ScenePanel runs its own entrance, and the
               panel is CSS-only so there is never a chunk to wait for */}
           <ScenePanel className="min-h-[240px] flex-1 rounded-[28px] border border-border/70" />
@@ -439,22 +444,7 @@ export default function AuthPage() {
 
       {/* ---------------- Right: the form ---------------- */}
       <main className="flex flex-1 flex-col">
-        {/* Top bar */}
-        <div className="flex items-center justify-between gap-3 border-b border-border/60 bg-card/40 px-5 py-3 backdrop-blur-md sm:px-8">
-          <StudySpaceLogo size={26} />
-          <div className="flex items-center gap-2">
-            <Link
-              to="/"
-              className="group inline-flex items-center gap-1.5 rounded-full border border-border bg-card/70 px-3 py-1.5 text-[12.5px] font-medium text-foreground/80 shadow-sm backdrop-blur transition-colors hover:border-primary/45 hover:text-foreground"
-            >
-              <ArrowLeft className="size-3 transition-transform duration-200 group-hover:-translate-x-0.5" />
-              Home
-            </Link>
-            <ThemeToggle size="sm" />
-          </div>
-        </div>
-
-        <div className="flex flex-1 items-center justify-center px-5 pb-10 pt-2 sm:px-8">
+        <div className="flex flex-1 items-center justify-center px-5 pb-10 pt-6 sm:px-8">
           <div className="w-full max-w-[380px]">
             {/* mobile: full logo centred above the form */}
             <div className="mb-6 flex justify-center lg:hidden">
