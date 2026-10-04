@@ -88,6 +88,28 @@ export default function Dashboard() {
         <StatCard label="Reviews today" value={analytics?.reviews_today ?? 0} icon={CalendarDays} hint="cards reviewed" to="/app/study" />
       </div>
 
+      {/* Quick actions */}
+      <div className="mt-6 grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <Button size="sm" onClick={() => setCreatingSpace(true)}>
+          <Plus className="size-4 mr-2" /> Create Space
+        </Button>
+        <Link to="/app/study">
+          <Button size="sm">
+            <Loader2 className="size-4 mr-2" /> Review
+          </Button>
+        </Link>
+        <Link to="/app/focus">
+          <Button size="sm">
+            <Timer className="size-4 mr-2" /> Focus
+          </Button>
+        </Link>
+        <Link to="/app/analytics">
+          <Button size="sm">
+            <BarChart3 className="size-4 mr-2" /> Analyze
+          </Button>
+        </Link>
+      </div>
+
       <div className="grid gap-6 lg:grid-cols-[2fr_1fr]">
         {/* Spaces */}
         <section aria-label="Your spaces">
@@ -223,12 +245,12 @@ export default function Dashboard() {
 
 function StatCard({ label, value, icon: Icon, hint, to }) {
   const inner = (
-    <Card className="p-4 transition-[transform,box-shadow] hover:-translate-y-0.5 hover:shadow-[var(--shadow-md)]">
+    <Card className="p-4 flex flex-col gap-2 transition-[transform,box-shadow] hover:-translate-y-0.5 hover:shadow-[var(--shadow-md)]">
       <div className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
         <Icon className="size-3.5 text-primary" aria-hidden />
         {label}
       </div>
-      <div className="mt-1.5 text-2xl font-bold tracking-tight">{value}</div>
+      <div className="mt-1 flex-1 text-2xl font-bold tracking-tight">{value}</div>
       {hint && <div className="mt-0.5 text-[11px] text-muted-foreground">{hint}</div>}
     </Card>
   );

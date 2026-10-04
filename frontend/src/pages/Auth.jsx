@@ -447,19 +447,19 @@ export default function AuthPage() {
 
       {/* ---------------- Right: the form ---------------- */}
       <main className="flex flex-1 flex-col overflow-hidden">
-        <div className="flex flex-1 items-center justify-center overflow-y-auto px-5 pb-6 pt-4 sm:px-8">
+        <div className="flex flex-1 items-center justify-center px-5 pb-4 pt-2 sm:px-8">
           <div className="w-full max-w-[380px]">
             {/* mobile: full logo centred above the form */}
-            <div className="mb-6 flex justify-center lg:hidden">
-              <StudySpaceLogo size={30} />
+            <div className="mb-4 flex justify-center lg:hidden">
+              <StudySpaceLogo size={28} />
             </div>
 
-            <h1 className="text-[26px] font-semibold leading-tight tracking-[-0.025em]">
+            <h1 className="text-[22px] font-semibold leading-tight tracking-[-0.025em]">
               {form[0]}
             </h1>
-            <p className="mt-2 text-[13.5px] leading-relaxed text-foreground/80">{form[1]}</p>
+            <p className="mt-1 text-[12.5px] leading-relaxed text-foreground/80">{form[1]}</p>
 
-            <div className="mt-6 rounded-2xl border border-border/80 bg-card p-5 shadow-[0_2px_8px_color-mix(in_srgb,var(--primary)_5%,transparent),0_12px_32px_color-mix(in_srgb,var(--primary)_8%,transparent)] ring-1 ring-primary/5 sm:p-6">
+            <div className="mt-4 rounded-2xl border border-border/80 bg-card p-4 shadow-[0_2px_8px_color-mix(in_srgb,var(--primary)_5%,transparent),0_12px_32px_color-mix(in_srgb,var(--primary)_8%,transparent)] ring-1 ring-primary/5 sm:p-5">
               {sent ? (
                 <motion.div
                   initial={{ opacity: 0, y: 10 }}
@@ -494,7 +494,7 @@ export default function AuthPage() {
                   </div>
                 </motion.div>
               ) : (
-                <form onSubmit={submit} noValidate className="space-y-4">
+                <form onSubmit={submit} noValidate className="space-y-3">
                   <AnimatePresence initial={false}>
                     {errors.form && (
                       <motion.div
