@@ -55,42 +55,6 @@ export default function StudioPanel({ spaceId }) {
   });
 
   const open = openId ? outputs.find((o) => o.id === openId) : null;
-  const selected = TYPES.find((t) => t.id === type);
-
-  // Drag state for reordering sections
-  const [dragActive, setDragActive] = useState(false);
-  const [dragIndex, setDragIndex] = useState(null);
-  const dragRef = useRef(null);
-
-  const handleOnDragStart = (e, index) => {
-    setDragIndex(index);
-    setDragActive(true);
-    // Add visual feedback
-    e.target.style.transition = "none";
-    setTimeout(() => {
-      e.target.style.opacity = "0.4";
-      e.target.style.transform = "scale(0.98)";
-    }, 0);
-  };
-
-  const handleOnDragEnd = () => {
-    setDragActive(false);
-    setDragIndex(null);
-    setTimeout(() => {
-      dragRef.current?.forEach((el) => {
-        el.style.opacity = "";
-        el.style.transform = "";
-      });
-    }, 200);
-  };
-
-  const handleSectionReorder = (fromIndex, toIndex) => {
-    // Implement reorder logic - call API to reorder sections
-    // For now, we'll just update state locally
-    success("Sections reordered.");
-    setDragIndex(null);
-    setDragActive(false);
-  };
 
   const handleExport = async (format) => {
     if (!open) return;

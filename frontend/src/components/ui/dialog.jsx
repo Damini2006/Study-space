@@ -124,7 +124,13 @@ const TabsContext = createContext(null);
 export function Tabs({ value, onValueChange, children, variant = "line", className, ariaLabel }) {
   return (
     <TabsContext.Provider value={{ value, onValueChange }}>
-      <div className={cn(TAB_VARIANTS[variant], className)} data-variant={variant}>
+      <div
+        className={cn(TAB_VARIANTS[variant], className)}
+        data-variant={variant}
+        role="tablist"
+        aria-label={ariaLabel}
+        aria-orientation="horizontal"
+      >
         {children}
       </div>
     </TabsContext.Provider>

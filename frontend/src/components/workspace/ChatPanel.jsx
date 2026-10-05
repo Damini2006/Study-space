@@ -28,7 +28,7 @@ const NOT_FOUND_SUGGESTIONS = [
 
 export default function ChatPanel({ spaceId, onSelectPassage }) {
   const qc = useQueryClient();
-  const { error: toastError, success: toastSuccess } = useToast();
+  const { error: toastError } = useToast();
   const [input, setInput] = useState("");
   const [messages, setMessages] = useState([]);
   const [streaming, setStreaming] = useState(false);
@@ -342,8 +342,11 @@ function StreamingMessage({ text, citations, claims, layerStatus }) {
 
         <div className="mt-1.5 flex items-center gap-1.5 text-[11px] text-muted-foreground">
           <Loader2 className="size-3 animate-spin" aria-hidden />
-          <span>Checking claims against your sources…</span>
-          
+          <span aria-live="polite">
+            {claims.length > 0
+              ? `Checking ${claims.length} claim${claims.length === 1 ? "" : "s"} against your sources…`
+              : "Checking claims against your sources…"}
+          </span>
           <div className="flex items-center gap-1 ml-2">
             {Object.entries(layerStatus).map(([name, status]) => (
               <LayerStatusBadge key={name} name={name} enabled={status.enabled} running={!status.done} />

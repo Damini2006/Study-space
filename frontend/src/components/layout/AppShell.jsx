@@ -9,16 +9,13 @@ import {
   LayoutDashboard,
   LogOut,
   Menu,
-  Moon,
   Palette,
   Search,
   Settings,
   ShieldCheck,
-  Sun,
   Timer,
   X,
   BarChart3,
-  Flame,
   Image,
   Wallet,
 } from "lucide-react";
@@ -41,8 +38,6 @@ const NAV = [
   { to: "/app/settings", label: "Settings", icon: Settings },
 ];
 
-const THEME_ICONS = { light: Sun, dark: Moon, cozy: Flame, pastel: Palette };
-
 /** Shell-shaped placeholder shown while a lazily-loaded route chunk arrives. */
 function PageSkeleton() {
   return (
@@ -59,17 +54,13 @@ function PageSkeleton() {
   );
 }
 
+// Swatches come from THEMES so Settings and the shell can never drift apart.
 function ThemeDot({ id }) {
-  const colors = {
-    light: "#f7f8fc",
-    dark: "#171a2e",
-    cozy: "#faf3e8",
-    pastel: "#fbf7ff",
-  };
+  const swatch = THEMES.find((t) => t.id === id)?.swatch;
   return (
     <span
       className="inline-block size-3 rounded-full border border-border"
-      style={{ background: colors[id] }}
+      style={{ background: swatch }}
       aria-hidden
     />
   );

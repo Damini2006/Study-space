@@ -4,6 +4,7 @@ import { motion } from "framer-motion";
 import {
   BarChart3,
   CheckCircle2,
+  Download,
   Loader2,
   Play,
   ShieldCheck,
@@ -120,7 +121,16 @@ function RunCard({ run, onRun, showDetails }) {
       )}
 
       <div className="flex items-center justify-between pt-2 border-t border-border">
-        <Button variant="ghost" size="sm" onClick={() => showDetails(run.id)}><Table className="size-3.5 mr-1" /> Details</Button>
+        <div className="flex items-center gap-1">
+          <Button variant="ghost" size="sm" onClick={() => showDetails(run.id)}>
+            <Table className="size-3.5 mr-1" /> Details
+          </Button>
+          {run.status === "completed" && (
+            <Button variant="ghost" size="sm" onClick={() => onRun(run.id, "export")}>
+              <Download className="size-3.5 mr-1" /> Export
+            </Button>
+          )}
+        </div>
         {run.status === "pending" && <Button size="sm" onClick={() => onRun(run.id, "run")}><Play className="size-3.5 mr-1" /> Run</Button>}
       </div>
     </Card>
@@ -136,6 +146,7 @@ export default function AdminEvals() {
   const [dataset, setDataset] = useState("v1");
   const [limit, setLimit] = useState(100);
   const [detailRun, setDetailRun] = useState(null);
+  const [showDetail, setShowDetail] = useState(false);
   const [showExport, setShowExport] = useState(false);
   const [exportFormat, setExportFormat] = useState("csv");
 
@@ -155,7 +166,7 @@ export default function AdminEvals() {
     setRunning(false);
   };
 
-  const handleExport = async (format) => {
+  const handleExport = (format) => {
     setExportFormat(format);
     setShowExport(true);
   };
@@ -193,8 +204,17 @@ export default function AdminEvals() {
   };
 
   const handleRunAction = (runId, action) => {
-    if (action === "view") setDetailRun(runs.find(r => r.id === runId));
-    else if (action === "run") queryClient.invalidateQueries({ queryKey: ["evals", "runs"] });
+    const run = runs.find((r) => r.id === runId);
+    if (action === "view") {
+      setDetailRun(run);
+      setShowDetail(true);
+    } else if (action === "export") {
+      // The export dialog downloads `detailRun`'s results, so target it first.
+      setDetailRun(run);
+      handleExport("csv");
+    } else if (action === "run") {
+      queryClient.invalidateQueries({ queryKey: ["evals", "runs"] });
+    }
   };
 
   // Compute summary stats
@@ -302,10 +322,103 @@ export default function AdminEvals() {
               key={run.id}
               run={run}
               onRun={(id, action) => handleRunAction(run.id, action)}
+              showDetails={(id) => handleRunAction(id, "view")}
             />
           ))}
         </div>
       )}
+
+      {/* Single-run detail sheet */}
+      <Dialog
+        open={showDetail && !!detailRun}
+        onClose={() => setShowDetail(false)}
+        title={detailRun ? `Run · ${detailRun.label}` : "Run details"}
+        className="max-w-lg"
+      >
+        {detailRun && (
+          <div className="space-y-4 text-sm">
+            <div className="flex flex-wrap items-center gap-2">
+              <Badge
+                variant={
+                  detailRun.status === "completed"
+                    ? "success"
+                    : detailRun.status === "failed"
+                      ? "danger"
+                      : "default"
+                }
+              >
+                {detailRun.status}
+              </Badge>
+              <ConfigBadge config={detailRun.config} />
+            </div>
+            <dl className="grid grid-cols-2 gap-x-4 gap-y-2">
+              {[
+                ["Created", formatDate(detailRun.created_at)],
+                ["Dataset", detailRun.dataset_version || "—"],
+                ["Questions", detailRun.summary?.total ?? 0],
+                ["Passed", detailRun.summary?.passed ?? 0],
+                [
+                  "Hallucination rate",
+                  detailRun.summary?.hallucination_rate != null
+                    ? `${Math.round(detailRun.summary.hallucination_rate * 100)}%`
+                    : "—",
+                ],
+                [
+                  "Avg. latency",
+                  detailRun.summary?.avg_latency_ms != null
+                    ? `${detailRun.summary.avg_latency_ms} ms`
+                    : "—",
+                ],
+              ].map(([label, value]) => (
+                <div key={label} className="flex items-baseline justify-between gap-2 border-b border-border pb-1">
+                  <dt className="text-xs text-muted-foreground">{label}</dt>
+                  <dd className="font-mono text-xs">{value}</dd>
+                </div>
+              ))}
+            </dl>
+          </div>
+        )}
+      </Dialog>
+
+      {/* Export sheet */}
+      <Dialog
+        open={showExport}
+        onClose={() => setShowExport(false)}
+        title="Export results"
+        description={detailRun ? `Download ${detailRun.label} as CSV, JSON or PDF.` : undefined}
+        className="max-w-md"
+      >
+        <fieldset className="mt-1">
+          <legend className="text-[13px] font-medium">Format</legend>
+          <div className="mt-3 flex gap-2">
+            {["csv", "json", "pdf"].map((fmt) => (
+              <button
+                key={fmt}
+                type="button"
+                onClick={() => handleExport(fmt)}
+                aria-pressed={exportFormat === fmt}
+                className={cn(
+                  "rounded-lg border px-3 py-1.5 text-xs font-medium uppercase tracking-wide transition-colors",
+                  exportFormat === fmt
+                    ? "border-primary/40 bg-primary/10 text-primary"
+                    : "border-border text-muted-foreground hover:border-foreground/25 hover:text-foreground"
+                )}
+              >
+                {fmt}
+              </button>
+            ))}
+          </div>
+        </fieldset>
+
+        <div className="mt-5 flex justify-end gap-2">
+          <Button variant="outline" size="sm" onClick={() => setShowExport(false)}>
+            Cancel
+          </Button>
+          <Button size="sm" onClick={confirmExport} disabled={!detailRun}>
+            <Download className="size-3.5" aria-hidden /> Download
+          </Button>
+        </div>
+      </Dialog>
     </div>
   );
 }
