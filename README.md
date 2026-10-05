@@ -36,6 +36,36 @@ cd frontend && npm install && npm run dev
 
 **Try the demo:** Click "Try the demo workspace" on the landing page — no signup required.
 
+### Quality checks
+
+CI runs these three on every push and pull request to `main`. Run them locally before
+opening a PR — all three must pass.
+
+```bash
+cd frontend
+
+npm run lint     # ESLint flat config: undefined identifiers, unused code, React hooks
+npm run test     # Vitest: lib unit tests + component render tests (jsdom)
+npm run build    # Vite production build (code-split, vendor chunks)
+```
+
+A single command that runs all three in order:
+
+```bash
+npm run check
+```
+
+Notes:
+
+- `npm run lint` fails on **errors** and reports `react-refresh` / `exhaustive-deps`
+  as warnings, so hot-reload and hook-dependency notices don't block a merge.
+- The lint config includes `react/jsx-uses-vars` and `react/jsx-no-undef`. Without
+  the first, ESLint treats every component referenced only from JSX as dead code
+  and `--fix` will delete it; without the second, a missing component import ships
+  and white-screens at runtime.
+- Tests live in `frontend/tests/` and share one `setup.js` (jest-dom matchers plus
+  jsdom polyfills for `matchMedia`, `IntersectionObserver` and `ResizeObserver`).
+
 ---
 
 ## Architecture
