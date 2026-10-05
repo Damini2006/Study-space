@@ -1,5 +1,6 @@
 import { cva } from "class-variance-authority";
-import { forwardRef } from "react";
+import { forwardRef, useState } from "react";
+import { Eye, EyeOff } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export const Input = forwardRef(function Input({ className, type = "text", ...props }, ref) {
@@ -15,6 +16,38 @@ export const Input = forwardRef(function Input({ className, type = "text", ...pr
       )}
       {...props}
     />
+  );
+});
+
+export const PasswordInput = forwardRef(function PasswordInput({ className, ...props }, ref) {
+  const [visible, setVisible] = useState(false);
+  return (
+    <div className="relative">
+      <input
+        ref={ref}
+        type={visible ? "text" : "password"}
+        className={cn(
+          "flex h-9 w-full rounded-lg border border-input bg-surface px-3 py-1 pr-10 text-sm shadow-sm transition-colors",
+          "placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+          "disabled:cursor-not-allowed disabled:opacity-50",
+          className
+        )}
+        {...props}
+      />
+      <button
+        type="button"
+        onClick={() => setVisible((v) => !v)}
+        aria-label={visible ? "Hide password" : "Show password"}
+        className="absolute right-2 top-1/2 -translate-y-1/2 rounded p-1 text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
+        tabIndex={-1}
+      >
+        {visible ? (
+          <EyeOff className="size-4" aria-hidden />
+        ) : (
+          <Eye className="size-4" aria-hidden />
+        )}
+      </button>
+    </div>
   );
 });
 
