@@ -39,6 +39,15 @@ export default function Dashboard() {
 
   const upcoming = useMemo(() => tasks.filter((t) => t.status === "pending").slice(0, 5), [tasks]);
 
+  const greeting = useMemo(() => {
+    const h = new Date().getHours();
+    if (h < 5) return "Burning the midnight oil";
+    if (h < 12) return "Good morning";
+    if (h < 17) return "Good afternoon";
+    if (h < 21) return "Good evening";
+    return "Good night";
+  }, []);
+
   const createSpace = useMutation({
     mutationFn: (payload) => spacesApi.create(payload),
     onSuccess: (space) => {
@@ -61,8 +70,9 @@ export default function Dashboard() {
       {/* Greeting */}
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
+          <p className="text-xs font-medium uppercase tracking-[0.14em] text-primary">{greeting}</p>
           <h1 className="text-2xl font-bold tracking-tight">
-            Hello{profile?.display_name ? `, ${profile.display_name.split(" ")[0]}` : ""} 👋
+            {profile?.display_name ? profile.display_name.split(" ")[0] : "there"} 👋
           </h1>
           <p className="mt-0.5 text-sm text-muted-foreground">
             {new Date().toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric" })}
