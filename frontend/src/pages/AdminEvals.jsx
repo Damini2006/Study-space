@@ -175,8 +175,8 @@ export default function AdminEvals() {
       });
       if (!res.ok) throw new Error("Export failed");
       
-      let blob = await res.blob();
-      let url, filename;
+      const blob = await res.blob();
+      let filename;
       
       if (exportFormat === "csv") {
         filename = `evals-report-${new Date().toISOString().slice(0,10)}.csv`;
@@ -186,7 +186,7 @@ export default function AdminEvals() {
         filename = `evals-report-${new Date().toISOString().slice(0,10)}.pdf`;
       }
       
-      url = URL.createObjectURL(blob);
+      const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
       a.download = filename;

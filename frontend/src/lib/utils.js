@@ -164,6 +164,8 @@ export function mdToHtml(markdown) {
 
   for (const raw of lines) {
     const trimmed = raw.trim();
+    // NUL is the sentinel delimiter for citation markers — matching it is the point.
+    // eslint-disable-next-line no-control-regex
     if (/^\u0000CB\d+\u0000$/.test(trimmed)) {
       flushParagraph();
       closeList();

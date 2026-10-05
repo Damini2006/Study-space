@@ -109,7 +109,9 @@ export default function AmbientMixer() {
     return () => {
       try {
         ctxRef.current?.close();
-      } catch {}
+      } catch {
+        // AudioContext can throw if it was already closed by the browser.
+      }
       ctxRef.current = null;
     };
   }, []);

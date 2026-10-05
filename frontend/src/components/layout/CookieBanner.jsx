@@ -3,12 +3,23 @@ import { Button } from "@/components/ui/button";
 
 const KEY = "studyspace.cookieConsent";
 
+/** localStorage throws in private browsing / when full — the banner still works without it. */
+function remember(value) {
+  try {
+    localStorage.setItem(KEY, value);
+  } catch {
+    // Storage unavailable: consent simply won't persist for this visit.
+  }
+}
+
 export default function CookieBanner() {
   const [visible, setVisible] = useState(false);
   useEffect(() => {
     try {
       if (!localStorage.getItem(KEY)) setVisible(true);
-    } catch {}
+    } catch {
+      // Storage unavailable: show the banner rather than silently skipping it.
+    }
   }, []);
   if (!visible) return null;
   return (
@@ -26,7 +37,7 @@ export default function CookieBanner() {
             variant="outline"
             size="sm"
             onClick={() => {
-              try { localStorage.setItem(KEY, "declined"); } catch {}
+              remember("declined");
               setVisible(false);
             }}
           >
@@ -35,7 +46,7 @@ export default function CookieBanner() {
           <Button
             size="sm"
             onClick={() => {
-              try { localStorage.setItem(KEY, "accepted"); } catch {}
+              remember("accepted");
               setVisible(false);
             }}
           >
