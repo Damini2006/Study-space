@@ -1,0 +1,29 @@
+# EditorConfig helps keep formatting consistent across editors and contributors.
+# https://editorconfig.org
+root = true
+
+[*]
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = true
+indent_style = space
+indent_size = 2
+
+# Windows / batch files need CRLF to run.
+[*.{bat,cmd,ps1}]
+end_of_line = crlf
+
+[*.md]
+# Markdown renders two trailing spaces as a hard line break.
+trim_trailing_whitespace = false
+
+[Makefile]
+indent_style = tab
+
+# Python lives in backend/ and worker/ and follows ruff's conventions.
+[*.py]
+indent_size = 4
+
+[*.sql]
+indent_size = 2
