@@ -1,9 +1,16 @@
 import { useEffect, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Loader2, Send, Square, Trash2, Shield, Sparkles, CheckCircle2 } from "lucide-react";
 import { chatApi } from "@/services/api-services";
 import { streamSSE } from "@/lib/api";
-
-
+import { Button } from "@/components/ui/button";
+import { StatusBadge } from "@/components/ui/status-badges";
+import { 
+  LayerStatusBadge, 
+  CitationQualityScore, 
+  ClaimVerificationHighlight,
+  NotFoundSuggestions 
+} from "@/components/ui/confidence-meter";
 import { cn, mdToHtml } from "@/lib/utils";
 import { useToast } from "@/components/ui/toast";
 

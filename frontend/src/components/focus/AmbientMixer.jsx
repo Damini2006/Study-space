@@ -4,6 +4,9 @@
  * with saved volume levels in localStorage.
  */
 import { useEffect, useRef, useState } from "react";
+import { Volume2, VolumeX } from "lucide-react";
+import { Card } from "@/components/ui/card";
+import { Label } from "@/components/ui/input";
 
 const CHANNELS = [
   { id: "rain", label: "Rain", desc: "Soft filtered noise" },

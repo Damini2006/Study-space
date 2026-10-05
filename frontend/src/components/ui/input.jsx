@@ -1,5 +1,6 @@
 import { cva } from "class-variance-authority";
 import { forwardRef, useState } from "react";
+import { Eye, EyeOff } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export const Input = forwardRef(function Input({ className, type = "text", ...props }, ref) {

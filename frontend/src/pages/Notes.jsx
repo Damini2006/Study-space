@@ -1,11 +1,24 @@
 import { useEffect, useMemo, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-
-
+import { motion, AnimatePresence } from "framer-motion";
+import {
+  Plus,
+  Search,
+  Tag,
+  Trash2,
+  Pin,
+  FileText,
+  X,
+} from "lucide-react";
+import { Card } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input, Label } from "@/components/ui/input";
+import { Dialog } from "@/components/ui/dialog";
+import { Badge } from "@/components/ui/input";
 import { notesApi } from "@/services/api-services";
 import { useToast } from "@/components/ui/toast";
 import { cn, tiptapToText } from "@/lib/utils";
-import { Editor } from "@tiptap/react";
+import { Editor, EditorContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import Placeholder from "@tiptap/extension-placeholder";
 

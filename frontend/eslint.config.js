@@ -1,5 +1,6 @@
 import js from "@eslint/js";
 import globals from "globals";
+import react from "eslint-plugin-react";
 import reactHooks from "eslint-plugin-react-hooks";
 import reactRefresh from "eslint-plugin-react-refresh";
 import unusedImports from "eslint-plugin-unused-imports";
@@ -17,6 +18,10 @@ export default [
       },
     },
     plugins: {
+      // `jsx-uses-vars` / `jsx-uses-react` are essential: without them ESLint's
+      // scope analysis treats every component referenced only from JSX as dead
+      // code, and --fix would happily delete it.
+      react,
       "react-hooks": reactHooks,
       "react-refresh": reactRefresh,
       "unused-imports": unusedImports,
@@ -26,6 +31,10 @@ export default [
       ...reactHooks.configs.recommended.rules,
 
       // JSX is plain JavaScript here — React 17+ doesn't need the import.
+      // JSX counts as a real reference.
+      "react/jsx-uses-vars": "error",
+      "react/jsx-uses-react": "error",
+
       "react-refresh/only-export-components": ["warn", { allowConstantExport: true }],
 
       // Catch the class of bug that white-screens a page: a symbol that was

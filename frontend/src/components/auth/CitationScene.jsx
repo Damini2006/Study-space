@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { CheckCircle2, FileText, Sparkles } from "lucide-react";
 
 /**
  * The decorative scene behind the auth caption.

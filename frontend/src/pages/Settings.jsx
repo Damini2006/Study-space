@@ -4,7 +4,13 @@ import { useAuth } from "@/hooks/useAuth";
 import { useTheme, THEMES } from "@/hooks/useTheme";
 import { useToast } from "@/components/ui/toast";
 import { meApi } from "@/services/api-services";
+import { Card } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input, Label } from "@/components/ui/input";
+import { Dialog } from "@/components/ui/dialog";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/dialog";
 import { cn, formatDate } from "@/lib/utils";
+import { Copy, Plus, X } from "lucide-react";
 
 export default function MCPManagement() {
   const { profile, signOut, isDemo } = useAuth();

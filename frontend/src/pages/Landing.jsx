@@ -1,15 +1,25 @@
 import { useEffect, useState, useRef } from "react";
-import { useNavigate } from "react-router-dom";
-import { useScroll, useTransform, useMotionValue, useSpring } from "framer-motion";
+import { Link, useNavigate } from "react-router-dom";
+import { motion, useScroll, useTransform, useMotionValue, useSpring, AnimatePresence } from "framer-motion";
 import {
+  ArrowRight,
+  ArrowUpRight,
   Brain,
   CalendarCheck,
+  Check,
+  ChevronDown,
+  ChevronRight,
+  CircleCheck,
+  FileText,
   Fingerprint,
   Flame,
+  GraduationCap,
   KeyRound,
   Lock,
   MessageSquare,
+  Minus,
   Monitor,
+  Plus,
   ScanSearch,
   ShieldCheck,
   Sparkles,
@@ -18,6 +28,8 @@ import {
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/components/ui/toast";
+import { Button } from "@/components/ui/button";
+import ThemeToggle from "@/components/ui/theme-toggle";
 import { cn } from "@/lib/utils";
 
 /* ------------------------------------------------------------------ */

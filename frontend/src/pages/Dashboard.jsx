@@ -1,15 +1,26 @@
 import { useMemo, useState } from "react";
-import { useSearchParams } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
+  BarChart3,
   CalendarDays,
+  Check,
   Flame,
   Layers,
+  Loader2,
+  Plus,
+  Quote,
+  Sparkles,
   Timer,
 } from "lucide-react";
 import { analyticsApi, habitsApi, plannerApi, spacesApi, studyApi } from "@/services/api-services";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/components/ui/toast";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input, Label } from "@/components/ui/input";
+import { Dialog } from "@/components/ui/dialog";
+import { Badge } from "@/components/ui/input";
 import { cn, formatDate, relativeTime } from "@/lib/utils";
 
 export default function Dashboard() {

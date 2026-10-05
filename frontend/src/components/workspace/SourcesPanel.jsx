@@ -5,7 +5,12 @@
  */
 import { useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { FileText, Plus, Trash2, Upload, X } from "lucide-react";
 import { sourcesApi } from "@/services/api-services";
+import { Button } from "@/components/ui/button";
+import { Input, Textarea } from "@/components/ui/input";
+import { Dialog } from "@/components/ui/dialog";
+import { SourceStatusBadge } from "@/components/ui/status-badges";
 import { formatBytes, formatDate } from "@/lib/utils";
 import { useToast } from "@/components/ui/toast";
 

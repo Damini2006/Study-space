@@ -4,7 +4,10 @@
  * private `vision` storage bucket and render through signed URLs.
  */
 import { useCallback, useEffect, useRef, useState } from "react";import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { motion } from "framer-motion";
+import { ImagePlus, Loader2, Plus, StickyNote, Trash2 } from "lucide-react";
 import { visionApi } from "@/services/api-services";
+import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/toast";
 import { cn } from "@/lib/utils";
 

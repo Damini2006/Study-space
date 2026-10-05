@@ -1,3 +1,6 @@
+import { Link } from "react-router-dom";
+import { CheckCircle2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 export default function ThankYou() {
   return (

@@ -1,12 +1,22 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { motion, AnimatePresence } from "framer-motion";
 import {
   AlertCircle,
   CheckCircle2,
   Clock,
   Loader2,
+  MessageSquare,
   Plus,
+  RotateCcw,
+  Search,
+  X,
+  Loader,
+  Flame,
 } from "lucide-react";
+import { Card } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { studyApi } from "@/services/api-services";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/components/ui/toast";
