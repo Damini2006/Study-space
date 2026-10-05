@@ -1,19 +1,21 @@
-import { Moon, Sun } from "lucide-react";
+import { Moon, Sun, Monitor } from "lucide-react";
 import { useTheme } from "@/hooks/useTheme";
 import { cn } from "@/lib/utils";
 
 const OPTIONS = [
   { id: "light", label: "Light", Icon: Sun },
   { id: "dark", label: "Dark", Icon: Moon },
+  { id: "system", label: "System", Icon: Monitor },
 ];
 
 /**
- * Light / dark switch for the marketing pages.
+ * Light / dark / system switch for the marketing pages.
  * The full four-theme picker lives in Settings and the app shell.
  */
-export default function ThemeToggle({ className, size = "md" }) {
+export default function ThemeToggle({ className, size = "md", showSystem = false }) {
   const { theme, setTheme } = useTheme();
-  const active = theme === "dark" ? "dark" : "light";
+  const active = theme === "dark" ? "dark" : theme === "system" ? "system" : "light";
+  const options = showSystem ? OPTIONS : OPTIONS.filter((o) => o.id !== "system");
 
   return (
     <div
@@ -24,7 +26,7 @@ export default function ThemeToggle({ className, size = "md" }) {
         className
       )}
     >
-      {OPTIONS.map(({ id, label, Icon }) => {
+      {options.map(({ id, label, Icon }) => {
         const isActive = active === id;
         return (
           <button
