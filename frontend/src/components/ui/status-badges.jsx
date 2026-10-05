@@ -55,10 +55,34 @@ const SOURCE_STATES = {
 export function SourceStatusBadge({ status }) {
   const cfg = SOURCE_STATES[status] || SOURCE_STATES.queued;
   const Icon = cfg.icon;
+  const isActive = status === "processing";
   return (
     <Badge variant={cfg.variant}>
-      <Icon className="size-3" aria-hidden />
+      <Icon className={cn("size-3", isActive && "animate-pulse")} aria-hidden />
       {cfg.label}
     </Badge>
+  );
+}
+
+/** Live dot indicator with pulse for active states. */
+export function StatusDot({ active = false, className, label }) {
+  return (
+    <span
+      role={label ? "status" : undefined}
+      aria-label={label}
+      className={cn(
+        "inline-flex items-center gap-1.5",
+        className
+      )}
+    >
+      <span
+        className={cn(
+          "size-2 rounded-full",
+          active ? "bg-success animate-pulse" : "bg-muted-foreground/50"
+        )}
+        aria-hidden
+      />
+      {label && <span className="text-xs text-muted-foreground">{label}</span>}
+    </span>
   );
 }
