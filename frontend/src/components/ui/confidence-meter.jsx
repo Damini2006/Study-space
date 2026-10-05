@@ -31,7 +31,8 @@ export function ConfidenceMeter({ value, size = "md", showLabel = true, classNam
         aria-valuenow={percentage}
         aria-valuemin={0}
         aria-valuemax={100}
-        aria-label={`Confidence: ${percentage}%`}
+        aria-valuetext={`${percentage}% - ${step.label} confidence`}
+        aria-label="Confidence level"
       >
         <div
           className={cn("h-full rounded-full transition-all duration-500", step.color)}
