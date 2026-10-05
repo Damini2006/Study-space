@@ -1320,3 +1320,106 @@
   }
 }
 
+/* --- Print ---------------------------------------------------------------- */
+/* Users print study plans, notes and revision sheets. Collapse the app chrome
+   to a single readable column and force the light palette so ink stays legible
+   regardless of the on-screen theme. */
+@media print {
+  :root,
+  [data-theme] {
+    color-scheme: light !important;
+    --background: #ffffff;
+    --foreground: #10131f;
+    --card: #ffffff;
+    --card-foreground: #10131f;
+    --surface: #ffffff;
+    --surface-2: #f3f4f8;
+    --border: #d8dae3;
+    --muted-foreground: #4b5162;
+    --primary: #3d44c6;
+  }
+
+  html,
+  body {
+    background: #fff !important;
+    color: #10131f !important;
+  }
+
+  /* Hide everything that isn't the document itself. */
+  header,
+  nav,
+  aside,
+  footer,
+  [data-print="hide"],
+  .no-print,
+  .fixed,
+  .sticky {
+    display: none !important;
+  }
+
+  main,
+  #main-content {
+    position: static !important;
+    width: 100% !important;
+    max-width: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: visible !important;
+  }
+
+  /* Strip motion, shadows and decorative surfaces. */
+  *,
+  *::before,
+  *::after {
+    animation: none !important;
+    transition: none !important;
+    box-shadow: none !important;
+    backdrop-filter: none !important;
+  }
+
+  a[href^="http"]::after {
+    content: " (" attr(href) ")";
+    font-size: 0.85em;
+    word-break: break-all;
+    color: #6b7183;
+  }
+
+  a {
+    color: inherit !important;
+    text-decoration: underline;
+  }
+
+  h1,
+  h2,
+  h3 {
+    break-after: avoid;
+    page-break-after: avoid;
+  }
+
+  p,
+  li,
+  figure,
+  blockquote {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  table {
+    border-collapse: collapse;
+    width: 100%;
+  }
+
+  th,
+  td {
+    border: 1px solid #d8dae3;
+    padding: 6px 8px;
+    text-align: left;
+  }
+
+  pre,
+  code {
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+}
+
