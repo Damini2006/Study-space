@@ -44,11 +44,33 @@ function score(query, text) {
   return 0;
 }
 
+const RECENTS_KEY = "ss.palette.recents";
+const RECENTS_MAX = 5;
+
+function readRecents() {
+  try {
+    const raw = JSON.parse(localStorage.getItem(RECENTS_KEY) || "[]");
+    return Array.isArray(raw) ? raw.filter((x) => typeof x === "string") : [];
+  } catch {
+    return [];
+  }
+}
+
+function pushRecent(id) {
+  try {
+    const next = [id, ...readRecents().filter((x) => x !== id)].slice(0, RECENTS_MAX);
+    localStorage.setItem(RECENTS_KEY, JSON.stringify(next));
+  } catch {
+    /* storage unavailable — recents are a nice-to-have */
+  }
+}
+
 /** Global command palette (Ctrl/Cmd+K): navigate, open spaces, quick actions. */
 export default function CommandPalette({ open, onClose }) {
   const navigate = useNavigate();
   const { profile, startDemo, isDemo } = useAuth();
   const [query, setQuery] = useState("");
+  const [recents, setRecents] = useState(readRecents);
   const inputRef = useRef(null);
 
   const { data: spaces = [] } = useQuery({
@@ -125,14 +147,25 @@ export default function CommandPalette({ open, onClose }) {
   const results = useMemo(() => {
     const scored = actions
       .map((a) => ({ ...a, s: Math.max(score(query, a.label), query ? score(query, a.hint || "") : 0) }))
-      .filter((a) => a.s > 0)
-      .sort((a, b) => b.s - a.s);
+      .filter((a) => a.s > 0);
+    if (query) {
+      scored.sort((a, b) => b.s - a.s);
+    } else {
+      // Empty query: surface recently used commands first, then the default order.
+      scored.sort((a, b) => {
+        const ra = recents.indexOf(a.id);
+        const rb = recents.indexOf(b.id);
+        if (ra !== rb) return (ra === -1 ? RECENTS_MAX : ra) - (rb === -1 ? RECENTS_MAX : rb);
+        return 0;
+      });
+    }
     return scored.slice(0, 12);
-  }, [actions, query]);
+  }, [actions, query, recents]);
 
   useEffect(() => {
     if (open) {
       setQuery("");
+      setRecents(readRecents());
       setTimeout(() => inputRef.current?.focus(), 30);
     }
   }, [open]);
@@ -140,6 +173,8 @@ export default function CommandPalette({ open, onClose }) {
   const run = useCallback(
     (item) => {
       onClose();
+      pushRecent(item.id);
+      setRecents(readRecents());
       item.run();
     },
     [onClose]
@@ -187,6 +222,9 @@ export default function CommandPalette({ open, onClose }) {
                 <Icon className="size-4 text-muted-foreground" aria-hidden />
                 <span className="flex-1 truncate">{item.label}</span>
                 {item.hint && <span className="text-xs text-muted-foreground">{item.hint}</span>}
+                {!query && recents.includes(item.id) && (
+                  <span className="text-[10px] uppercase tracking-wide text-primary">Recent</span>
+                )}
                 <span className="text-[10px] uppercase tracking-wide text-muted-foreground">{item.group}</span>
               </button>
             </li>
