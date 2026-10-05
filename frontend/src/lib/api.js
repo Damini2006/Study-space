@@ -3,32 +3,22 @@
  * errors. All backend calls in the app go through here.
  */
 import { supabase } from "@/lib/supabase";
+import { pickMessage, friendlyMessage } from "@/lib/errors";
+
+export { friendlyMessage };
 
 const API_BASE = (import.meta.env.VITE_API_URL || "http://localhost:8000/api").replace(/\/$/, "");
 
 export class ApiError extends Error {
   constructor(status, detail) {
-    super(detail || `Request failed (${status})`);
+    // `.message` is deliberately the user-facing copy — most call sites toast
+    // `err.message` directly. The raw payload stays on `.detail`.
+    super(pickMessage(status, detail));
+    this.name = "ApiError";
     this.status = status;
-    this.detail = detail;
+    this.detail = detail ?? this.message;
   }
 }
-
-/** Human-readable copy for the common failure modes, so users aren't shown raw HTTP text. */
-const FRIENDLY = {
-  0: "Couldn’t reach StudySpace. Check your connection and try again.",
-  400: "That request wasn’t quite right.",
-  401: "Your session expired. Please sign in again.",
-  403: "You don’t have access to that.",
-  404: "We couldn’t find that.",
-  409: "That conflicts with something that already exists.",
-  413: "That file is too large.",
-  422: "Some of the details weren’t valid.",
-  429: "You’re going a little fast — give it a moment and retry.",
-  500: "StudySpace hit an internal error. Please try again.",
-  502: "The server is restarting. Please try again in a moment.",
-  503: "StudySpace is temporarily unavailable. Please try again.",
-};
 
 const RETRYABLE = new Set([408, 429, 500, 502, 503, 504]);
 
@@ -40,17 +30,6 @@ function toTransportError(err) {
   if (err instanceof ApiError) return err;
   if (err?.name === "AbortError") return err;
   return new ApiError(0, err?.message || "Network request failed");
-}
-
-/** Short, user-facing sentence for an ApiError. Falls back to the server detail. */
-export function friendlyMessage(err) {
-  if (!err) return "Something went wrong.";
-  if (err.name === "AbortError") return "Request cancelled.";
-  const status = err.status ?? 0;
-  const detail = typeof err.detail === "string" ? err.detail.trim() : "";
-  // Prefer an explicit server message, but don't surface HTML error pages.
-  if (detail && detail.length < 200 && !/^</.test(detail)) return detail;
-  return FRIENDLY[status] || "Something went wrong. Please try again.";
 }
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));

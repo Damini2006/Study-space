@@ -2,9 +2,20 @@ import { createContext, useCallback, useContext, useMemo, useState } from "react
 import { AnimatePresence, motion } from "framer-motion";
 import { CheckCircle2, Info, X, XCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { friendlyMessage } from "@/lib/errors";
 
 const ToastContext = createContext(null);
 let idCounter = 0;
+
+/**
+ * Accepts a plain string or an Error. Errors are run through the API client's
+ * friendly copy so users never see a raw status line in a toast.
+ */
+function toText(message) {
+  if (typeof message === "string") return message;
+  if (message instanceof Error) return friendlyMessage(message);
+  return String(message ?? "");
+}
 
 export function ToastProvider({ children }) {
   const [toasts, setToasts] = useState([]);
@@ -16,7 +27,8 @@ export function ToastProvider({ children }) {
   const push = useCallback(
     (message, { variant = "default", duration = 4000 } = {}) => {
       const id = ++idCounter;
-      setToasts((list) => [...list.slice(-3), { id, message, variant, duration }]);
+      const text = toText(message);
+      setToasts((list) => [...list.slice(-3), { id, message: text, variant, duration }]);
       if (duration > 0) setTimeout(() => dismiss(id), duration);
       return id;
     },
