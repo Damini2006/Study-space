@@ -335,7 +335,7 @@ export default function Planner() {
                       </div>
                       {dayTasks.length > 0 && (
                         <div className="p-2 text-[10px] text-success">
-                          {dayTasks.length} task{s}
+                          {dayTasks.length} task{dayTasks.length === 1 ? "" : "s"}
                         </div>
                       )}
                     </div>

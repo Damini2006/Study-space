@@ -238,7 +238,7 @@ export default function MCPManagement() {
                     theme === t.id ? "border-primary ring-2 ring-primary/20" : "border-border hover:border-primary/40"
                   )}
                 >
-                  <div className="size-10 rounded-full mx-auto mb-2 border" style={{ background: THEME_DOTS[t.id] }} />
+                  <div className="size-10 rounded-full mx-auto mb-2 border border-border" style={{ background: t.swatch }} />
                   <div className="text-sm font-medium capitalize">{t.label}</div>
                 </button>
               ))}

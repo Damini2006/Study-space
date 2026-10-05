@@ -168,7 +168,7 @@ export default function StudioPanel({ spaceId }) {
 
             {/* Rich editor view based on type */}
             {openOutput.type === "summary" || openOutput.type === "guide" ? (
-              <SummaryView output={openOutput} />
+              <SummaryView output={openOutput} spaceId={spaceId} />
             ) : openOutput.type === "flashcards" ? (
               <FlashcardsView output={openOutput} />
             ) : (
@@ -297,10 +297,11 @@ function labelFor(type) {
 }
 
 // Summary view with inline editing
-function SummaryView({ output }) {
+function SummaryView({ output, spaceId }) {
   const [isEditing, setIsEditing] = useState(false);
   const [content, setContent] = useState(output?.content?.markdown ?? "");
   const qc = useQueryClient();
+  const { error: toastError, success } = useToast();
 
   const saveEdits = async () => {
     try {

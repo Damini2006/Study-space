@@ -2,11 +2,12 @@ import { useCallback, useEffect, useState } from "react";
 import { api } from "@/lib/api";
 import { useAuth } from "@/hooks/useAuth";
 
+// `swatch` is the preview colour used by the theme pickers (Settings, AppShell).
 export const THEMES = [
-  { id: "light", label: "Light" },
-  { id: "dark", label: "Dark" },
-  { id: "cozy", label: "Cozy" },
-  { id: "pastel", label: "Pastel" },
+  { id: "light", label: "Light", swatch: "#f7f8fc" },
+  { id: "dark", label: "Dark", swatch: "#171a2e" },
+  { id: "cozy", label: "Cozy", swatch: "#faf3e8" },
+  { id: "pastel", label: "Pastel", swatch: "#fbf7ff" },
 ];
 
 function currentTheme() {
