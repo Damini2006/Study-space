@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { Suspense, useEffect, useRef, useState } from "react";
 import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { AnimatePresence, motion } from "framer-motion";
 import {
@@ -46,6 +46,22 @@ const NAV = [
 ];
 
 const THEME_ICONS = { light: Sun, dark: Moon, cozy: Flame, pastel: Palette };
+
+/** Shell-shaped placeholder shown while a lazily-loaded route chunk arrives. */
+function PageSkeleton() {
+  return (
+    <div role="status" aria-label="Loading page" className="space-y-5">
+      <div className="h-7 w-52 animate-pulse rounded-md bg-surface-2" />
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        {Array.from({ length: 4 }).map((_, i) => (
+          <div key={i} className="h-24 animate-pulse rounded-2xl bg-surface-2" />
+        ))}
+      </div>
+      <div className="h-56 animate-pulse rounded-2xl bg-surface-2" />
+      <span className="sr-only">Loading page…</span>
+    </div>
+  );
+}
 
 function ThemeDot({ id }) {
   const colors = {
@@ -336,7 +352,9 @@ export default function AppShell() {
               exit={{ opacity: 0, y: -4 }}
               transition={{ duration: 0.18, ease: "easeOut" }}
             >
-              <Outlet />
+              <Suspense fallback={<PageSkeleton />}>
+                <Outlet />
+              </Suspense>
             </motion.div>
           </AnimatePresence>
         </main>

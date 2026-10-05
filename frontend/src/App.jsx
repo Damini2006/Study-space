@@ -1,5 +1,5 @@
 import { Navigate, Route, Routes, useLocation } from "react-router-dom";
-import { useEffect } from "react";
+import { lazy, Suspense, useEffect } from "react";
 import { motion } from "framer-motion";
 import { useAuth } from "@/hooks/useAuth";
 import AppShell from "@/components/layout/AppShell";
@@ -11,19 +11,41 @@ import Study from "@/pages/Study";
 import Planner from "@/pages/Planner";
 import Notes from "@/pages/Notes";
 import Focus from "@/pages/Focus";
-import Analytics from "@/pages/Analytics";
-import VisionBoard from "@/pages/VisionBoard";
-import Finance from "@/pages/Finance";
-import Settings from "@/pages/Settings";
-import AdminEvals from "@/pages/AdminEvals";
 import AuthCallback from "@/pages/AuthCallback";
 import NotFound from "@/pages/NotFound";
-import Privacy from "@/pages/Privacy";
-import Terms from "@/pages/Terms";
-import ThankYou from "@/pages/ThankYou";
-import Security from "@/pages/Security";
-import Contact from "@/pages/Contact";
 import CookieBanner from "@/components/layout/CookieBanner";
+
+// Secondary routes are code-split so the first paint only pulls in what the
+// landing page and dashboard actually need.
+const Analytics = lazy(() => import("@/pages/Analytics"));
+const VisionBoard = lazy(() => import("@/pages/VisionBoard"));
+const Finance = lazy(() => import("@/pages/Finance"));
+const Settings = lazy(() => import("@/pages/Settings"));
+const AdminEvals = lazy(() => import("@/pages/AdminEvals"));
+const Privacy = lazy(() => import("@/pages/Privacy"));
+const Terms = lazy(() => import("@/pages/Terms"));
+const ThankYou = lazy(() => import("@/pages/ThankYou"));
+const Security = lazy(() => import("@/pages/Security"));
+const Contact = lazy(() => import("@/pages/Contact"));
+
+function RouteFallback() {
+  return (
+    <div
+      role="status"
+      aria-label="Loading page"
+      className="mx-auto flex min-h-[50vh] w-full max-w-6xl flex-col justify-center gap-4"
+    >
+      <div className="h-7 w-48 animate-pulse rounded-md bg-surface-2" />
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        {Array.from({ length: 4 }).map((_, i) => (
+          <div key={i} className="h-24 animate-pulse rounded-2xl bg-surface-2" />
+        ))}
+      </div>
+      <div className="h-64 animate-pulse rounded-2xl bg-surface-2" />
+      <span className="sr-only">Loading page…</span>
+    </div>
+  );
+}
 
 function Protected({ children }) {
   const { isAuthenticated, initialising } = useAuth();
@@ -119,6 +141,7 @@ export default function App() {
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
     >
+    <Suspense fallback={<RouteFallback />}>
     <Routes location={location}>
       <Route path="/" element={<Landing />} />
       <Route path="/auth" element={<AuthPage />} />
@@ -151,6 +174,7 @@ export default function App() {
       </Route>
       <Route path="*" element={<NotFound />} />
     </Routes>
+    </Suspense>
     </motion.div>
     </>
   );
