@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input, Label } from "@/components/ui/input";
 import ThemeToggle from "@/components/ui/theme-toggle";
 import { useToast } from "@/components/ui/toast";
+import { cn } from "@/lib/utils";
 
 const TOPICS = ["Bug report", "Security report", "Partnership", "Press", "Something else"];
 
@@ -28,9 +29,32 @@ export default function Contact() {
     return Object.keys(e).length === 0;
   };
 
+  // Validate a single field once the user leaves it, so mistakes surface early
+  // instead of only on submit.
+  const validateField = (field) => {
+    const e = {};
+    if (field === "name" && name.trim().length < 2) e.name = "Please tell us what to call you.";
+    if (field === "email" && !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email.trim()))
+      e.email = "Enter a valid e-mail address.";
+    if (field === "message" && message.trim().length < 20)
+      e.message = "Give us at least 20 characters to work with.";
+    setErrors((prev) => {
+      const next = { ...prev };
+      if (e[field]) next[field] = e[field];
+      else delete next[field];
+      return next;
+    });
+  };
+
   const submit = async (ev) => {
     ev.preventDefault();
-    if (!validate()) return;
+    if (!validate()) {
+      // Send focus to the first field that failed so keyboard users aren't stranded.
+      requestAnimationFrame(() => {
+        document.querySelector("[aria-invalid='true']")?.focus();
+      });
+      return;
+    }
     setBusy(true);
     try {
       // Falls back to the visitor's own mail client so the form always works.
@@ -161,6 +185,7 @@ export default function Contact() {
                         id="c-name"
                         value={name}
                         onChange={(e) => setName(e.target.value)}
+                        onBlur={() => validateField("name")}
                         placeholder="Ada Lovelace"
                         aria-invalid={!!errors.name}
                         aria-describedby={errors.name ? "c-name-err" : undefined}
@@ -174,6 +199,7 @@ export default function Contact() {
                         type="email"
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
+                        onBlur={() => validateField("email")}
                         placeholder="you@school.edu"
                         aria-invalid={!!errors.email}
                         aria-describedby={errors.email ? "c-email-err" : undefined}
@@ -189,18 +215,27 @@ export default function Contact() {
                       rows={6}
                       value={message}
                       onChange={(e) => setMessage(e.target.value)}
+                      onBlur={() => validateField("message")}
                       placeholder="Steps to reproduce, what you expected, what happened."
                       aria-invalid={!!errors.message}
-                      aria-describedby={errors.message ? "c-msg-err" : undefined}
+                      aria-describedby={errors.message ? "c-msg-err" : "c-msg-hint"}
                       className="flex w-full rounded-lg border border-input bg-background px-3 py-2 text-sm outline-none ring-offset-background transition-colors placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                     />
                     <div className="flex items-start justify-between gap-4">
                       {errors.message ? (
                         <p id="c-msg-err" role="alert" className="text-xs text-destructive">{errors.message}</p>
                       ) : (
-                        <p className="text-xs text-muted-foreground">Never include passwords or access tokens.</p>
+                        <p id="c-msg-hint" className="text-xs text-muted-foreground">Never include passwords or access tokens.</p>
                       )}
-                      <span className="shrink-0 font-mono text-[11px] text-muted-foreground">{message.trim().length}/20</span>
+                      <span
+                        aria-live="polite"
+                        className={cn(
+                          "shrink-0 font-mono text-[11px]",
+                          message.trim().length >= 20 ? "text-success" : "text-muted-foreground"
+                        )}
+                      >
+                        {message.trim().length}/20
+                      </span>
                     </div>
                   </div>
 
