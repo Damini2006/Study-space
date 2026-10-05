@@ -10,6 +10,22 @@ export const spacesApi = {
   create: (body) => api.post("/spaces", body),
   update: (id, body) => api.patch(`/spaces/${id}`, body),
   delete: (id) => api.delete(`/spaces/${id}`),
+
+  // Sharing
+  createShare: (spaceId, body) => api.post(`/spaces/${spaceId}/shares`, body),
+  listShares: (spaceId) => api.get(`/spaces/${spaceId}/shares`),
+  revokeShare: (spaceId, shareId) => api.delete(`/spaces/${spaceId}/shares/${shareId}`),
+
+  // Public publishing
+  publish: (spaceId, body) => api.post(`/spaces/${spaceId}/public`, body),
+  getPublicInfo: (spaceId) => api.get(`/spaces/${spaceId}/public`),
+  unpublish: (spaceId) => api.delete(`/spaces/${spaceId}/public`),
+  getPublicSpace: (slug) => api.get(`/spaces/public/${slug}`),
+  getSharedSpace: (token) => api.get(`/spaces/shared/${token}`),
+
+  // Export / Import
+  export: (spaceId, fmt) => api.get(`/spaces/${spaceId}/export`, { params: { fmt } }, { responseType: "blob" }),
+  import: (spaceId, fmt, formData) => api.upload(`/spaces/${spaceId}/import`, formData, { params: { fmt } }),
 };
 
 export const sourcesApi = {

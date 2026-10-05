@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useRef } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { X } from "lucide-react";
+import { Check, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 /**
@@ -199,5 +199,142 @@ export function Switch({ checked, onChange, label, disabled }) {
         )}
       />
     </button>
+  );
+}
+
+/**
+ * Select — native <select> with consistent styling.
+ * Use with SelectTrigger, SelectValue, SelectContent, SelectItem.
+ */
+const SelectContext = createContext(null);
+
+export function Select({ value, onValueChange, children, disabled }) {
+  return (
+    <SelectContext.Provider value={{ value, onValueChange, disabled }}>
+      {children}
+    </SelectContext.Provider>
+  );
+}
+
+export function SelectTrigger({ value, placeholder, className, disabled }) {
+  const ctx = useContext(SelectContext);
+  const isDisabled = disabled || ctx?.disabled;
+  const currentValue = value ?? ctx?.value;
+  const handleChange = (e) => ctx?.onValueChange?.(e.target.value);
+
+  return (
+    <select
+      value={currentValue ?? ""}
+      onChange={handleChange}
+      disabled={isDisabled}
+      className={cn(
+        "flex h-9 w-full items-center gap-2 rounded-lg border border-border bg-background px-3 py-2 text-sm transition-colors",
+        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+        "disabled:cursor-not-allowed disabled:opacity-50",
+        className
+      )}
+      aria-label={placeholder}
+    >
+      {!currentValue && <option value="" disabled>{placeholder}</option>}
+      {currentValue && <option value={currentValue} selected>{currentValue}</option>}
+    </select>
+  );
+}
+
+export function SelectValue({ placeholder }) {
+  // Used as a placeholder in the trigger
+  return <span className="text-muted-foreground">{placeholder}</span>;
+}
+
+export function SelectContent({ children, className }) {
+  return (
+    <div className={cn("relative z-50 max-h-60 overflow-y-auto rounded-lg border border-border bg-popover p-1 shadow-lg", className)}>
+      {children}
+    </div>
+  );
+}
+
+export function SelectItem({ value, children, disabled, className }) {
+  const ctx = useContext(SelectContext);
+  const isSelected = ctx?.value === value;
+  const handleClick = () => {
+    if (disabled) return;
+    ctx?.onValueChange?.(value);
+  };
+
+  return (
+    <div
+      role="option"
+      aria-selected={isSelected}
+      aria-disabled={disabled}
+      onClick={handleClick}
+      className={cn(
+        "relative flex cursor-pointer select-none items-center rounded-sm py-1.5 pl-8 pr-2 text-sm outline-none",
+        "focus:bg-primary focus:text-primary-foreground",
+        "data-[disabled]:pointer-events-none data-[disabled]:opacity-50",
+        isSelected && "bg-primary text-primary-foreground",
+        className
+      )}
+      data-disabled={disabled}
+    >
+      <span className="absolute left-2 flex h-3.5 w-3.5 items-center justify-center">
+        {isSelected && <Check className="size-3.5" />}
+      </span>
+      {children}
+    </div>
+  );
+}
+
+/**
+ * RadioGroup — accessible radio button group with styled items.
+ */
+const RadioContext = createContext(null);
+
+export function RadioGroup({ value, onValueChange, children, className, disabled }) {
+  return (
+    <RadioContext.Provider value={{ value, onValueChange, disabled }}>
+      <div role="radiogroup" className={cn("flex flex-col gap-1", className)}>
+        {children}
+      </div>
+    </RadioContext.Provider>
+  );
+}
+
+export function RadioGroupItem({ value, children, className, disabled }) {
+  const ctx = useContext(RadioContext);
+  const isSelected = ctx?.value === value;
+  const isDisabled = disabled || ctx?.disabled;
+
+  return (
+    <label
+      className={cn(
+        "relative flex cursor-pointer items-center gap-2 rounded-lg border p-2 text-sm transition-colors",
+        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+        isDisabled ? "cursor-not-allowed opacity-50" : "hover:bg-surface-2",
+        isSelected && "border-primary/40 bg-primary/5",
+        className
+      )}
+    >
+      <input
+        type="radio"
+        value={value}
+        checked={isSelected}
+        onChange={() => !isDisabled && ctx?.onValueChange?.(value)}
+        disabled={isDisabled}
+        className="sr-only"
+      />
+      <span
+        className={cn(
+          "relative flex h-4 w-4 items-center justify-center rounded-full border-2 transition-colors",
+          isSelected ? "border-primary bg-primary" : "border-border",
+          isDisabled && "opacity-50"
+        )}
+      >
+        {isSelected && <span className="absolute size-2 rounded-full bg-white" />}
+      </span>
+      <span className={cn("font-medium", isSelected ? "text-foreground" : "text-muted-foreground")}>
+        {children}
+      </span>
+    </label>
   );
 }
