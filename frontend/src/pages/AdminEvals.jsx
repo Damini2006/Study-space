@@ -13,7 +13,7 @@ import {
 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/input";
+import { Badge, Input, Label } from "@/components/ui/input";
 import { Dialog } from "@/components/ui/dialog";
 import { evalsApi } from "@/services/api-services";
 import { useToast } from "@/components/ui/toast";

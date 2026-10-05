@@ -217,7 +217,7 @@ export default function Analytics() {
               </div>
             </div>
             <div className="space-y-2">
-              {weeks.map((week, wi) => (
+              {weeks.map((week) => (
                 <div key={week.start} className="flex items-center gap-2">
                   <span className="text-xs text-muted-foreground w-20 text-right">{formatDate(week.start)}</span>
                   <div className="flex gap-1">

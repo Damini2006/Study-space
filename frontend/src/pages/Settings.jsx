@@ -6,23 +6,21 @@ import { useToast } from "@/components/ui/toast";
 import { meApi } from "@/services/api-services";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input, Label } from "@/components/ui/input";
+import { Badge, Input, Label } from "@/components/ui/input";
 import { Dialog } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/dialog";
 import { cn, formatDate } from "@/lib/utils";
-import { Copy, Plus, X } from "lucide-react";
+import { Copy, Loader2, Plus, X } from "lucide-react";
 
 export default function MCPManagement() {
-  const { profile, signOut, isDemo } = useAuth();
+  const { isDemo } = useAuth();
   const { theme, setTheme } = useTheme();
   const { success, error, toast } = useToast();
   const queryClient = useQueryClient();
   const [tab, setTab] = useState("tokens");
-  const [tokens = [], setTokens] = useState([]);
   const [showCreate, setShowCreate] = useState(false);
   const [newTokenName, setNewTokenName] = useState("");
   const [newTokenScopes, setNewTokenScopes] = useState(["read"]);
-  const [creating, setCreating] = useState(false);
   const [editingToken, setEditingToken] = useState(null);
   const [showRevoke, setShowRevoke] = useState(false);
   const [tokenToRevoke, setTokenToRevoke] = useState(null);
@@ -56,6 +54,12 @@ export default function MCPManagement() {
     navigator.clipboard.writeText(token);
     toast("Token copied to clipboard!");
   };
+
+  const confirmRevoke = () => {
+    if (tokenToRevoke) revokeToken.mutate(tokenToRevoke);
+  };
+
+  const revokeTarget = mcpTokens.find((t) => t.id === tokenToRevoke);
 
   const toggleScope = (scopes, scope) => {
     if (scopes.includes(scope)) {
@@ -124,7 +128,7 @@ export default function MCPManagement() {
                     <input
                       type="checkbox"
                       checked={newTokenScopes.includes("read")}
-                      onChange={e => setNewTokenScopes(toggleScope(newTokenScopes, "read"))}
+                      onChange={() => setNewTokenScopes(toggleScope(newTokenScopes, "read"))}
                       className="size-4 accent-primary"
                     />
                     <span>Read (list spaces, search sources, get due cards, stats)</span>
@@ -133,7 +137,7 @@ export default function MCPManagement() {
                     <input
                       type="checkbox"
                       checked={newTokenScopes.includes("write")}
-                      onChange={e => setNewTokenScopes(toggleScope(newTokenScopes, "write"))}
+                      onChange={() => setNewTokenScopes(toggleScope(newTokenScopes, "write"))}
                       className="size-4 accent-primary"
                     />
                     <span>Write (create notes)</span>
@@ -141,8 +145,8 @@ export default function MCPManagement() {
                 </div>
                 <div className="flex justify-end gap-2 pt-2">
                   <Button variant="outline" type="button" onClick={() => setShowCreate(false)}>Cancel</Button>
-                  <Button type="submit" disabled={!newTokenName.trim() || creating}>
-                    {creating && <Loader2 className="size-4 animate-spin mr-1" />}
+                  <Button type="submit" disabled={!newTokenName.trim() || createToken.isPending}>
+                    {createToken.isPending && <Loader2 className="size-4 animate-spin mr-1" />}
                     Create token
                   </Button>
                 </div>
@@ -252,14 +256,45 @@ export default function MCPManagement() {
           </Card>
         </TabsContent>
       </Tabs>
+
+      {/* Revoking is irreversible and kills live MCP clients, so confirm first. */}
+      <Dialog
+        open={showRevoke}
+        onClose={() => {
+          setShowRevoke(false);
+          setTokenToRevoke(null);
+        }}
+        title="Revoke this token?"
+        description="Any MCP client still using it loses access immediately."
+        className="max-w-sm"
+      >
+        <p className="text-sm text-muted-foreground">
+          {revokeTarget?.name ? (
+            <>
+              <span className="font-medium text-foreground">{revokeTarget.name}</span> —{" "}
+            </>
+          ) : null}
+          {revokeTarget?.token_prefix ? `${revokeTarget.token_prefix}… ` : ""}
+          This cannot be undone. You can create a replacement token afterwards.
+        </p>
+
+        <div className="mt-5 flex justify-end gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              setShowRevoke(false);
+              setTokenToRevoke(null);
+            }}
+          >
+            Keep it
+          </Button>
+          <Button variant="destructive" size="sm" onClick={confirmRevoke} disabled={revokeToken.isPending}>
+            {revokeToken.isPending && <Loader2 className="size-4 animate-spin" aria-hidden />}
+            Revoke token
+          </Button>
+        </div>
+      </Dialog>
     </div>
   );
-}
-
-/* Helper function */
-function toggleScope(scopes, scope) {
-  if (scopes.includes(scope)) {
-    return scopes.filter(s => s !== scope);
-  }
-  return [...scopes, scope];
 }

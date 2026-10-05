@@ -34,6 +34,10 @@ export default [
       // JSX counts as a real reference.
       "react/jsx-uses-vars": "error",
       "react/jsx-uses-react": "error",
+      // Core `no-undef` only inspects plain JS expressions — it never checks
+      // `<Foo />` element names, so a missing component import would ship and
+      // white-screen at runtime. This rule closes that gap.
+      "react/jsx-no-undef": ["error", { allowGlobals: false }],
 
       "react-refresh/only-export-components": ["warn", { allowConstantExport: true }],
 

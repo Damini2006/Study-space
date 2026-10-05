@@ -100,6 +100,11 @@ export default function Focus() {
       clearInterval(intervalRef.current);
     }
     return () => clearInterval(intervalRef.current);
+    // `remaining` is intentionally the only changing dep: it re-arms the
+    // interval every tick, so the callback always closes over fresh
+    // `kind`/`duration`/`createSession`. Adding the mutation object here would
+    // re-arm on every render and could starve the timer.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [running, remaining]);
 
   const progress = (duration * 60 - remaining) / (duration * 60);
