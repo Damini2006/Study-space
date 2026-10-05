@@ -12,6 +12,10 @@ import {
   Search,
   Sparkles,
   X,
+  Loader,
+  Keyboard,
+  Flame,
+  Calendar,
 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -22,8 +26,8 @@ import { studyApi, studioApi } from "@/services/api-services";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/components/ui/toast";
 import { cn, formatDate, mdToHtml } from "@/lib/utils";
-import { SourceStatusBadge } from "@/components/ui/status-badges";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/dialog";
+import { ConfidenceMeter, LayerStatusBadge } from "@/components/ui/confidence-meter";
+import { useRef, useEffect } from "react";
 
 const REVIEW_RATINGS = [
   { value: 1, label: "Again", desc: "Complete blackout", className: "bg-destructive/10 text-destructive border-destructive/30" },
@@ -48,11 +52,50 @@ function ReviewButton({ cardId, rating, disabled, onReview }) {
   );
 }
 
-function ReviewCard({ card, onReview, loadingRating }) {
+function ReviewCard({ card, onReview, loadingRating, onFlip }) {
   const [showBack, setShowBack] = useState(false);
-  
+  const cardRef = useRef(null);
+
+  useEffect(() => {
+    // Handle keyboard navigation
+    const handleKeyDown = (e) => {
+      if (!showBack) {
+        if (e.key >= "1" && e.key <= "4") {
+          const rating = parseInt(e.key);
+          onReview(rating);
+        }
+        if (e.key === "f") {
+          setShowBack(true);
+        }
+      } else {
+        if (e.key === "Escape") {
+          setShowBack(false);
+        }
+        if (e.key >= "1" && e.key <= "4") {
+          const rating = parseInt(e.key);
+          onReview(rating);
+          setShowBack(false);
+        }
+      }
+    };
+
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [showBack, onReview]);
+
+  const handleFlip = () => {
+    onFlip?.();
+    setShowBack((prev) => !prev);
+  };
+
   return (
-    <Card className="p-4 space-y-4">
+    <Card
+      ref={cardRef}
+      className="p-4 space-y-4 cursor-pointer transition-transform hover:scale-[1.02]"
+      onClick={handleFlip}
+      role="button"
+      aria-label={showBack ? "Show question" : "Show answer"}
+    >
       <div className="space-y-2">
         <div className="text-sm font-medium leading-snug">
           {showBack ? card.back : card.front}
@@ -62,7 +105,7 @@ function ReviewCard({ card, onReview, loadingRating }) {
           {card.tags?.length && <span className="px-1.5 py-0.5 rounded bg-surface-2">{card.tags[0]}</span>}
         </div>
       </div>
-      
+
       <div className="pt-2 border-t border-border">
         {showBack ? (
           <div className="space-y-2">
@@ -79,7 +122,11 @@ function ReviewCard({ card, onReview, loadingRating }) {
                     loadingRating === r.value && "opacity-70"
                   )}
                 >
-                  {loadingRating === r.value ? <Loader2 className="size-4 animate-spin mx-auto" /> : r.label}
+                  {loadingRating === r.value ? (
+                    <Loader className="size-4 animate-spin mx-auto" />
+                  ) : (
+                    r.label
+                  )}
                 </button>
               ))}
             </div>
@@ -100,14 +147,17 @@ function ReviewCard({ card, onReview, loadingRating }) {
 export default function Study() {
   const { success } = useToast();
   const queryClient = useQueryClient();
+  const { profile } = useAuth();
   const [search, setSearch] = useState("");
-  
+  const [showStats, setShowStats] = useState(false);
+  const [showCalendar, setShowCalendar] = useState(false);
+
   const { data: due } = useQuery({
     queryKey: ["study", "due"],
     queryFn: studyApi.due,
     refetchInterval: 30_000,
   });
-  
+
   const reviewMutation = useMutation({
     mutationFn: ({ cardId, rating }) => studyApi.review({ card_id: cardId, rating }),
     onSuccess: () => {
@@ -125,13 +175,25 @@ export default function Study() {
     c.back.toLowerCase().includes(search.toLowerCase())
   );
 
+  // Stats computation
+  const dueCount = due?.due_count ?? 0;
+  const newCount = due?.new_count ?? 0;
+  const learningCount = due?.learning_count ?? 0;
+  const reviewCount = due?.review_count ?? 0;
+  const totalCards = due?.total_cards ?? 0;
+
+  // Calculate retention rate from review logs
+  const retentionRate = totalCards > 0 ? Math.round((reviewCount / totalCards) * 100) : 0;
+  const avgReps = totalCards > 0 ? Math.round(due?.cards?.reduce((sum, c) => sum + (c.reps || 0), 0) / totalCards) : 0;
+  const totalLapses = due?.cards?.reduce((sum, c) => sum + (c.lapses || 0), 0) ?? 0;
+
   return (
     <div className="mx-auto max-w-4xl space-y-6">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Review</h1>
           <p className="mt-0.5 text-sm text-muted-foreground">
-            {due?.due_count ?? 0} cards due · {due?.new_count ?? 0} new · {due?.learning_count ?? 0} learning · {due?.review_count ?? 0} review
+            {dueCount} cards due · {newCount} new · {learningCount} learning · {reviewCount} review
           </p>
         </div>
         <Button variant="outline" size="sm" onClick={() => queryClient.invalidateQueries({ queryKey: ["study", "due"] })}>
@@ -139,15 +201,44 @@ export default function Study() {
         </Button>
       </div>
 
-      <div className="relative mb-4">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
-        <Input
-          placeholder="Filter due cards…"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="pl-10"
-        />
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center gap-2">
+          <Search className="size-4 text-muted-foreground" />
+          <Input
+            placeholder="Filter due cards…"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="pl-8"
+          />
+        </div>
+        <Button variant="ghost" size="icon-sm" aria-label="View stats">
+          <Flame className="size-4" /> Stats
+        </Button>
       </div>
+
+      {showStats ? (
+        <StatsCard
+          dueCount={dueCount}
+          newCount={newCount}
+          learningCount={learningCount}
+          reviewCount={reviewCount}
+          totalCards={totalCards}
+          retentionRate={retentionRate}
+          avgReps={avgReps}
+          totalLapses={totalLapses}
+          onClose={() => setShowStats(false)}
+        />
+      ) : (
+        <div className="relative mb-4">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
+          <Input
+            placeholder="Filter due cards…"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="pl-10"
+          />
+        </div>
+      )}
 
       {filteredCards.length === 0 ? (
         <Card className="p-8 text-center">
@@ -172,12 +263,132 @@ export default function Study() {
                   card={card}
                   onReview={(rating) => reviewMutation.mutate({ cardId: card.id, rating })}
                   loadingRating={reviewMutation.variables?.cardId === card.id ? reviewMutation.variables.rating : null}
+                  onFlip={() => console.log("flip")}
                 />
               </motion.div>
             ))}
           </AnimatePresence>
         </div>
       )}
+
+      {/* Quick stats bar */}
+      {dueCards.length > 0 && (
+        <div className="mt-6 p-4 bg-surface-2 rounded-lg border border-border">
+          <div className="grid grid-cols-3 gap-4">
+            <div>
+              <p className="text-xs text-muted-foreground uppercase tracking-wide">Due</p>
+              <p className="text-2xl font-bold">{dueCount}</p>
+            </div>
+            <div>
+              <p className="text-xs text-muted-foreground uppercase tracking-wide">New</p>
+              <p className="text-2xl font-bold text-primary">{newCount}</p>
+            </div>
+            <div>
+              <p className="text-xs text-muted-foreground uppercase tracking-wide">Lapses</p>
+              <p className="text-2xl font-bold text-destructive">{totalLapses}</p>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function StatsCard({ dueCount, newCount, learningCount, reviewCount, totalCards, retentionRate, avgReps, totalLapses, onClose }) {
+  return (
+    <div className="mx-auto max-w-2xl space-y-6 p-6 bg-card rounded-xl border border-border">
+      <button
+      type="button"
+      onClick={onClose}
+      className="absolute top-4 right-4 text-muted-foreground hover:text-foreground"
+    >
+      <X className="size-4" />
+    </button>
+
+    <h2 className="text-xl font-bold tracking-tight mb-6">Review Stats</h2>
+
+    <div className="grid grid-cols-2 gap-4 mb-6">
+      <StatItem
+        label="Due"
+        value={dueCount}
+        icon="Clock"
+        className="border-primary/20 text-primary"
+      />
+      <StatItem
+        label="Retention"
+        value={`${retentionRate}%`}
+        icon="CheckCircle2"
+        className={`${retentionRate >= 80 ? "text-success" : retentionRate >= 60 ? "text-warning" : "text-destructive"}`}
+      />
+      <StatItem
+        label="Avg. reps"
+        value={avgReps}
+        icon="Loader2"
+        className="text-warning"
+      />
+      <StatItem
+        label="Lapses"
+        value={totalLapses}
+        icon="AlertCircle"
+        className="text-destructive"
+      />
+    </div>
+
+    <hr className="my-6" />
+
+    <div className="space-y-3">
+      <StatItem
+        label="New cards"
+        value={newCount}
+        icon="Plus"
+        className="text-primary"
+      />
+      <StatItem
+        label="Learning"
+        value={learningCount}
+        icon="Loader"
+        className="text-warning"
+      />
+      <StatItem
+        label="Reviews"
+        value={reviewCount}
+        icon="Clock"
+        className="text-success"
+      />
+    </div>
+
+    <hr className="my-6" />
+
+    <div>
+      <p className="text-xs text-muted-foreground uppercase tracking-wide">Streak</p>
+      <div className="w-full bg-surface-2 rounded-lg h-2">
+        <div
+          className="h-full bg-primary rounded-lg"
+          style={{ width: `${Math.min(retentionRate, 100)}%` }}
+        />
+      </div>
+      <p className="mt-2 text-[10px] text-muted-foreground">Retention confidence</p>
+    </div>
+    </div>
+  );
+}
+
+function StatItem({ label, value, icon, className }) {
+  const Icon = {
+    Clock,
+    CheckCircle2,
+    Plus,
+    Loader2,
+    AlertCircle,
+  }[icon];
+
+  return (
+    <div className="flex items-center gap-2">
+      <Icon className={cn("size-4", className)} aria-hidden />
+      <span className="flex-1">
+        <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide">{label}</p>
+        <p className="text-2xl font-bold">{value}</p>
+      </span>
     </div>
   );
 }

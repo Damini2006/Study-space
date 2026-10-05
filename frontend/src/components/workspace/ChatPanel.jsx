@@ -1,15 +1,17 @@
-/**
- * Chat panel — centre pane of the Space workspace.
- * Streams answers over SSE, shows the retrieval citations and the
- * verification status for every assistant message.
- */
 import { useEffect, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Loader2, Send, Square, Trash2 } from "lucide-react";
+import { Loader2, Send, Square, Trash2, Shield, Search, Sparkles, X, AlertCircle, CheckCircle2 } from "lucide-react";
 import { chatApi } from "@/services/api-services";
 import { streamSSE } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { StatusBadge } from "@/components/ui/status-badges";
+import { 
+  ConfidenceMeter, 
+  LayerStatusBadge, 
+  CitationQualityScore, 
+  ClaimVerificationHighlight,
+  NotFoundSuggestions 
+} from "@/components/ui/confidence-meter";
 import { cn, mdToHtml } from "@/lib/utils";
 import { useToast } from "@/components/ui/toast";
 
@@ -19,17 +21,27 @@ const SUGGESTIONS = [
   "Quiz me on the hardest concept here.",
 ];
 
+const NOT_FOUND_SUGGESTIONS = [
+  "Upload notes covering this topic to this Space.",
+  "Rephrase using keywords from your materials.",
+  "Check that your sources finished processing (they show Ready).",
+];
+
 export default function ChatPanel({ spaceId, onSelectPassage }) {
   const qc = useQueryClient();
-  const { error: toastError } = useToast();
+  const { error: toastError, success: toastSuccess } = useToast();
   const [input, setInput] = useState("");
   const [messages, setMessages] = useState([]);
   const [streaming, setStreaming] = useState(false);
   const [streamText, setStreamText] = useState("");
+  const [streamCitations, setStreamCitations] = useState([]);
+  const [streamClaims, setStreamClaims] = useState([]);
   const [activeThread, setActiveThread] = useState(null);
   const [threadId, setThreadId] = useState(null);
+  const [layerStatus, setLayerStatus] = useState({});
   const abortRef = useRef(null);
   const scrollRef = useRef(null);
+  const messageEndRef = useRef(null);
 
   const { data: threads = [] } = useQuery({
     queryKey: ["chat-threads", spaceId],
@@ -55,8 +67,12 @@ export default function ChatPanel({ spaceId, onSelectPassage }) {
     onError: (e) => toastError(e.message || "Could not delete that conversation."),
   });
 
+  const scrollToBottom = () => {
+    messageEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  };
+
   useEffect(() => {
-    scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
+    scrollToBottom();
   }, [messages.length, streamText]);
 
   const resetThread = () => {
@@ -65,15 +81,21 @@ export default function ChatPanel({ spaceId, onSelectPassage }) {
     setActiveThread(null);
     setStreamText("");
     setStreaming(false);
+    setStreamCitations([]);
+    setStreamClaims([]);
+    setLayerStatus({});
   };
 
-  const send = async (text) => {
+  const send = async (text, options = {}) => {
     const content = (text ?? input).trim();
     if (!content || streaming) return;
     setInput("");
     setMessages((prev) => [...prev, { id: `local-${Date.now()}`, role: "user", content, created_at: new Date().toISOString() }]);
     setStreamText("");
+    setStreamCitations([]);
+    setStreamClaims([]);
     setStreaming(true);
+    setLayerStatus({});
 
     const controller = new AbortController();
     abortRef.current = controller;
@@ -81,14 +103,24 @@ export default function ChatPanel({ spaceId, onSelectPassage }) {
     let acc = "";
     let status = null;
     let citations = [];
+    let claims = [];
+
     try {
       await streamSSE(
         `/spaces/${spaceId}/chat`,
-        { message: content, thread_id: threadId },
+        { 
+          message: content, 
+          thread_id: threadId,
+          layers: options.layers,
+          socratic: options.socratic 
+        },
         (ev) => {
           if (ev.type === "thread" && ev.thread_id && !threadId) {
             setThreadId(ev.thread_id);
             qc.invalidateQueries({ queryKey: ["chat-threads", spaceId] });
+          } else if (ev.type === "retrieval") {
+            // Update layer status - retrieval done
+            setLayerStatus((prev) => ({ ...prev, retrieval: { done: true } }));
           } else if (ev.type === "token") {
             acc += ev.text;
             setStreamText(acc);
@@ -97,7 +129,20 @@ export default function ChatPanel({ spaceId, onSelectPassage }) {
             acc = m.content ?? acc;
             status = m.status ?? null;
             citations = m.citations ?? [];
+            claims = m.claims ?? [];
             setStreamText(acc);
+            setStreamCitations(citations);
+            setStreamClaims(claims);
+            // Update layer status from meta
+            if (m.meta?.layers) {
+              const layers = m.meta.layers;
+              setLayerStatus((prev) => ({
+                ...prev,
+                relevance_gate: { enabled: layers.includes("relevance_gate"), done: true },
+                citation_validation: { enabled: layers.includes("citation_validation"), done: true },
+                claim_verification: { enabled: layers.includes("claim_verification"), done: true },
+              }));
+            }
           } else if (ev.type === "error") {
             toastError(ev.detail || "The assistant could not answer that.");
           }
@@ -113,6 +158,7 @@ export default function ChatPanel({ spaceId, onSelectPassage }) {
           content: acc,
           status: status || "pending",
           citations,
+          claims,
           created_at: new Date().toISOString(),
         },
       ]);
@@ -120,7 +166,7 @@ export default function ChatPanel({ spaceId, onSelectPassage }) {
       if (err?.name !== "AbortError") {
         setMessages((prev) => [
           ...prev,
-          { id: `e-${Date.now()}`, role: "assistant", content: "Something went wrong while answering. Please try again.", status: "not_found", citations: [], created_at: new Date().toISOString() },
+          { id: `e-${Date.now()}`, role: "assistant", content: "Something went wrong while answering. Please try again.", status: "not_found", citations: [], claims: [], created_at: new Date().toISOString() },
         ]);
       }
     } finally {
@@ -137,6 +183,16 @@ export default function ChatPanel({ spaceId, onSelectPassage }) {
       e.preventDefault();
       send();
     }
+  };
+
+  const handleSocratic = () => {
+    if (!input.trim() || streaming) return;
+    send(input, { socratic: true });
+  };
+
+  const handleLayers = (layers) => {
+    if (!input.trim() || streaming) return;
+    send(input, { layers });
   };
 
   return (
@@ -206,17 +262,15 @@ export default function ChatPanel({ spaceId, onSelectPassage }) {
         ))}
 
         {streaming && (
-          <div className="flex gap-2.5">
-            <div className="mt-1 size-6 shrink-0 rounded-full brand-gradient" aria-hidden />
-            <div className="min-w-0 flex-1">
-              <div className="prose-sm space-y-2" dangerouslySetInnerHTML={{ __html: mdToHtml(streamText || "…") }} />
-              <div className="mt-1.5 flex items-center gap-1.5 text-[11px] text-muted-foreground">
-                <Loader2 className="size-3 animate-spin" aria-hidden />
-                Checking claims against your sources…
-              </div>
-            </div>
-          </div>
+          <StreamingMessage 
+            text={streamText} 
+            citations={streamCitations} 
+            claims={streamClaims}
+            layerStatus={layerStatus}
+          />
         )}
+
+        <div ref={messageEndRef} />
       </div>
 
       <footer className="border-t border-border p-2.5">
@@ -230,27 +284,75 @@ export default function ChatPanel({ spaceId, onSelectPassage }) {
             aria-label="Message"
             className="max-h-32 min-h-[2.25rem] flex-1 resize-none bg-transparent text-sm text-foreground outline-none placeholder:text-muted-foreground"
           />
-          {streaming ? (
-            <Button variant="secondary" size="icon-sm" onClick={stop} aria-label="Stop generating" title="Stop">
-              <Square className="size-3.5" />
-            </Button>
-          ) : (
+          <div className="flex items-center gap-1">
             <Button
+              variant="ghost"
               size="icon-sm"
-              onClick={() => send()}
-              disabled={!input.trim()}
-              aria-label="Send message"
-              title="Send"
+              onClick={handleSocratic}
+              disabled={!input.trim() || streaming}
+              aria-label="Socratic mode"
+              title="Socratic tutor mode - guide instead of answer"
             >
-              <Send className="size-3.5" />
+              <Sparkles className="size-3.5" />
             </Button>
-          )}
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              onClick={() => handleLayers({ relevance_gate: true, citation_validation: true, claim_verification: true })}
+              disabled={!input.trim() || streaming}
+              aria-label="Full safety"
+              title="Enable all safety layers"
+            >
+              <Shield className="size-3.5" />
+            </Button>
+            {streaming ? (
+              <Button variant="secondary" size="icon-sm" onClick={stop} aria-label="Stop generating" title="Stop">
+                <Square className="size-3.5" />
+              </Button>
+            ) : (
+              <Button
+                size="icon-sm"
+                onClick={() => send()}
+                disabled={!input.trim()}
+                aria-label="Send message"
+                title="Send"
+              >
+                <Send className="size-3.5" />
+              </Button>
+            )}
+          </div>
         </div>
         <p className="mt-1.5 text-[10px] text-muted-foreground">
           Verify important details against the original source.
         </p>
       </footer>
     </section>
+  );
+}
+
+function StreamingMessage({ text, citations, claims, layerStatus }) {
+  return (
+    <div className="flex gap-2.5">
+      <div className="mt-1 size-6 shrink-0 rounded-full brand-gradient" aria-hidden />
+      <div className="min-w-0 flex-1">
+        <div className="prose-sm space-y-2" dangerouslySetInnerHTML={{ __html: mdToHtml(text || "…") }} />
+        
+        {citations.length > 0 && (
+          <CitationQualityScore citations={citations} className="mt-2" />
+        )}
+
+        <div className="mt-1.5 flex items-center gap-1.5 text-[11px] text-muted-foreground">
+          <Loader2 className="size-3 animate-spin" aria-hidden />
+          <span>Checking claims against your sources…</span>
+          
+          <div className="flex items-center gap-1 ml-2">
+            {Object.entries(layerStatus).map(([name, status]) => (
+              <LayerStatusBadge key={name} name={name} enabled={status.enabled} running={!status.done} />
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
   );
 }
 
@@ -266,6 +368,7 @@ function Message({ message, onSelectPassage }) {
   }
 
   const citations = message.citations || [];
+  const claims = message.claims || [];
 
   return (
     <div className="flex gap-2.5">
@@ -274,23 +377,45 @@ function Message({ message, onSelectPassage }) {
         <div className="space-y-2 text-sm" dangerouslySetInnerHTML={{ __html: mdToHtml(message.content) }} />
 
         {citations.length > 0 && (
-          <div className="mt-2 flex flex-wrap gap-1.5">
-            {citations.map((c) => (
-              <button
-                key={c.label ?? c.chunk_id}
-                type="button"
-                onClick={() => onSelectPassage?.(c)}
-                title={c.quote}
-                className={cn(
-                  "rounded-md border border-border bg-surface-2 px-1.5 py-0.5 text-[11px] text-muted-foreground",
-                  "transition-colors hover:border-primary/50 hover:text-foreground"
-                )}
-              >
-                {c.label}. {c.source_title || "source"}
-                {c.page != null ? ` · p.${c.page}` : ""}
-              </button>
+          <div className="mt-2 space-y-2">
+            <CitationQualityScore citations={citations} />
+            <div className="flex flex-wrap gap-1.5">
+              {citations.map((c) => (
+                <button
+                  key={c.label ?? c.chunk_id}
+                  type="button"
+                  onClick={() => onSelectPassage?.(c)}
+                  title={c.quote}
+                  className={cn(
+                    "rounded-md border border-border bg-surface-2 px-1.5 py-0.5 text-[11px] text-muted-foreground",
+                    "transition-colors hover:border-primary/50 hover:text-foreground",
+                    c.verified && "border-success/50 text-success"
+                  )}
+                >
+                  {c.label}. {c.source_title || "source"}
+                  {c.page != null ? ` · p.${c.page}` : ""}
+                  {c.verified && <CheckCircle2 className="size-3 inline-block ml-1" />}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {claims.length > 0 && (
+          <div className="mt-2 space-y-1.5">
+            <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide">Claim verification</p>
+            {claims.map((claim, i) => (
+              <ClaimVerificationHighlight 
+                key={i} 
+                claim={claim} 
+                onViewEvidence={onSelectPassage}
+              />
             ))}
           </div>
+        )}
+
+        {message.status === "not_found" && (
+          <NotFoundSuggestions suggestions={NOT_FOUND_SUGGESTIONS} className="mt-2" />
         )}
 
         {message.status && <StatusBadge status={message.status} className="mt-2" />}

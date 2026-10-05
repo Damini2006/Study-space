@@ -10,6 +10,13 @@ import {
   ShieldCheck,
   X,
   Zap,
+  Shield,
+  ArrowLeftRight,
+  Repeat,
+  BarChart3,
+  TrendingUp,
+  CalendarDays,
+  Eye,
 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -20,8 +27,11 @@ import { plannerApi } from "@/services/api-services";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/components/ui/toast";
 import { cn, formatDate } from "@/lib/utils";
+import { useRef } from "react";
+import { ConfidenceMeter } from "@/components/ui/confidence-meter";
 
 const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+const HOURS = Array.from({ length: 24 }, (_, i) => `${i % 12 || 12}${i < 12 ? " AM" : " PM"}`);
 
 function GhostTaskCard({ task, index, onRemove, onEdit }) {
   return (
@@ -42,10 +52,20 @@ function GhostTaskCard({ task, index, onRemove, onEdit }) {
           </div>
         </div>
         <div className="flex gap-1">
-          <button type="button" onClick={() => onEdit(index)} className="rounded p-1 text-muted-foreground hover:bg-surface-2 hover:text-foreground" aria-label="Edit task">
+          <button
+            type="button"
+            onClick={() => onEdit(index)}
+            className="rounded p-1 text-muted-foreground hover:bg-surface-2 hover:text-foreground"
+            aria-label="Edit task"
+          >
             <ChevronDown className="size-3.5" />
           </button>
-          <button type="button" onClick={() => onRemove(index)} className="rounded p-1 text-muted-foreground hover:bg-surface-2 hover:text-destructive" aria-label="Remove task">
+          <button
+            type="button"
+            onClick={() => onRemove(index)}
+            className="rounded p-1 text-muted-foreground hover:bg-surface-2 hover:text-destructive"
+            aria-label="Remove task"
+          >
             <X className="size-3.5" />
           </button>
         </div>
@@ -72,7 +92,12 @@ function ApprovedTaskCard({ task, onToggle, onDelete }) {
           {task.source === "ai" && <span className="px-1.5 py-0.5 rounded bg-primary/10 text-primary text-[10px]">AI</span>}
         </div>
       </div>
-      <button type="button" onClick={() => onDelete(task.id)} className="rounded p-1 text-muted-foreground hover:bg-surface-2 hover:text-destructive" aria-label="Delete task">
+      <button
+        type="button"
+        onClick={() => onDelete(task.id)}
+        className="rounded p-1 text-muted-foreground hover:bg-surface-2 hover:text-destructive"
+        aria-label="Delete task"
+      >
         <X className="size-3.5" />
       </button>
     </Card>
@@ -81,13 +106,18 @@ function ApprovedTaskCard({ task, onToggle, onDelete }) {
 
 function PlannerForm({ onSubmit, pending, defaultValues = {} }) {
   return (
-    <Dialog open onClose={() => onSubmit?.()} title="Create study plan" description="Tell the planner about your exams, availability and weak topics." className="max-w-xl">
+    <Dialog
+      open onClose={() => onSubmit?.()}
+      title="Create study plan"
+      description="Tell the planner about your exams, availability and weak topics."
+      className="max-w-xl"
+    >
       <form onSubmit={onSubmit} className="space-y-4">
         <div className="space-y-1.5">
           <Label>Plan title</Label>
           <Input defaultValue={defaultValues.title || ""} placeholder="Midterm study plan" />
         </div>
-        
+
         <div className="space-y-1.5">
           <Label>Exam dates (one per line: Subject, YYYY-MM-DD)</Label>
           <textarea
@@ -131,12 +161,15 @@ function PlannerForm({ onSubmit, pending, defaultValues = {} }) {
 export default function Planner() {
   const { success, error } = useToast();
   const queryClient = useQueryClient();
+  const { profile } = useAuth();
   const [showForm, setShowForm] = useState(false);
   const [activeTab, setActiveTab] = useState("proposals");
-  
+  const [view, setView] = useState("calendar"); // "calendar" or "list"
+  const [dragTask, setDragTask] = useState(null);
+
   const { data: runs = [] } = useQuery({ queryKey: ["planner", "runs"], queryFn: plannerApi.listRuns });
   const { data: tasks = [] } = useQuery({ queryKey: ["planner", "tasks"], queryFn: () => plannerApi.listTasks(false) });
-  
+
   const pendingRun = runs.find(r => r.status === "awaiting_approval");
   const approvedRuns = runs.filter(r => r.status === "approved");
 
@@ -183,166 +216,265 @@ export default function Planner() {
     setShowForm(false);
   };
 
-  if (pendingRun) {
-    const proposal = pendingRun.proposal || { tasks: [] };
-    return (
-      <div className="mx-auto max-w-3xl space-y-6">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold tracking-tight">Review your study plan</h1>
-            <p className="mt-0.5 text-sm text-muted-foreground">
-              These are proposed ghost tasks — nothing is committed until you approve.
-            </p>
-          </div>
-        </div>
+  // Calendar view state
+  const [selectedDate, setSelectedDate] = useState(null);
+  const [weekStart, setWeekStart] = useState(() => {
+    const d = new Date();
+    const day = d.getDay();
+    const diff = d.getDate() - day + (day === 0 ? -6 : 1);
+    return new Date(d.setDate(d.getDate() + diff));
+  });
 
-        <Card className="p-4 space-y-3">
-          {proposal.rationale && <p className="text-sm text-muted-foreground">{proposal.rationale}</p>}
-          <AnimatePresence>
-            {proposal.tasks?.length ? (
-              proposal.tasks.map((t, i) => (
-                <GhostTaskCard
-                  key={t.title + i}
-                  task={t}
-                  index={i}
-                  onRemove={() => {}}
-                  onEdit={() => {}}
-                />
-              ))
-            ) : (
-              <p className="text-center text-muted-foreground py-4">No tasks proposed.</p>
-            )}
-          </AnimatePresence>
-        </Card>
+  const handleDateSelect = (date) => {
+    setSelectedDate(date);
+    // Navigate to that date
+    setWeekStart(new Date(date));
+  };
 
-        <div className="flex justify-end gap-2">
-          <Button variant="outline" onClick={() => rejectRun.mutate(pendingRun.id)} disabled={rejectRun.isPending}>
-            <X className="size-4 mr-1" /> Reject
-          </Button>
-          <Button onClick={() => approveRun.mutate({ runId: pendingRun.id, body: { tasks: proposal.tasks } })} disabled={approveRun.isPending}>
-            <ShieldCheck className="size-4 mr-1" /> Approve plan
-          </Button>
-        </div>
-      </div>
-    );
-  }
+  const prevWeek = () => {
+    const date = new Date(weekStart);
+    date.setDate(date.getDate() - 7);
+    setWeekStart(date);
+  };
+
+  const nextWeek = () => {
+    const date = new Date(weekStart);
+    date.setDate(date.getDate() + 7);
+    setWeekStart(date);
+  };
+
+  // Get tasks for the current week
+  const weekTasks = tasks.filter((task) => {
+    if (!task.due) return false;
+    const taskDate = new Date(task.due);
+    const weekStartDate = new Date(weekStart);
+    const weekEndDate = new Date(weekStart);
+    weekEndDate.setDate(weekEndDate.getDate() + 6);
+    return taskDate >= weekStartDate && taskDate <= weekEndDate;
+  });
+
+  // Get pending runs
+  const handleRunAction = (runId, action) => {
+    if (action === "approve") {
+      approveRun.mutate({ runId, body: { tasks: pendingRun?.proposal?.tasks || [] } });
+    } else if (action === "reject") {
+      rejectRun.mutate(runId);
+    } else if (action === "view") {
+      // Navigate to details
+    } else if (action === "run") {
+      queryClient.invalidateQueries({ queryKey: ["evals", "runs"] });
+    }
+  };
 
   return (
     <div className="mx-auto max-w-4xl space-y-6">
-      <div className="flex items-center justify-between">
+      {/* Header */}
+      <div className="flex items-center justify-between mb-4">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Planner</h1>
           <p className="mt-0.5 text-sm text-muted-foreground">
             AI drafts your study week around exams and weak topics — you approve.
           </p>
         </div>
-        <Button onClick={() => setShowForm(true)}>
-          <Plus className="size-4 mr-1" /> New plan
-        </Button>
+
+        <div className="flex items-center gap-2">
+          <Button onClick={() => setShowForm(true)}>
+            <Plus className="size-4 mr-1" /> New plan
+          </Button>
+
+          {/* View switch */}
+          <Tabs value={view} onValueChange={setView} ariaLabel="Planner views">
+            <TabsList>
+              <TabsTrigger value="calendar">Calendar</TabsTrigger>
+              <TabsTrigger value="list">List</TabsTrigger>
+              <TabsTrigger value="history">History</TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="calendar">
+              <div className="space-y-4">
+                {/* Calendar grid */}
+                <div className="grid grid-cols-7">
+                  {DAYS.map((day) => (
+                    <div key={day} className="min-h-14 text-center text-[10px] font-medium text-muted-foreground uppercase tracking-wide">
+                      {day}
+                    </div>
+                  ))}
+                </div>
+
+                {/* Week numbers and days */}
+                {Array.from({ length: 7 }).map((_, i) => {
+                  const date = new Date(weekStart);
+                  date.setDate(weekStart.getDate() + i);
+                  const today = new Date();
+                  const isToday =
+                    date.getFullYear() === today.getFullYear() &&
+                    date.getMonth() === today.getMonth() &&
+                    date.getDate() === today.getDate();
+
+                  const dayTasks = weekTasks.filter((t) => {
+                    if (!t.due) return false;
+                    const taskDate = new Date(t.due);
+                    return (
+                      taskDate.getFullYear() === date.getFullYear() &&
+                      taskDate.getMonth() === date.getMonth() &&
+                      taskDate.getDate() === date.getDate()
+                    );
+                  });
+
+                  return (
+                    <div
+                      key={i}
+                      className={cn(
+                        "min-h-14 border-y border-border border-border/50",
+                        isToday && "border-primary"
+                      )}
+                    >
+                      <div className="p-1 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+                        {DAYS[date.getDay()]} {date.getDate()}{" "}
+                        {date.toLocaleDateString(undefined, { month: "short" })}
+                      </div>
+                      {dayTasks.length > 0 && (
+                        <div className="p-2 text-[10px] text-success">
+                          {dayTasks.length} task{s}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+
+                {/* Nav buttons */}
+                <div className="flex justify-between p-2 text-muted-foreground">
+                  <Button variant="ghost" onClick={prevWeek} size="icon-sm" aria-label="Previous week">
+                    <ArrowLeft className="size-4" />
+                  </Button>
+                  <Button variant="ghost" onClick={nextWeek} size="icon-sm" aria-label="Next week">
+                    <ArrowRight className="size-4" />
+                  </Button>
+                </div>
+              </div>
+            </TabsContent>
+
+            <TabsContent value="list">
+              {tasks.length === 0 ? (
+                <Card className="p-8 text-center">
+                  <Calendar className="size-12 mx-auto text-muted-foreground mb-3" />
+                  <h3 className="text-lg font-semibold">No tasks yet</h3>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    Approve a plan proposal to add tasks, or create them manually.
+                  </p>
+                </Card>
+              ) : (
+                <div className="space-y-2">
+                  {tasks.map((task) => (
+                    <ApprovedTaskCard
+                      key={task.id}
+                      task={task}
+                      onToggle={(id, status) => {
+                        plannerApi.updateTask(id, { status });
+                        queryClient.invalidateQueries({ queryKey: ["planner", "tasks"] });
+                      }}
+                      onDelete={(id) => {
+                        plannerApi.deleteTask(id);
+                        queryClient.invalidateQueries({ queryKey: ["planner", "tasks"] });
+                      }}
+                    />
+                  ))}
+                </div>
+              )}
+            </TabsContent>
+
+            <TabsContent value="history">
+              {runs.length === 0 ? (
+                <p className="text-center text-muted-foreground py-8">No planner runs yet.</p>
+              ) : (
+                <div className="space-y-2">
+                  {runs.map((run) => (
+                    <Card key={run.id} className="p-4">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <Badge
+                            variant={
+                              run.status === "approved" ? "success" :
+                              run.status === "awaiting_approval" ? "warning" :
+                              run.status === "rejected" ? "danger" : "default"
+                            }
+                          >
+                            {run.status}
+                          </Badge>
+                          <div>
+                            <p className="font-medium">{run.input?.title || "Study plan"}</p>
+                            <p className="text-xs text-muted-foreground">Created {formatDate(run.created_at)}</p>
+                          </div>
+                        </div>
+                        {run.status === "failed" && <Badge variant="danger">Failed</Badge>}
+                      </div>
+                    </Card>
+                  ))}
+                </div>
+              )}
+            </TabsContent>
+          </Tabs>
+        </div>
       </div>
 
-      <Tabs value={activeTab} onValueChange={setActiveTab} ariaLabel="Planner views">
-        <TabsList>
-          <TabsTrigger value="proposals">Proposals ({runs.filter(r => r.status === "awaiting_approval").length})</TabsTrigger>
-          <TabsTrigger value="tasks">Approved tasks ({tasks.length})</TabsTrigger>
-          <TabsTrigger value="history">History ({runs.length})</TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="proposals">
-          {approvedRuns.length === 0 && runs.filter(r => r.status === "awaiting_approval").length === 0 ? (
-            <Card className="p-8 text-center">
-              <Zap className="size-12 mx-auto text-primary mb-3" />
-              <h3 className="text-lg font-semibold">No active proposals</h3>
-              <p className="mt-1 text-sm text-muted-foreground">
-                Create a plan draft and the planner will propose ghost tasks for you to approve.
+      {/* Pending run section */}
+      {pendingRun && pendingRun.status === "awaiting_approval" ? (
+        <div className="mx-auto max-w-3xl space-y-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-2xl font-bold tracking-tight">Review your study plan</h1>
+              <p className="mt-0.5 text-sm text-muted-foreground">
+                These are proposed ghost tasks — nothing is committed until you approve.
               </p>
-            </Card>
-          ) : (
-            <div className="space-y-4">
-              {approvedRuns.map(run => (
-                <Card key={run.id} className="p-4">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="font-medium">{run.input?.title || "Study plan"}</p>
-                      <p className="text-xs text-muted-foreground">Created {formatDate(run.created_at)}</p>
-                    </div>
-                    <Badge variant="success">Approved</Badge>
-                  </div>
-                </Card>
-              ))}
-              {runs.filter(r => r.status === "awaiting_approval").map(run => (
-                <Card key={run.id} className="p-4 border-primary/30">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="font-medium">{run.input?.title || "Study plan"}</p>
-                      <p className="text-xs text-muted-foreground">Created {formatDate(run.created_at)}</p>
-                    </div>
-                    <Badge variant="warning">Awaiting approval</Badge>
-                  </div>
-                </Card>
-              ))}
             </div>
-          )}
-        </TabsContent>
+          </div>
 
-        <TabsContent value="tasks">
-          {tasks.length === 0 ? (
-            <Card className="p-8 text-center">
-              <Calendar className="size-12 mx-auto text-muted-foreground mb-3" />
-              <h3 className="text-lg font-semibold">No tasks yet</h3>
-              <p className="mt-1 text-sm text-muted-foreground">
-                Approve a plan proposal to add tasks, or create them manually.
-              </p>
-            </Card>
-          ) : (
-            <div className="space-y-2">
-              {tasks.map(task => (
-                <ApprovedTaskCard
-                  key={task.id}
-                  task={task}
-                  onToggle={(id, status) => {
-                    plannerApi.updateTask(id, { status });
-                    queryClient.invalidateQueries({ queryKey: ["planner", "tasks"] });
-                  }}
-                  onDelete={(id) => {
-                    plannerApi.deleteTask(id);
-                    queryClient.invalidateQueries({ queryKey: ["planner", "tasks"] });
-                  }}
-                />
-              ))}
-            </div>
-          )}
-        </TabsContent>
+          <Card className="p-4 space-y-3">
+            {pendingRun.proposal?.rationale && <p className="text-sm text-muted-foreground">{pendingRun.proposal.rationale}</p>}
+            <AnimatePresence>
+              {pendingRun.proposal.tasks?.length ? (
+                pendingRun.proposal.tasks.map((t, i) => (
+                  <GhostTaskCard
+                    key={t.title + i}
+                    task={t}
+                    index={i}
+                    onRemove={() => {}}
+                    onEdit={() => {}}
+                  />
+                ))
+              ) : (
+                <p className="text-center text-muted-foreground py-4">No tasks proposed.</p>
+              )}
+            </AnimatePresence>
+          </Card>
 
-        <TabsContent value="history">
-          {runs.length === 0 ? (
-            <p className="text-center text-muted-foreground py-8">No planner runs yet.</p>
-          ) : (
-            <div className="space-y-2">
-              {runs.map(run => (
-                <Card key={run.id} className="p-4">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <Badge variant={
-                        run.status === "approved" ? "success" :
-                        run.status === "awaiting_approval" ? "warning" :
-                        run.status === "rejected" ? "danger" : "default"
-                      }>{run.status}</Badge>
-                      <div>
-                        <p className="font-medium">{run.input?.title || "Study plan"}</p>
-                        <p className="text-xs text-muted-foreground">Created {formatDate(run.created_at)}</p>
-                      </div>
-                    </div>
-                    {run.status === "failed" && <Badge variant="danger">Failed</Badge>}
-                  </div>
-                </Card>
-              ))}
-            </div>
-          )}
-        </TabsContent>
-      </Tabs>
+          <div className="flex justify-end gap-2">
+            <Button variant="outline" onClick={() => rejectRun.mutate(pendingRun.id)} disabled={rejectRun.isPending}>
+              <X className="size-4 mr-1" /> Reject
+            </Button>
+            <Button
+              onClick={() => approveRun.mutate({ runId: pendingRun.id, body: { tasks: pendingRun.proposal?.tasks || [] } })}
+              disabled={approveRun.isPending}
+            >
+              <ShieldCheck className="size-4 mr-1" /> Approve plan
+            </Button>
+          </div>
+        </div>
+      ) : null}
 
+      {/* Create plan form */}
       <PlannerForm open={showForm} onClose={() => setShowForm(false)} onSubmit={handleSubmit} pending={createRun.isPending} />
+
+      {/* Progress tracking */}
+      {approvedRuns.length > 0 && (
+        <div className="mt-6 p-4 bg-surface-2 rounded-xl border border-border">
+          <h2 className="text-semibold mb-4">Study Progress</h2>
+          <BarChart3 className="size-6 mx-auto mb-3" />
+          <p className="text-sm text-muted-foreground">
+            {approvedRuns.length} plans approved, {tasks.length} active tasks
+          </p>
+        </div>
+      )}
     </div>
   );
 }
