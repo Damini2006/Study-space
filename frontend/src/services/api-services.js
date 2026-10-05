@@ -23,9 +23,18 @@ export const spacesApi = {
   getPublicSpace: (slug) => api.get(`/spaces/public/${slug}`),
   getSharedSpace: (token) => api.get(`/spaces/shared/${token}`),
 
-  // Export / Import
-  export: (spaceId, fmt) => api.get(`/spaces/${spaceId}/export`, { params: { fmt } }, { responseType: "blob" }),
-  import: (spaceId, fmt, formData) => api.upload(`/spaces/${spaceId}/import`, formData, { params: { fmt } }),
+  // RAG Settings
+  getRagSettings: (spaceId) => api.get(`/spaces/${spaceId}/rag`),
+  updateRagSettings: (spaceId, body) => api.patch(`/spaces/${spaceId}/rag`, body),
+  resetRagSettings: (spaceId) => api.delete(`/spaces/${spaceId}/rag`),
+
+  // Citation Audit
+  auditCitations: (spaceId, body) => api.post(`/spaces/${spaceId}/citation-audit`, body),
+
+  // Export / Import — `exportUrl` is a plain link the browser downloads directly,
+  // `importBundle` posts a file as multipart form-data.
+  exportUrl: (spaceId, fmt) => `${api.base}/spaces/${spaceId}/export?fmt=${encodeURIComponent(fmt)}`,
+  importBundle: (spaceId, fmt, formData) => api.upload(`/spaces/${spaceId}/import?fmt=${encodeURIComponent(fmt)}`, formData),
 };
 
 export const sourcesApi = {
@@ -138,4 +147,32 @@ export const meApi = {
   mcpTokens: () => api.get("/me/mcp-tokens"),
   createMcpToken: (body) => api.post("/me/mcp-tokens", body),
   revokeMcpToken: (id) => api.delete(`/me/mcp-tokens/${id}`),
+};
+
+export const modelsApi = {
+  catalog: () => api.get("/models/catalog"),
+  config: () => api.get("/models/config"),
+  defaults: () => api.get("/models/defaults"),
+};
+
+export const promptTemplatesApi = {
+  list: ({ spaceId, type } = {}) => {
+    const q = new URLSearchParams();
+    if (spaceId) q.set("space_id", spaceId);
+    if (type) q.set("type", type);
+    const qs = q.toString();
+    return api.get(`/prompt-templates${qs ? `?${qs}` : ""}`);
+  },
+  get: (id) => api.get(`/prompt-templates/${id}`),
+  create: (body) => api.post("/prompt-templates", body),
+  update: (id, body) => api.patch(`/prompt-templates/${id}`, body),
+  remove: (id) => api.delete(`/prompt-templates/${id}`),
+  render: (id, variables) => api.post(`/prompt-templates/${id}/render`, variables),
+};
+
+export const ragApi = {
+  getSettings: (spaceId) => api.get(`/spaces/${spaceId}/rag`),
+  updateSettings: (spaceId, body) => api.patch(`/spaces/${spaceId}/rag`, body),
+  resetSettings: (spaceId) => api.delete(`/spaces/${spaceId}/rag`),
+  auditCitations: (spaceId, body = {}) => api.post(`/spaces/${spaceId}/citation-audit`, body),
 };

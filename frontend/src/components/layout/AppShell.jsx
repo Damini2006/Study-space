@@ -24,6 +24,7 @@ import { useTheme, THEMES } from "@/hooks/useTheme";
 import { cn } from "@/lib/utils";
 import { useCommandPalette } from "@/components/layout/use-command-palette";
 import CommandPalette from "@/components/layout/CommandPalette";
+import OfflineIndicator from "@/components/pwa/OfflineIndicator";
 import { initials } from "@/lib/utils";
 
 const NAV = [
@@ -278,6 +279,7 @@ export default function AppShell() {
             SS
           </div>
           <div className="min-w-0 flex-1 truncate text-sm font-semibold">StudySpace</div>
+          <OfflineIndicator />
           <button
             type="button"
             onClick={() => palette.setOpen(true)}
@@ -294,16 +296,19 @@ export default function AppShell() {
           scrolled ? "border-border shadow-[var(--shadow-sm)]" : "border-transparent"
         )}>
           <div className="min-w-0 flex-1">
-            <p className="text-xs text-muted-foreground">
-              {isDemo ? (
-                <>
-                  <span className="mr-1.5 inline-block rounded-full bg-info-bg px-2 py-0.5 align-middle text-[10px] font-semibold uppercase text-info">Demo</span>
-                  Demo workspace — data can be reset from the command palette
-                </>
-              ) : (
-              <>Signed in as <span className="font-medium text-foreground">{profile?.email}</span></>
-              )}
-            </p>
+            <div className="flex items-center gap-2">
+              <OfflineIndicator className="hidden sm:inline-flex" />
+              <p className="text-xs text-muted-foreground">
+                {isDemo ? (
+                  <>
+                    <span className="mr-1.5 inline-block rounded-full bg-info-bg px-2 py-0.5 align-middle text-[10px] font-semibold uppercase text-info">Demo</span>
+                    Demo workspace — data can be reset from the command palette
+                  </>
+                ) : (
+                  <>Signed in as <span className="font-medium text-foreground">{profile?.email}</span></>
+                )}
+              </p>
+            </div>
           </div>
           <button
             type="button"

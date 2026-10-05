@@ -12,6 +12,7 @@ from studyspace.db import close_pool, init_pool
 from studyspace.routers import (
     analytics,
     chat,
+    citation_audit,
     demo,
     evals,
     export,
@@ -19,11 +20,14 @@ from studyspace.routers import (
     focus,
     habits,
     me,
+    models,
     mcp_internal,
     mcp_tokens,
     meta,
     notes,
     planner,
+    prompt_templates,
+    rag_settings,
     sources,
     spaces,
     study,
@@ -80,6 +84,10 @@ def create_app() -> FastAPI:
     app.include_router(spaces.router, prefix="/api")
     app.include_router(sources.router, prefix="/api")
     app.include_router(export.router, prefix="/api")
+    app.include_router(models.router, prefix="/api")
+    app.include_router(prompt_templates.router, prefix="/api")
+    app.include_router(rag_settings.router, prefix="/api")
+    app.include_router(citation_audit.router, prefix="/api")
     app.include_router(chat.router, prefix="/api")
     app.include_router(studio.router, prefix="/api")
     app.include_router(study.router, prefix="/api")

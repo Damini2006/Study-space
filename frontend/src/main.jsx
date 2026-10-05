@@ -46,3 +46,15 @@ ReactDOM.createRoot(document.getElementById("root")).render(
     </QueryClientProvider>
   </React.StrictMode>
 );
+
+// Offline support. The worker lives in `public/` so it's served unbundled from
+// the site root — a hashed asset URL would 404 since SW scope must be "/".
+// Registration itself is driven by the useServiceWorker hook; this block only
+// warms it up as early as possible so the first navigation is already covered.
+if (import.meta.env.PROD && "serviceWorker" in navigator) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("/service-worker.js", { scope: "/" }).catch(() => {
+      /* offline support unavailable — the app still works online */
+    });
+  });
+}

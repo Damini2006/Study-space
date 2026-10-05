@@ -1,0 +1,50 @@
+{
+  "name": "StudySpace — source-grounded AI study workspace",
+  "short_name": "StudySpace",
+  "description": "Chat with your sources, generate study material, and review with real FSRS spaced repetition. Every claim traceable.",
+  "id": "/",
+  "start_url": "/app/dashboard",
+  "scope": "/",
+  "display": "standalone",
+  "display_override": ["window-controls-overlay", "standalone"],
+  "theme_color": "#0d1526",
+  "background_color": "#0d1526",
+  "orientation": "any",
+  "categories": ["education", "productivity"],
+  "icons": [
+    {
+      "src": "/logo-mark.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/og-image.png",
+      "sizes": "1200x630",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Review due cards",
+      "short_name": "Review",
+      "description": "Open today's review queue",
+      "url": "/app/study",
+      "icons": [{ "src": "/logo-mark.svg", "sizes": "any", "type": "image/svg+xml" }]
+    },
+    {
+      "name": "Ask your sources",
+      "short_name": "Chat",
+      "description": "Ask a question grounded in your sources",
+      "url": "/app/dashboard",
+      "icons": [{ "src": "/logo-mark.svg", "sizes": "any", "type": "image/svg+xml" }]
+    }
+  ]
+}

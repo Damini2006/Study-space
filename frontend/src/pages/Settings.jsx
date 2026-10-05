@@ -1,16 +1,34 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/useAuth";
 import { useTheme, THEMES } from "@/hooks/useTheme";
 import { useToast } from "@/components/ui/toast";
-import { meApi } from "@/services/api-services";
+import { meApi, spacesApi } from "@/services/api-services";
+import ModelRouterPanel from "@/components/settings/ModelRouterPanel";
+import PromptTemplatesPanel from "@/components/settings/PromptTemplatesPanel";
+import RagSettingsPanel from "@/components/settings/RagSettingsPanel";
+import CitationAuditPanel from "@/components/settings/CitationAuditPanel";
+import PwaSettings from "@/components/pwa/PwaSettings";
+import { clearQueue, enqueueReview, flushQueue, queueSize } from "@/lib/offline-queue";
+import { studyApi } from "@/services/api-services";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge, Input, Label } from "@/components/ui/input";
-import { Dialog } from "@/components/ui/dialog";
+import { Dialog, Select, SelectContent, SelectItem, SelectTrigger } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/dialog";
 import { cn, formatDate } from "@/lib/utils";
 import { Copy, Loader2, Plus, X } from "lucide-react";
+
+function DemoNotice({ feature }) {
+  return (
+    <Card className="p-5">
+      <h3 className="font-semibold">{feature}</h3>
+      <p className="mt-1 text-sm text-muted-foreground">
+        Not available in the demo workspace. Create your own space to use it.
+      </p>
+    </Card>
+  );
+}
 
 export default function MCPManagement() {
   const { isDemo } = useAuth();
@@ -26,6 +44,31 @@ export default function MCPManagement() {
   const [tokenToRevoke, setTokenToRevoke] = useState(null);
 
   const { data: mcpTokens = [] } = useQuery({ queryKey: ["me", "mcp-tokens"], queryFn: () => meApi.mcpTokens() });
+
+  // Offline review-queue controls — surfaced here because it's the only place
+  // that can explain what "waiting to sync" means.
+  const [queuePending, setQueuePending] = useState(0);
+  const refreshQueue = async () => setQueuePending(await queueSize());
+  useEffect(() => {
+    refreshQueue();
+  }, []);
+  const flushQueueNow = async () => {
+    const { flushed } = await flushQueue((entry) => studyApi.review(entry));
+    refreshQueue();
+    if (flushed) success(`Synced ${flushed} queued review${flushed === 1 ? "" : "s"}.`);
+  };
+  const { data: spaces = [] } = useQuery({
+    queryKey: ["spaces"],
+    queryFn: () => spacesApi.list(),
+    enabled: !isDemo,
+  });
+
+  // RAG tuning and citation audit are per-space; default to the first space so
+  // the panel is never in a dead-end state after landing on Settings.
+  const [activeSpaceId, setActiveSpaceId] = useState("");
+  useEffect(() => {
+    if (!activeSpaceId && spaces.length) setActiveSpaceId(spaces[0].id);
+  }, [spaces, activeSpaceId]);
 
   const createToken = useMutation({
     mutationFn: (body) => meApi.createMcpToken(body),
@@ -81,6 +124,11 @@ export default function MCPManagement() {
       <Tabs value={tab} onValueChange={setTab} className="space-y-6">
         <TabsList>
           <TabsTrigger value="tokens">Tokens</TabsTrigger>
+          <TabsTrigger value="models">Models</TabsTrigger>
+          <TabsTrigger value="prompts">Prompts</TabsTrigger>
+          <TabsTrigger value="retrieval">Retrieval</TabsTrigger>
+          <TabsTrigger value="audit">Audit</TabsTrigger>
+          <TabsTrigger value="app">App</TabsTrigger>
           <TabsTrigger value="settings">Settings</TabsTrigger>
         </TabsList>
 
@@ -222,6 +270,109 @@ export default function MCPManagement() {
                 </div>
               )}
             </div>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="models" className="space-y-4">
+          {isDemo ? <DemoNotice feature="Model router" /> : <ModelRouterPanel />}
+        </TabsContent>
+
+        <TabsContent value="prompts" className="space-y-4">
+          {isDemo ? <DemoNotice feature="Prompt templates" /> : <PromptTemplatesPanel spaceId={activeSpaceId || null} />}
+        </TabsContent>
+
+        <TabsContent value="retrieval" className="space-y-4">
+          {isDemo ? (
+            <DemoNotice feature="Retrieval tuning" />
+          ) : (
+            <div className="space-y-4">
+              <Card className="p-4">
+                <Label htmlFor="rag_space">Space</Label>
+                <Select value={activeSpaceId} onValueChange={setActiveSpaceId}>
+                  <SelectTrigger placeholder="Choose a space" className="mt-1.5 max-w-sm" />
+                  <SelectContent>
+                    {spaces.map((s) => (
+                      <SelectItem key={s.id} value={s.id}>
+                        {s.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="mt-2 text-xs text-muted-foreground">
+                  Retrieval settings are stored per space, so each subject can have its own tuning.
+                </p>
+              </Card>
+              <RagSettingsPanel spaceId={activeSpaceId} />
+            </div>
+          )}
+        </TabsContent>
+
+        <TabsContent value="audit" className="space-y-4">
+          {isDemo ? (
+            <DemoNotice feature="Citation audit" />
+          ) : (
+            <div className="space-y-4">
+              <Card className="p-4">
+                <Label htmlFor="audit_space">Space</Label>
+                <Select value={activeSpaceId} onValueChange={setActiveSpaceId}>
+                  <SelectTrigger placeholder="Choose a space" className="mt-1.5 max-w-sm" />
+                  <SelectContent>
+                    {spaces.map((s) => (
+                      <SelectItem key={s.id} value={s.id}>
+                        {s.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </Card>
+              <CitationAuditPanel spaceId={activeSpaceId} />
+            </div>
+          )}
+        </TabsContent>
+
+        <TabsContent value="app" className="space-y-4">
+          <PwaSettings />
+          <Card className="p-5 space-y-3">
+            <h3 className="font-semibold">Offline reviews</h3>
+            <p className="text-sm text-muted-foreground">
+              Grades are written to this device first and sent to the server when a connection is
+              available, so reviewing on a train never loses your progress. Sync also happens
+              automatically whenever the tab regains focus.
+            </p>
+            <div className="flex flex-wrap items-center gap-2">
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => {
+                  enqueueReview({
+                    card_id: "00000000-0000-0000-0000-000000000000",
+                    rating: 3,
+                    graded_at: new Date().toISOString(),
+                    duration_ms: 1200,
+                  });
+                  refreshQueue();
+                  success("Queued a test review to demonstrate offline sync.");
+                }}
+              >
+                Queue a test review
+              </Button>
+              <Button size="sm" variant="ghost" onClick={() => flushQueueNow()}>
+                Sync now
+              </Button>
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={async () => {
+                  await clearQueue();
+                  refreshQueue();
+                }}
+              >
+                Clear queue
+              </Button>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              {queuePending} waiting to sync.
+            </p>
           </Card>
         </TabsContent>
 

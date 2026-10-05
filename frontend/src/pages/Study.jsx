@@ -20,6 +20,8 @@ import { Input } from "@/components/ui/input";
 import { studyApi } from "@/services/api-services";
 import { useToast } from "@/components/ui/toast";
 import { cn } from "@/lib/utils";
+import { enqueueReview } from "@/lib/offline-queue";
+import { useReviewQueueSync } from "@/hooks/usePwa";
 import { useRef, useEffect } from "react";
 
 const REVIEW_RATINGS = [
@@ -133,11 +135,41 @@ export default function Study() {
     refetchInterval: 30_000,
   });
 
+  const { pending, flush } = useReviewQueueSync();
+
+  // Grades are written to IndexedDB first, then replayed to the API. A failed
+  // flush leaves the entry queued rather than dropping the grade, so the FSRS
+  // interval can't silently desync from what the student actually answered.
   const reviewMutation = useMutation({
-    mutationFn: ({ cardId, rating }) => studyApi.review({ card_id: cardId, rating }),
-    onSuccess: () => {
+    mutationFn: async ({ cardId, rating }) => {
+      const entry = {
+        card_id: cardId,
+        rating,
+        graded_at: new Date().toISOString(),
+        duration_ms: null,
+      };
+      if (!navigator.onLine) {
+        await enqueueReview(entry);
+        return { queued: true };
+      }
+      try {
+        return await studyApi.review({ card_id: cardId, rating });
+      } catch (err) {
+        // A transport failure means we're effectively offline — queue it.
+        if (err?.status === 0) {
+          await enqueueReview(entry);
+          return { queued: true };
+        }
+        throw err;
+      }
+    },
+    onSuccess: (result) => {
       queryClient.invalidateQueries({ queryKey: ["study", "due"] });
-      success("Card reviewed!");
+      if (result?.queued) {
+        success("Saved offline — it will sync when you're back online.");
+      } else {
+        success("Card reviewed!");
+      }
     },
     onError: (err) => error(err),
   });
@@ -173,6 +205,17 @@ export default function Study() {
           <RotateCcw className="size-4 mr-1" /> Refresh
         </Button>
       </div>
+
+      {pending > 0 ? (
+        <Card className="flex items-center justify-between gap-3 border-warning/40 bg-warning/10 p-3">
+          <p className="text-xs text-warning">
+            {pending} review{pending === 1 ? "" : "s"} saved on this device and waiting to sync.
+          </p>
+          <Button size="sm" variant="outline" onClick={() => flush()}>
+            Sync now
+          </Button>
+        </Card>
+      ) : null}
 
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
