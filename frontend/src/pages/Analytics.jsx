@@ -59,6 +59,28 @@ function StatCard({ label, value, icon: Icon, hint, trend, to }) {
   return to ? <a href={to}>{content}</a> : content;
 }
 
+/** Week-over-week delta chip: never colour-only — arrow + signed value. */
+function WeekDelta({ now, prev }) {
+  if (!prev) return null;
+  const pct = Math.round(((now - prev) / prev) * 100);
+  const up = pct >= 0;
+  const Icon = up ? TrendingUp : TrendingDown;
+  return (
+    <span
+      className={cn(
+        "inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium",
+        up ? "bg-success/10 text-success" : "bg-destructive/10 text-destructive"
+      )}
+      title={`Compared with ${prev} minutes last week`}
+    >
+      <Icon className="size-3" aria-hidden />
+      {up ? "+" : ""}
+      {pct}%
+      <span className="sr-only">{up ? "more" : "less"} than last week</span>
+    </span>
+  );
+}
+
 export default function Analytics() {
   const { data: analytics, isLoading } = useQuery({ queryKey: ["analytics", "summary"], queryFn: () => analyticsApi.summary(90) });
   
@@ -118,7 +140,10 @@ export default function Analytics() {
         <TabsContent value="overview" className="space-y-6">
           <div className="grid gap-4 lg:grid-cols-2">
             <Card className="p-5">
-              <h3 className="font-semibold mb-3">Focus this week</h3>
+              <div className="mb-3 flex items-baseline justify-between gap-2">
+                <h3 className="font-semibold">Focus this week</h3>
+                <WeekDelta now={analytics?.minutes_this_week ?? 0} prev={analytics?.minutes_last_week ?? 0} />
+              </div>
               <div className="space-y-2">
                 <div className="flex items-center justify-between text-sm">
                   <span className="text-muted-foreground">Minutes</span>
@@ -131,6 +156,33 @@ export default function Analytics() {
                 <div className="flex items-center justify-between text-sm">
                   <span className="text-muted-foreground">Last week</span>
                   <span className="font-mono">{analytics?.minutes_last_week ?? 0}m</span>
+                </div>
+              </div>
+
+              {/* Weekly target: fills against a 300-minute (5h) goal. */}
+              <div className="mt-4 space-y-1.5">
+                <div className="flex items-center justify-between text-xs text-muted-foreground">
+                  <span>Weekly goal</span>
+                  <span className="font-mono">
+                    {analytics?.minutes_this_week ?? 0}/300m
+                  </span>
+                </div>
+                <div
+                  role="progressbar"
+                  aria-valuemin={0}
+                  aria-valuemax={300}
+                  aria-valuenow={Math.min(300, analytics?.minutes_this_week ?? 0)}
+                  aria-label="Progress towards the 300 minute weekly focus goal"
+                  className="h-2 w-full overflow-hidden rounded-full bg-surface-2"
+                >
+                  <motion.div
+                    className="h-full rounded-full bg-primary"
+                    initial={{ width: 0 }}
+                    animate={{
+                      width: `${Math.min(100, ((analytics?.minutes_this_week ?? 0) / 300) * 100)}%`,
+                    }}
+                    transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
+                  />
                 </div>
               </div>
             </Card>
