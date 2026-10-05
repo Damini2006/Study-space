@@ -1423,3 +1423,60 @@
   }
 }
 
+/* --- High contrast -------------------------------------------------------- */
+/* Honour the OS "increase contrast" setting: strengthen every hairline border,
+   widen focus rings and stop relying on translucency for legibility. */
+@media (prefers-contrast: more) {
+  :root {
+    --border: color-mix(in srgb, var(--foreground) 45%, transparent);
+    --ring: color-mix(in srgb, var(--primary) 90%, transparent);
+  }
+
+  * {
+    border-color: var(--border) !important;
+  }
+
+  /* Muted copy must stay readable — bump it to the foreground level. */
+  .text-muted-foreground,
+  [class*="text-muted-foreground"] {
+    color: var(--foreground) !important;
+  }
+
+  /* Translucent surfaces lose their fill; make them solid. */
+  .bg-background\/85,
+  .bg-background\/80,
+  .bg-card\/80,
+  .bg-surface\/80,
+  .backdrop-blur,
+  .backdrop-blur-xl {
+    background-color: var(--background) !important;
+    backdrop-filter: none !important;
+  }
+
+  :focus-visible {
+    outline-width: 3px !important;
+    outline-offset: 2px !important;
+    outline-color: var(--ring) !important;
+  }
+
+  /* De-emphasised labels are still labels. */
+  [class*="opacity-60"],
+  [class*="opacity-70"] {
+    opacity: 1 !important;
+  }
+}
+
+/* Windows / macOS forced-colors (high visibility) mode: let the UA palette win
+   but keep our layout, and give icons an explicit colour so they aren't dropped. */
+@media (forced-colors: active) {
+  .brand-gradient,
+  .brand-text {
+    color: CanvasText !important;
+    background: none !important;
+  }
+
+  svg {
+    color: CanvasText;
+  }
+}
+
