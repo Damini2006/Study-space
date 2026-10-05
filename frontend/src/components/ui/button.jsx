@@ -31,7 +31,7 @@ const buttonVariants = cva(
 );
 
 export const Button = forwardRef(function Button(
-  { className, variant, size, type = "button", ...props },
+  { className, variant, size, type = "button", loading = false, ...props },
   ref
 ) {
   return (
@@ -39,6 +39,8 @@ export const Button = forwardRef(function Button(
       ref={ref}
       type={type}
       className={cn(buttonVariants({ variant, size }), className)}
+      aria-busy={loading || undefined}
+      disabled={loading || props.disabled}
       {...props}
     />
   );
