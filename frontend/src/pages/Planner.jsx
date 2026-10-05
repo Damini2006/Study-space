@@ -17,12 +17,10 @@ import { Input, Label } from "@/components/ui/input";
 import { Dialog } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/dialog";
 import { plannerApi } from "@/services/api-services";
-import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/components/ui/toast";
 import { cn, formatDate } from "@/lib/utils";
 
 const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
-const HOURS = Array.from({ length: 24 }, (_, i) => `${i % 12 || 12}${i < 12 ? " AM" : " PM"}`);
 
 function GhostTaskCard({ task, index, onRemove, onEdit }) {
   return (
@@ -152,11 +150,8 @@ function PlannerForm({ onSubmit, pending, defaultValues = {} }) {
 export default function Planner() {
   const { success, error } = useToast();
   const queryClient = useQueryClient();
-  const { profile } = useAuth();
   const [showForm, setShowForm] = useState(false);
-  const [activeTab, setActiveTab] = useState("proposals");
   const [view, setView] = useState("calendar"); // "calendar" or "list"
-  const [dragTask, setDragTask] = useState(null);
 
   const { data: runs = [] } = useQuery({ queryKey: ["planner", "runs"], queryFn: plannerApi.listRuns });
   const { data: tasks = [] } = useQuery({ queryKey: ["planner", "tasks"], queryFn: () => plannerApi.listTasks(false) });
@@ -166,7 +161,7 @@ export default function Planner() {
 
   const createRun = useMutation({
     mutationFn: (body) => plannerApi.createRun(body),
-    onSuccess: (run) => {
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["planner", "runs"] });
       success("Plan drafted — review the ghost tasks and approve when ready.");
     },
@@ -208,19 +203,12 @@ export default function Planner() {
   };
 
   // Calendar view state
-  const [selectedDate, setSelectedDate] = useState(null);
   const [weekStart, setWeekStart] = useState(() => {
     const d = new Date();
     const day = d.getDay();
     const diff = d.getDate() - day + (day === 0 ? -6 : 1);
     return new Date(d.setDate(d.getDate() + diff));
   });
-
-  const handleDateSelect = (date) => {
-    setSelectedDate(date);
-    // Navigate to that date
-    setWeekStart(new Date(date));
-  };
 
   const prevWeek = () => {
     const date = new Date(weekStart);
@@ -243,19 +231,6 @@ export default function Planner() {
     weekEndDate.setDate(weekEndDate.getDate() + 6);
     return taskDate >= weekStartDate && taskDate <= weekEndDate;
   });
-
-  // Get pending runs
-  const handleRunAction = (runId, action) => {
-    if (action === "approve") {
-      approveRun.mutate({ runId, body: { tasks: pendingRun?.proposal?.tasks || [] } });
-    } else if (action === "reject") {
-      rejectRun.mutate(runId);
-    } else if (action === "view") {
-      // Navigate to details
-    } else if (action === "run") {
-      queryClient.invalidateQueries({ queryKey: ["evals", "runs"] });
-    }
-  };
 
   return (
     <div className="mx-auto max-w-4xl space-y-6">

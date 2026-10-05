@@ -63,7 +63,7 @@ function NoteCard({ note, onPin, onDelete, onExport }) {
   );
 }
 
-function NoteEditor({ note, onSave, onClose, tags, allTags }) {
+function NoteEditor({ note, onSave, onClose, allTags }) {
   const [title, setTitle] = useState(note?.title || "");
   const [color, setColor] = useState(note?.color || "#FFF9B3");
   const [noteTags, setNoteTags] = useState(note?.tags || []);
@@ -95,6 +95,9 @@ function NoteEditor({ note, onSave, onClose, tags, allTags }) {
       chars: text.length,
       readMin: Math.max(1, Math.round(words / 220)),
     };
+    // `content` isn't read here — TipTap owns the document — but it is the only
+    // signal that the text changed, so it must trigger the recompute.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [editor, content]);
 
   const addTag = () => {
@@ -171,8 +174,6 @@ function NoteEditor({ note, onSave, onClose, tags, allTags }) {
     </Dialog>
   );
 }
-
-const editorRef = { current: null };
 
 export default function Notes() {
   const { success, error } = useToast();
@@ -268,7 +269,7 @@ export default function Notes() {
 
       <NoteEditor
         note={editingNote}
-        tags={allTags}
+        allTags={allTags}
         onClose={() => setEditingNote(null)}
         onSave={(body) => {
           if (editingNote) updateMutation.mutate({ id: editingNote.id, body });

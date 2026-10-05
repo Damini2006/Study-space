@@ -18,7 +18,6 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { studyApi } from "@/services/api-services";
-import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/components/ui/toast";
 import { cn } from "@/lib/utils";
 import { useRef, useEffect } from "react";
@@ -29,22 +28,6 @@ const REVIEW_RATINGS = [
   { value: 3, label: "Good", desc: "Recalled comfortably", className: "bg-success-bg text-success border-success/30" },
   { value: 4, label: "Easy", desc: "Perfect recall", className: "bg-primary/10 text-primary border-primary/30" },
 ];
-
-function ReviewButton({ cardId, rating, disabled, onReview }) {
-  return (
-    <button
-      type="button"
-      onClick={() => onReview(rating)}
-      disabled={disabled}
-      className={cn(
-        "flex-1 rounded-lg py-2.5 text-sm font-medium transition-colors",
-        disabled && "opacity-50 cursor-not-allowed"
-      )}
-    >
-      {rating}
-    </button>
-  );
-}
 
 function ReviewCard({ card, onReview, loadingRating, onFlip }) {
   const [showBack, setShowBack] = useState(false);
@@ -139,12 +122,10 @@ function ReviewCard({ card, onReview, loadingRating, onFlip }) {
 }
 
 export default function Study() {
-  const { success } = useToast();
+  const { success, error } = useToast();
   const queryClient = useQueryClient();
-  const { profile } = useAuth();
   const [search, setSearch] = useState("");
   const [showStats, setShowStats] = useState(false);
-  const [showCalendar, setShowCalendar] = useState(false);
 
   const { data: due } = useQuery({
     queryKey: ["study", "due"],
@@ -158,9 +139,7 @@ export default function Study() {
       queryClient.invalidateQueries({ queryKey: ["study", "due"] });
       success("Card reviewed!");
     },
-    onError: (err) => {
-      // error toast handled by api client
-    },
+    onError: (err) => error(err),
   });
 
   const dueCards = due?.cards || [];
@@ -299,7 +278,10 @@ function StatsCard({ dueCount, newCount, learningCount, reviewCount, totalCards,
       <X className="size-4" />
     </button>
 
-    <h2 className="text-xl font-bold tracking-tight mb-6">Review Stats</h2>
+    <div className="mb-6 flex items-baseline justify-between gap-3">
+      <h2 className="text-xl font-bold tracking-tight">Review Stats</h2>
+      <span className="font-mono text-xs text-muted-foreground">{totalCards} cards in deck</span>
+    </div>
 
     <div className="grid grid-cols-2 gap-4 mb-6">
       <StatItem

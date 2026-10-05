@@ -6,7 +6,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn, formatDate, mdToHtml } from "@/lib/utils";
 import { useToast } from "@/components/ui/toast";
-import { useRef } from "react";
 
 const TYPES = [
   { id: "summary", label: "Summary", icon: FileText, hint: "Concise markdown overview with takeaways." },
