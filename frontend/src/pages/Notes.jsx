@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -12,6 +12,7 @@ import {
   Trash2,
   Pin,
   FileText,
+  X,
 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -75,8 +76,33 @@ function NoteEditor({ note, onSave, onClose, tags, allTags }) {
   const [pinned, setPinned] = useState(note?.pinned || false);
   const [content, setContent] = useState(note?.content || { type: "doc", content: [] });
   const [tagInput, setTagInput] = useState("");
-  
-  const editor = useRef(null);
+
+  // One TipTap instance per dialog. Constructing it inline during render (as
+  // this previously did) allocated a fresh editor on every keystroke.
+  const editor = useMemo(
+    () =>
+      new Editor({
+        extensions: [StarterKit, Placeholder.configure({ placeholder: "Start writing…" })],
+        content: note?.content || { type: "doc", content: [] },
+        onUpdate: ({ editor: e }) => setContent(e.getJSON()),
+      }),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    []
+  );
+
+  useEffect(() => () => editor.destroy(), [editor]);
+
+  // Live writing stats for the footer, recomputed whenever the doc changes.
+  const stats = useMemo(() => {
+    const text = (editor.getText?.() || "").trim();
+    const words = text ? text.split(/\s+/).length : 0;
+    return {
+      words,
+      chars: text.length,
+      readMin: Math.max(1, Math.round(words / 220)),
+    };
+  }, [editor, content]);
+
   const addTag = () => {
     const t = tagInput.trim();
     if (t && !noteTags.includes(t)) setNoteTags([...noteTags, t]);
@@ -120,8 +146,22 @@ function NoteEditor({ note, onSave, onClose, tags, allTags }) {
         </div>
 
         <div className="space-y-1.5">
-          <Label>Content</Label>
-          <EditorContent editor={editor.current || new Editor({ extensions: [StarterKit, Placeholder.configure({ placeholder: "Start writing…" })], content: content, onUpdate: ({ editor }) => setContent(editor.getJSON()) })} className="min-h-[240px] rounded-lg border border-border bg-surface p-3 prose prose-sm max-w-none" />
+          <Label htmlFor="note-content">Content</Label>
+          <EditorContent
+            id="note-content"
+            editor={editor}
+            className="min-h-[240px] rounded-lg border border-border bg-surface p-3 prose prose-sm max-w-none focus-within:ring-2 focus-within:ring-ring"
+          />
+          <div
+            aria-live="polite"
+            className="flex flex-wrap items-center gap-x-3 gap-y-1 font-mono text-[11px] text-muted-foreground"
+          >
+            <span>{stats.words} words</span>
+            <span aria-hidden className="text-border">·</span>
+            <span>{stats.chars} characters</span>
+            <span aria-hidden className="text-border">·</span>
+            <span>~{stats.readMin} min read</span>
+          </div>
         </div>
 
         <label className="flex items-center gap-2 text-sm">
