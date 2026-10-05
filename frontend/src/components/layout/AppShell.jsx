@@ -320,7 +320,14 @@ export default function AppShell() {
           </span>
         </header>
 
-        <main className="min-w-0 flex-1 px-4 py-6 pb-24 lg:px-10 lg:pb-10">
+        <a
+          href="#main-content"
+          className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-50 focus:rounded-lg focus:bg-primary focus:px-4 focus:py-2 focus:text-sm focus:text-on-primary focus:shadow-lg"
+        >
+          Skip to main content
+        </a>
+
+        <main id="main-content" className="min-w-0 flex-1 px-4 py-6 pb-24 lg:px-10 lg:pb-10" tabIndex={-1}>
           <AnimatePresence mode="wait" initial={false}>
             <motion.div
               key={location.pathname}
