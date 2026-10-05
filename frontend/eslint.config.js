@@ -2,6 +2,7 @@ import js from "@eslint/js";
 import globals from "globals";
 import reactHooks from "eslint-plugin-react-hooks";
 import reactRefresh from "eslint-plugin-react-refresh";
+import unusedImports from "eslint-plugin-unused-imports";
 
 export default [
   { ignores: ["dist", "node_modules", "coverage", ".vite"] },
@@ -18,6 +19,7 @@ export default [
     plugins: {
       "react-hooks": reactHooks,
       "react-refresh": reactRefresh,
+      "unused-imports": unusedImports,
     },
     rules: {
       ...js.configs.recommended.rules,
@@ -27,9 +29,13 @@ export default [
       "react-refresh/only-export-components": ["warn", { allowConstantExport: true }],
 
       // Catch the class of bug that white-screens a page: a symbol that was
-      // never imported or declared.
+      // never imported or declared. `unused-imports/no-unused-vars` reports the
+      // same thing as core `no-unused-vars` but can also auto-remove dead
+      // imports with --fix, which core ESLint deliberately refuses to do.
       "no-undef": "error",
-      "no-unused-vars": [
+      "no-unused-vars": "off",
+      "unused-imports/no-unused-imports": "error",
+      "unused-imports/no-unused-vars": [
         "error",
         {
           args: "after-used",

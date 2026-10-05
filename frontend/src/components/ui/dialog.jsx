@@ -1,6 +1,4 @@
 import { createContext, useContext, useEffect, useRef } from "react";
-import { AnimatePresence, motion } from "framer-motion";
-import { X } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 /**

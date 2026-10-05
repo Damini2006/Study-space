@@ -1,21 +1,14 @@
-import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { motion } from "framer-motion";
 import {
-  BarChart3,
   BarChart2,
-  Calendar,
   Clock,
   Flame,
   Target,
   TrendingUp,
   TrendingDown,
 } from "lucide-react";
-import { Card } from "@/components/ui/card";
-import { Badge } from "@/components/ui/input";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/dialog";
 import { analyticsApi } from "@/services/api-services";
-import { cn, formatDate, formatClock } from "@/lib/utils";
+import { cn, formatDate } from "@/lib/utils";
 
 const HEAT_COLORS = [
   "bg-heat-1",

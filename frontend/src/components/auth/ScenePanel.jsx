@@ -1,6 +1,4 @@
-import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
-import CitationScene from "./CitationScene";
 
 const EASE = [0.22, 1, 0.36, 1];
 

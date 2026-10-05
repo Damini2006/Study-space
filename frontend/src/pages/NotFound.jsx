@@ -1,6 +1,5 @@
-import { Link, useLocation } from "react-router-dom";
-import { ArrowLeft, Compass, LayoutDashboard, Layers, SearchX } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { useLocation } from "react-router-dom";
+import { Compass, LayoutDashboard, Layers } from "lucide-react";
 
 const SUGGESTIONS = [
   { to: "/app/dashboard", label: "Dashboard", hint: "Today's plan, streaks and spaces", icon: LayoutDashboard },

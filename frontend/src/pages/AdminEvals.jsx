@@ -1,31 +1,10 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { motion } from "framer-motion";
-import {
-  BarChart3,
-  CheckCircle2,
-  ChevronDown,
-  Loader2,
-  Play,
-  ShieldCheck,
-  Table,
-  TrendingUp,
-  XCircle,
-  Zap,
-  CreditCard,
-  Clock,
-  Layout,
-  Eye,
-} from "lucide-react";
-import { Card } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/input";
-import { Dialog } from "@/components/ui/dialog";
+
+
 import { evalsApi } from "@/services/api-services";
 import { useToast } from "@/components/ui/toast";
 import { cn, formatDate } from "@/lib/utils";
-import { ConfidenceMeter, LayerStatusBadge } from "@/components/ui/confidence-meter";
-import { useRef } from "react";
 
 const DEFAULT_CONFIGS = [
   { name: "baseline", relevance_gate: false, citation_validation: false, claim_verification: false, enabled: true },

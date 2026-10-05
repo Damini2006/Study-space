@@ -4,13 +4,8 @@
  */
 import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { motion } from "framer-motion";
-import { Loader2, Pencil, Plus, Trash2, TrendingDown, TrendingUp, Wallet } from "lucide-react";
+import { TrendingDown, TrendingUp, Wallet } from "lucide-react";
 import { financeApi } from "@/services/api-services";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input, Label } from "@/components/ui/input";
-import { Dialog } from "@/components/ui/dialog";
 import { useToast } from "@/components/ui/toast";
 import { cn, formatDate } from "@/lib/utils";
 

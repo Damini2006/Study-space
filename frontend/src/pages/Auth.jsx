@@ -1,29 +1,14 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Link, useLocation, useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import {
-  ArrowLeft,
-  ArrowRight,
-  Check,
-  Eye,
-  EyeOff,
   FileText,
-  GraduationCap,
   KeyRound,
-  Loader2,
   Lock,
-  Mail,
   Sparkles,
 } from "lucide-react";
 import { supabaseConfigured } from "@/lib/supabase";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/components/ui/toast";
-import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
-import { Input, Label } from "@/components/ui/input";
-import { motion, AnimatePresence } from "framer-motion";
-import ThemeToggle from "@/components/ui/theme-toggle";
-import ScenePanel from "@/components/auth/ScenePanel";
-import { StudySpaceLogo } from "@/components/brand/study-space-logo";
 import { cn } from "@/lib/utils";
 
 /* ------------------------------------------------------------------ */

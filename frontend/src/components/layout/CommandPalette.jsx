@@ -8,13 +8,11 @@ import {
   Gauge,
   Layers,
   LayoutDashboard,
-  Search,
   Settings,
   ShieldCheck,
   Timer,
   Library,
 } from "lucide-react";
-import { Dialog } from "@/components/ui/dialog";
 import { api } from "@/lib/api";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";

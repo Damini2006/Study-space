@@ -1,5 +1,4 @@
 import { AlertCircle, BadgeCheck, CircleHelp, ShieldAlert } from "lucide-react";
-import { Badge } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 
 /**

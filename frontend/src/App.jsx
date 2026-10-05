@@ -1,19 +1,6 @@
-import { Navigate, Route, Routes, useLocation } from "react-router-dom";
-import { lazy, Suspense, useEffect } from "react";
-import { motion } from "framer-motion";
+import { useLocation } from "react-router-dom";
+import { lazy, useEffect } from "react";
 import { useAuth } from "@/hooks/useAuth";
-import AppShell from "@/components/layout/AppShell";
-import Landing from "@/pages/Landing";
-import AuthPage from "@/pages/Auth";
-import Dashboard from "@/pages/Dashboard";
-import Workspace from "@/pages/Workspace";
-import Study from "@/pages/Study";
-import Planner from "@/pages/Planner";
-import Notes from "@/pages/Notes";
-import Focus from "@/pages/Focus";
-import AuthCallback from "@/pages/AuthCallback";
-import NotFound from "@/pages/NotFound";
-import CookieBanner from "@/components/layout/CookieBanner";
 
 // Secondary routes are code-split so the first paint only pulls in what the
 // landing page and dashboard actually need.

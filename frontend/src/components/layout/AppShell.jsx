@@ -1,26 +1,15 @@
-import { Suspense, useEffect, useRef, useState } from "react";
-import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
-import { AnimatePresence, motion } from "framer-motion";
+import { useEffect, useRef, useState } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 import {
-  BookOpen,
   CalendarRange,
-  ChevronDown,
   FileText,
-  Gauge,
-  Globe,
   Layers,
   LayoutDashboard,
-  LogOut,
-  Menu,
-  MonitorSmartphone,
   Moon,
   Palette,
-  Search,
   Settings,
-  ShieldCheck,
   Sun,
   Timer,
-  X,
   BarChart3,
   Flame,
   Image,
@@ -30,7 +19,6 @@ import { useAuth } from "@/hooks/useAuth";
 import { useTheme, THEMES } from "@/hooks/useTheme";
 import { cn } from "@/lib/utils";
 import { useCommandPalette } from "@/components/layout/CommandPalette";
-import CommandPalette from "@/components/layout/CommandPalette";
 import { initials } from "@/lib/utils";
 
 const NAV = [

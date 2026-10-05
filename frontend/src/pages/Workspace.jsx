@@ -1,14 +1,7 @@
-import { useCallback, useMemo, useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import { useCallback, useState } from "react";
+import { useParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-import { ArrowLeft, Layers, MessageSquare, NotebookPen } from "lucide-react";
 import { spacesApi } from "@/services/api-services";
-import { Button } from "@/components/ui/button";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/dialog";
-import SourcesPanel from "@/components/workspace/SourcesPanel";
-import ChatPanel from "@/components/workspace/ChatPanel";
-import StudioPanel from "@/components/workspace/StudioPanel";
-import { cn } from "@/lib/utils";
 
 /**
  * Space workspace — the centerpiece.

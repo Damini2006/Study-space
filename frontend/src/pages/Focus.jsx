@@ -1,25 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { motion } from "framer-motion";
-import {
-  CheckCircle2,
-  Circle,
-  Clock,
-  Loader2,
-  Pause,
-  Play,
-  RotateCcw,
-  Settings,
-  Target,
-  X,
-} from "lucide-react";
-import { Card } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input, Label } from "@/components/ui/input";
-import { Dialog } from "@/components/ui/dialog";
-import { Badge } from "@/components/ui/input";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/dialog";
-import AmbientMixer from "@/components/focus/AmbientMixer";
+
+
 import { focusApi } from "@/services/api-services";
 import { useToast } from "@/components/ui/toast";
 import { cn, formatClock, formatDate } from "@/lib/utils";

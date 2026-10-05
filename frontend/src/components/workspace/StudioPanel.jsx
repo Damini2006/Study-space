@@ -1,13 +1,10 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { BookOpen, FileText, Layers, ListChecks, Sparkles, Trash2, Move, Edit } from "lucide-react";
+import { BookOpen, FileText, Layers, ListChecks } from "lucide-react";
 import { studioApi } from "@/services/api-services";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { cn, formatDate, mdToHtml } from "@/lib/utils";
 import { useToast } from "@/components/ui/toast";
-import { Dialog, Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/dialog";
-import { useRef, useCallback } from "react";
+import { useRef } from "react";
 
 const TYPES = [
   { id: "summary", label: "Summary", icon: FileText, hint: "Concise markdown overview with takeaways." },

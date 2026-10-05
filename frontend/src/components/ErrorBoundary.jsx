@@ -1,6 +1,4 @@
 import { Component } from "react";
-import { AlertTriangle, RotateCcw } from "lucide-react";
-import { Button } from "@/components/ui/button";
 
 /**
  * Catches render-time crashes anywhere below it so a single broken view can't

@@ -1,34 +1,11 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { motion, AnimatePresence } from "framer-motion";
-import {
-  Calendar,
-  ChevronDown,
-  Clock,
-  Loader2,
-  Plus,
-  ShieldCheck,
-  X,
-  Zap,
-  Shield,
-  ArrowLeftRight,
-  Repeat,
-  BarChart3,
-  TrendingUp,
-  CalendarDays,
-  Eye,
-} from "lucide-react";
-import { Card } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input, Label } from "@/components/ui/input";
-import { Dialog } from "@/components/ui/dialog";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/dialog";
+
+
 import { plannerApi } from "@/services/api-services";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/components/ui/toast";
 import { cn, formatDate } from "@/lib/utils";
-import { useRef } from "react";
-import { ConfidenceMeter } from "@/components/ui/confidence-meter";
 
 const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 const HOURS = Array.from({ length: 24 }, (_, i) => `${i % 12 || 12}${i < 12 ? " AM" : " PM"}`);

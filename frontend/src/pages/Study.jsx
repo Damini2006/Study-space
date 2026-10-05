@@ -1,33 +1,16 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { motion, AnimatePresence } from "framer-motion";
 import {
   AlertCircle,
   CheckCircle2,
-  ChevronDown,
   Clock,
   Loader2,
-  MessageSquare,
   Plus,
-  RotateCcw,
-  Search,
-  Sparkles,
-  X,
-  Loader,
-  Keyboard,
-  Flame,
-  Calendar,
 } from "lucide-react";
-import { Card } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input, Label } from "@/components/ui/input";
-import { Badge } from "@/components/ui/input";
-import { Dialog } from "@/components/ui/dialog";
-import { studyApi, studioApi } from "@/services/api-services";
+import { studyApi } from "@/services/api-services";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/components/ui/toast";
-import { cn, formatDate, mdToHtml } from "@/lib/utils";
-import { ConfidenceMeter, LayerStatusBadge } from "@/components/ui/confidence-meter";
+import { cn } from "@/lib/utils";
 import { useRef, useEffect } from "react";
 
 const REVIEW_RATINGS = [

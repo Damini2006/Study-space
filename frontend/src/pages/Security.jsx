@@ -1,7 +1,3 @@
-import { Link } from "react-router-dom";
-import { motion } from "framer-motion";
-import { ArrowLeft, Check } from "lucide-react";
-import ThemeToggle from "@/components/ui/theme-toggle";
 
 const CONTROLS = [
   ["Hide API keys", "Server credentials are injected through server-side environment variables only. The browser bundle is built without them and checked in CI for literal key patterns."],
