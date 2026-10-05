@@ -22,7 +22,7 @@ import {
 import { useAuth } from "@/hooks/useAuth";
 import { useTheme, THEMES } from "@/hooks/useTheme";
 import { cn } from "@/lib/utils";
-import { useCommandPalette } from "@/components/layout/CommandPalette";
+import { useCommandPalette } from "@/components/layout/use-command-palette";
 import CommandPalette from "@/components/layout/CommandPalette";
 import { initials } from "@/lib/utils";
 

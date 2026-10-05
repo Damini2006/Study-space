@@ -2,14 +2,9 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import {
-  BarChart3,
-  CalendarRange,
-  FileText,
   Gauge,
   Layers,
-  LayoutDashboard,
   Search,
-  Settings,
   ShieldCheck,
   Timer,
   Library,
@@ -18,16 +13,7 @@ import { Dialog } from "@/components/ui/dialog";
 import { api } from "@/lib/api";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
-
-export const NAV_ITEMS = [
-  { to: "/app/dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { to: "/app/study", label: "Study", icon: Layers },
-  { to: "/app/planner", label: "Planner", icon: CalendarRange },
-  { to: "/app/notes", label: "Notes", icon: FileText },
-  { to: "/app/focus", label: "Focus", icon: Timer },
-  { to: "/app/analytics", label: "Analytics", icon: BarChart3 },
-  { to: "/app/settings", label: "Settings", icon: Settings },
-];
+import { NAV_ITEMS } from "@/components/layout/use-command-palette";
 
 function score(query, text) {
   const q = query.toLowerCase();
@@ -235,17 +221,3 @@ export default function CommandPalette({ open, onClose }) {
   );
 }
 
-export function useCommandPalette() {
-  const [open, setOpen] = useState(false);
-  useEffect(() => {
-    const onKey = (e) => {
-      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
-        e.preventDefault();
-        setOpen((v) => !v);
-      }
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, []);
-  return { open, setOpen };
-}
