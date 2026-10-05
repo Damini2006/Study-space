@@ -6,6 +6,32 @@ export function cn(...inputs) {
   return twMerge(clsx(inputs));
 }
 
+/** Debounce a function call */
+export function debounce(fn, delay = 300) {
+  let timer;
+  return function (...args) {
+    clearTimeout(timer);
+    timer = setTimeout(() => fn.apply(this, args), delay);
+  };
+}
+
+/** Throttle a function call */
+export function throttle(fn, limit = 300) {
+  let inThrottle = false;
+  return function (...args) {
+    if (!inThrottle) {
+      fn.apply(this, args);
+      inThrottle = true;
+      setTimeout(() => (inThrottle = false), limit);
+    }
+  };
+}
+
+/** Clamp a number between min and max */
+export function clamp(value, min, max) {
+  return Math.min(Math.max(value, min), max);
+}
+
 export function formatBytes(bytes = 0) {
   if (bytes < 1024) return bytes + " B";
   if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + " KB";
