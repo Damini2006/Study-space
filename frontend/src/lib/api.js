@@ -14,6 +14,72 @@ export class ApiError extends Error {
   }
 }
 
+/** Human-readable copy for the common failure modes, so users aren't shown raw HTTP text. */
+const FRIENDLY = {
+  0: "Couldn’t reach StudySpace. Check your connection and try again.",
+  400: "That request wasn’t quite right.",
+  401: "Your session expired. Please sign in again.",
+  403: "You don’t have access to that.",
+  404: "We couldn’t find that.",
+  409: "That conflicts with something that already exists.",
+  413: "That file is too large.",
+  422: "Some of the details weren’t valid.",
+  429: "You’re going a little fast — give it a moment and retry.",
+  500: "StudySpace hit an internal error. Please try again.",
+  502: "The server is restarting. Please try again in a moment.",
+  503: "StudySpace is temporarily unavailable. Please try again.",
+};
+
+const RETRYABLE = new Set([408, 429, 500, 502, 503, 504]);
+
+/**
+ * Wraps a transport failure in an ApiError with status 0 so callers can treat
+ * offline/DNS/socket errors the same way as HTTP errors.
+ */
+function toTransportError(err) {
+  if (err instanceof ApiError) return err;
+  if (err?.name === "AbortError") return err;
+  return new ApiError(0, err?.message || "Network request failed");
+}
+
+/** Short, user-facing sentence for an ApiError. Falls back to the server detail. */
+export function friendlyMessage(err) {
+  if (!err) return "Something went wrong.";
+  if (err.name === "AbortError") return "Request cancelled.";
+  const status = err.status ?? 0;
+  const detail = typeof err.detail === "string" ? err.detail.trim() : "";
+  // Prefer an explicit server message, but don't surface HTML error pages.
+  if (detail && detail.length < 200 && !/^</.test(detail)) return detail;
+  return FRIENDLY[status] || "Something went wrong. Please try again.";
+}
+
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+/**
+ * Fetch with bounded exponential backoff. Only safe/idempotent methods and
+ * transient statuses are retried, and an aborted request never retries.
+ */
+async function fetchWithRetry(url, init, { retries = 2, method = "GET" } = {}) {
+  const idempotent = method === "GET" || method === "HEAD";
+  let lastErr = null;
+  for (let attempt = 0; attempt <= retries; attempt += 1) {
+    try {
+      const res = await fetch(url, init);
+      if (res.ok || !RETRYABLE.has(res.status) || !idempotent || attempt === retries) {
+        return res;
+      }
+      lastErr = new ApiError(res.status, res.statusText);
+    } catch (err) {
+      if (err?.name === "AbortError") throw err;
+      lastErr = toTransportError(err);
+      if (!idempotent || attempt === retries) throw lastErr;
+    }
+    // 200ms, 400ms … capped, plus a little jitter so retries don't sync up.
+    await sleep(Math.min(200 * 2 ** attempt, 2000) + Math.random() * 120);
+  }
+  throw lastErr || new ApiError(0, "Request failed");
+}
+
 export async function getToken() {
   const { data } = await supabase.auth.getSession();
   return data?.session?.access_token ?? null;
@@ -34,7 +100,12 @@ async function request(path, { method = "GET", body, headers = {}, signal } = {}
   if (body !== undefined) {
     init.body = body instanceof FormData ? body : JSON.stringify(body);
   }
-  const res = await fetch(`${API_BASE}${path}`, init);
+  let res;
+  try {
+    res = await fetchWithRetry(`${API_BASE}${path}`, init, { method });
+  } catch (err) {
+    throw toTransportError(err);
+  }
   if (!res.ok) {
     let detail = null;
     try {
@@ -84,8 +155,7 @@ export async function streamSSE(path, body, onEvent, { signal } = {}) {
     }
     throw new ApiError(res.status, detail || res.statusText);
   }
-  const reader = res.body.getReader();
-  const decoder = new TextDecoder();
+  const reader = res.body.getReader();  const decoder = new TextDecoder();
   let buffer = "";
   for (;;) {
     const { done, value } = await reader.read();
