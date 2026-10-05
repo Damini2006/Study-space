@@ -16,7 +16,7 @@ export function ToastProvider({ children }) {
   const push = useCallback(
     (message, { variant = "default", duration = 4000 } = {}) => {
       const id = ++idCounter;
-      setToasts((list) => [...list.slice(-3), { id, message, variant }]);
+      setToasts((list) => [...list.slice(-3), { id, message, variant, duration }]);
       if (duration > 0) setTimeout(() => dismiss(id), duration);
       return id;
     },
@@ -51,7 +51,7 @@ export function ToastProvider({ children }) {
               exit={{ opacity: 0, y: 6, scale: 0.98 }}
               transition={{ duration: 0.18 }}
               className={cn(
-                "pointer-events-auto flex items-start gap-2 rounded-lg border bg-card px-3 py-2.5 text-sm shadow-[var(--shadow-md)]",
+                "pointer-events-auto relative flex items-start gap-2 rounded-lg border bg-card px-3 py-2.5 text-sm shadow-[var(--shadow-md)] overflow-hidden",
                 t.variant === "success" && "border-success/30",
                 t.variant === "danger" && "border-destructive/30",
                 t.variant === "info" && "border-info/30",
@@ -67,10 +67,17 @@ export function ToastProvider({ children }) {
                 type="button"
                 onClick={() => dismiss(t.id)}
                 aria-label="Dismiss notification"
-                className="rounded p-0.5 text-muted-foreground hover:text-foreground"
+                className="rounded p-0.5 text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
               >
                 <X className="size-3.5" aria-hidden />
               </button>
+              <motion.div
+                className="absolute bottom-0 left-0 h-0.5 bg-primary/40"
+                initial={{ width: "100%" }}
+                animate={{ width: "0%" }}
+                transition={{ duration: (t.duration || 4000) / 1000, ease: "linear" }}
+                aria-hidden
+              />
             </motion.div>
           ))}
         </AnimatePresence>
