@@ -93,8 +93,49 @@ jobs:
           cd frontend
           npm run build
 
+  # Runs the built bundle in a real browser. Kept out of lint-and-test so the
+  # Chromium download doesn't tax every push, and so a browser-only failure
+  # reads as its own job instead of looking like a unit-test flake.
+  e2e:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Set up Node
+        uses: actions/setup-node@v7
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install frontend deps
+        run: |
+          cd frontend
+          npm ci
+
+      - name: Install Playwright Chromium
+        run: |
+          cd frontend
+          npx playwright install --with-deps chromium
+
+      - name: Run end-to-end tests
+        run: |
+          cd frontend
+          npm run test:e2e
+
+      # Traces are recorded on first retry, so a red run can be replayed step
+      # by step rather than guessed at from a log line.
+      - name: Upload Playwright traces
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: playwright-test-results
+          path: frontend/test-results/
+          if-no-files-found: ignore
+
   docker:
-    needs: lint-and-test
+    # Nothing ships if either the unit gates or the browser gates fail.
+    needs: [lint-and-test, e2e]
     runs-on: ubuntu-latest
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     # ghcr.io rejects a default read-only token with
