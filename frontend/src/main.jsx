@@ -7,6 +7,7 @@ import ErrorBoundary from "@/components/ErrorBoundary";
 import PageViewTracker from "@/components/PageViewTracker";
 import { AuthProvider } from "@/hooks/useAuth";
 import { ToastProvider } from "@/components/ui/toast";
+import "@/styles/fonts.css";
 import "@/styles/globals.css";
 
 const queryClient = new QueryClient({

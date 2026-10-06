@@ -1,0 +1,80 @@
+/* ==========================================================================
+   Self-hosted webfonts — Inter and JetBrains Mono
+   ==========================================================================
+
+   These four files are byte-for-byte what index.html used to fetch from
+   fonts.googleapis.com on every page view: the css2 API was asked for
+   Inter 400/500/600/700 and JetBrains Mono 400/500 in latin and
+   latin-ext, and the woff2 files it pointed at came from
+   fonts.gstatic.com. Both fonts' SIL OFL 1.1 licenses sit beside them
+   in ../assets/fonts/.
+
+   Why the move: that stylesheet was render-blocking and third-party.
+   A cold visit waited on a DNS lookup, a TLS handshake and a round trip
+   to Google before a single glyph could appear — and until it arrived,
+   nothing painted. The font files themselves were never the problem:
+   font-display: swap has always let text show in the fallback first.
+   The request in front of them was. This also puts a real number
+   behind e2e/performance.e2e.js's paint budget: with every host on the
+   critical path our own, first paint now depends on this machine and
+   nothing else.
+
+   Weight ranges rather than repeated blocks: these are variable fonts.
+   Google's css2 API answers `wght@400..700` with these exact same
+   files and a single `font-weight: 400 700` face — that is where the
+   ranges below come from, checked against the API rather than assumed.
+   Six discrete-weight blocks resolve to the same four URLs anyway.
+
+   Subsets: latin and latin-ext only. latin-ext covers U+20AD-20C4,
+   which is where ₹ lives (Finance); unicode-range means a page with no
+   characters beyond latin never downloads it. The other subsets the
+   API offers — cyrillic, greek, vietnamese, and their -exts — nothing
+   in this app renders.
+
+   ========================================================================== */
+
+@font-face {
+  font-family: "Inter";
+  font-style: normal;
+  font-weight: 400 700;
+  font-display: swap;
+  src: url("../assets/fonts/inter-latin.woff2") format("woff2");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6,
+    U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122,
+    U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: "Inter";
+  font-style: normal;
+  font-weight: 400 700;
+  font-display: swap;
+  src: url("../assets/fonts/inter-latin-ext.woff2") format("woff2");
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7,
+    U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F,
+    U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C4, U+2113, U+2C60-2C7F,
+    U+A720-A7FF;
+}
+
+@font-face {
+  font-family: "JetBrains Mono";
+  font-style: normal;
+  font-weight: 400 500;
+  font-display: swap;
+  src: url("../assets/fonts/jetbrains-mono-latin.woff2") format("woff2");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6,
+    U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122,
+    U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: "JetBrains Mono";
+  font-style: normal;
+  font-weight: 400 500;
+  font-display: swap;
+  src: url("../assets/fonts/jetbrains-mono-latin-ext.woff2") format("woff2");
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7,
+    U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F,
+    U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C4, U+2113, U+2C60-2C7F,
+    U+A720-A7FF;
+}
