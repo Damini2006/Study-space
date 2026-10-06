@@ -285,9 +285,16 @@ async def get_template(db: DbDep, template_id: str) -> dict:
     if row is not None:
         return _hydrate(row)
     try:
-        return _system_row(PromptTemplateType(template_id))
+        type_ = PromptTemplateType(template_id)
     except ValueError as exc:
         raise HTTPException(status_code=404, detail="Template not found.") from exc
+    # The enum names more types than there are built-ins: `custom` and the three
+    # layer knobs are valid values to *store* a row under, but there is nothing
+    # to fall back to for them. Indexing SYSTEM_TEMPLATES blindly turned every
+    # one of those into a KeyError, i.e. a 500 where a 404 was meant.
+    if type_.value not in SYSTEM_TEMPLATES:
+        raise HTTPException(status_code=404, detail="Template not found.")
+    return _system_row(type_)
 
 
 @router.patch("/{template_id}")
