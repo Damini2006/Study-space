@@ -4,6 +4,12 @@ Two modes:
 - unit tests (no env needed) — chunking, RRF, security helpers, FSRS wiring
 - integration tests require TEST_DATABASE_URL (a pgvector Postgres) or the
   docker container from `docker-compose -f docker-compose.test.yml up -d`.
+
+When that database is absent the integration tests *skip* rather than fail. An
+unreachable database is a property of the machine, not of the code, and a suite
+that always errors cannot be used as a quality gate: nobody can tell a real
+regression from a container that was never started. Run them explicitly against
+a live database to get a green or red answer.
 """
 
 from __future__ import annotations
@@ -83,6 +89,23 @@ async def _apply_migrations(db_url: str) -> None:
         await conn.close()
 
 
+# Probed once per session: eleven tests do not need eleven refused connections.
+_DB_PROBE: dict[str, bool] = {}
+
+
+async def _database_reachable(dsn: str) -> bool:
+    if dsn not in _DB_PROBE:
+        asyncpg = _asyncpg()
+        try:
+            conn = await asyncpg.connect(dsn=dsn, timeout=2)
+        except Exception:
+            _DB_PROBE[dsn] = False
+        else:
+            await conn.close()
+            _DB_PROBE[dsn] = True
+    return _DB_PROBE[dsn]
+
+
 @pytest.fixture(scope="session")
 def db_url() -> str:
     return TEST_DB_URL
@@ -91,6 +114,12 @@ def db_url() -> str:
 @pytest.fixture()
 async def migrated_db(db_url):
     """Yield a fresh, fully-migrated test database (per test for isolation)."""
+    if not await _database_reachable(db_url):
+        pytest.skip(
+            f"no database at {db_url!r} — set TEST_DATABASE_URL, or run "
+            "`docker-compose -f docker-compose.test.yml up -d`, to run the "
+            "integration suite"
+        )
     await _apply_migrations(db_url)
     return db_url
 
