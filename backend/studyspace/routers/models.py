@@ -1,190 +1,213 @@
-"""Model Router & Provider Management."""
+"""Model catalog and per-task routing.
+
+The router answers one question for the Settings UI: *which model is actually
+answering my questions, and what does it cost?* It reports the deployment's real
+configuration rather than a wish list — every "in use" badge is derived from
+`get_settings()`, so the panel can never claim a model is active when the
+pipeline is calling something else.
+"""
 
 from __future__ import annotations
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter
 
 from studyspace.config import get_settings
-from studyspace.models.ai_intelligence import (
-    ModelProvider, ModelTask, ModelConfig, ModelRouterConfig,
-)
+from studyspace.deps import UserDep
+from studyspace.models.ai_intelligence import ModelRouterConfig, ModelTask
 
 router = APIRouter(prefix="/models", tags=["models"])
 
 
-# Hardcoded catalog for now — in production this would come from DB/config
+# Metadata for models StudySpace can route to. Pricing is USD per 1k tokens and
+# is used only to rank/annotate choices — nothing is billed through this table.
+# Anything LiteLLM can address that isn't listed here still works; it just shows
+# up with `known: false` so the UI can say "configured but undocumented" rather
+# than silently omitting a model the pipeline is calling.
 MODEL_CATALOG: dict[str, dict] = {
-    # OpenAI
     "gpt-4o": {
         "provider": "openai",
         "model_id": "gpt-4o",
         "display_name": "GPT-4o",
-        "max_tokens": 4096,
-        "supports_streaming": True,
-        "supports_json": True,
-        "cost_per_1k_input": 0.005,
-        "cost_per_1k_output": 0.015,
+        "max_tokens": 16384,
+        "cost_per_1k_input": 0.0025,
+        "cost_per_1k_output": 0.010,
         "latency_class": "fast",
-        "capabilities": ["vision", "function_calling"],
-        "is_default_for": ["chat", "generate"],
+        "capabilities": ["vision", "function_calling", "json"],
     },
     "gpt-4o-mini": {
         "provider": "openai",
         "model_id": "gpt-4o-mini",
         "display_name": "GPT-4o Mini",
-        "max_tokens": 4096,
-        "supports_streaming": True,
-        "supports_json": True,
+        "max_tokens": 16384,
         "cost_per_1k_input": 0.00015,
         "cost_per_1k_output": 0.0006,
         "latency_class": "fast",
-        "capabilities": ["vision", "function_calling"],
-        "is_default_for": ["chat", "generate", "classify"],
+        "capabilities": ["vision", "function_calling", "json"],
     },
-    "gpt-4-turbo": {
-        "provider": "openai",
-        "model_id": "gpt-4-turbo",
-        "display_name": "GPT-4 Turbo",
-        "max_tokens": 4096,
-        "supports_streaming": True,
-        "supports_json": True,
-        "cost_per_1k_input": 0.01,
-        "cost_per_1k_output": 0.03,
-        "latency_class": "medium",
-        "capabilities": ["vision", "function_calling"],
-    },
-    # Anthropic
     "claude-3-5-sonnet": {
         "provider": "anthropic",
         "model_id": "claude-3-5-sonnet-20241022",
         "display_name": "Claude 3.5 Sonnet",
-        "max_tokens": 4096,
-        "supports_streaming": True,
-        "supports_json": True,
+        "max_tokens": 8192,
         "cost_per_1k_input": 0.003,
         "cost_per_1k_output": 0.015,
         "latency_class": "medium",
-        "capabilities": ["vision", "function_calling"],
-        "is_default_for": ["judge", "generate"],
+        "capabilities": ["vision", "function_calling", "json"],
     },
     "claude-3-haiku": {
         "provider": "anthropic",
         "model_id": "claude-3-haiku-20240307",
         "display_name": "Claude 3 Haiku",
         "max_tokens": 4096,
-        "supports_streaming": True,
-        "supports_json": True,
         "cost_per_1k_input": 0.00025,
         "cost_per_1k_output": 0.00125,
         "latency_class": "fast",
-        "capabilities": ["vision", "function_calling"],
-        "is_default_for": ["classify"],
+        "capabilities": ["vision", "json"],
     },
-    # Local via Ollama
     "llama3.1:8b": {
         "provider": "local",
         "model_id": "llama3.1:8b",
         "display_name": "Llama 3.1 8B (local)",
-        "max_tokens": 4096,
-        "supports_streaming": True,
-        "supports_json": True,
+        "max_tokens": 8192,
         "cost_per_1k_input": 0.0,
         "cost_per_1k_output": 0.0,
         "latency_class": "slow",
-        "capabilities": [],
+        "capabilities": ["json"],
     },
-    # Embeddings
     "text-embedding-3-small": {
         "provider": "openai",
         "model_id": "text-embedding-3-small",
-        "display_name": "text-embedding-3-small",
+        "display_name": "Text Embedding 3 Small",
         "max_tokens": 8191,
-        "supports_streaming": False,
-        "supports_json": False,
         "cost_per_1k_input": 0.00002,
         "cost_per_1k_output": 0.0,
         "latency_class": "fast",
         "capabilities": ["embeddings"],
-        "is_default_for": ["embed"],
     },
     "text-embedding-3-large": {
         "provider": "openai",
         "model_id": "text-embedding-3-large",
-        "display_name": "text-embedding-3-large",
+        "display_name": "Text Embedding 3 Large",
         "max_tokens": 8191,
-        "supports_streaming": False,
-        "supports_json": False,
         "cost_per_1k_input": 0.00013,
         "cost_per_1k_output": 0.0,
         "latency_class": "medium",
         "capabilities": ["embeddings"],
     },
-    # Judge model (for claim verification)
-    "gpt-4o-mini-judge": {
-        "provider": "openai",
-        "model_id": "gpt-4o-mini",
-        "display_name": "GPT-4o Mini (Judge)",
-        "max_tokens": 4096,
-        "supports_streaming": True,
-        "supports_json": True,
-        "cost_per_1k_input": 0.00015,
-        "cost_per_1k_output": 0.0006,
-        "latency_class": "fast",
-        "capabilities": ["json"],
-        "is_default_for": ["judge"],
-    },
+}
+
+# Which catalog entry each pipeline task falls back to. Keyed by the *configured*
+# model name, so if an operator points LITELLM_MODEL at something undocumented,
+# task routing still resolves and the catalog can flag it as unknown.
+_TASK_FOR_MODEL = {
+    "chat": "litellm_model",
+    "judge": "litellm_judge_model",
+    "generate": "litellm_model",
+    "classify": "litellm_model",
+    "embed": "embedding_model",
 }
 
 
-def _get_current_config() -> dict:
-    """Get current model router config from settings."""
-    s = get_settings()
+def _entry_for(model_name: str) -> dict:
+    """Catalog metadata for ``model_name``, synthesising it when undocumented."""
+    known = MODEL_CATALOG.get(model_name)
+    if known:
+        return {"id": model_name, **known, "known": True}
+    # Derive the provider from a `provider/model` LiteLLM prefix when present.
+    provider, _, bare = model_name.rpartition("/")
     return {
-        "chat_model": s.litellm_chat_model,
-        "judge_model": s.litellm_judge_model,
-        "generate_model": s.litellm_chat_model,  # same as chat by default
-        "embed_model": s.litellm_embed_model,
-        "classify_model": s.litellm_chat_model,
-        "fallbacks": {
-            "chat": ["gpt-4o-mini", "claude-3-haiku"],
-            "judge": ["gpt-4o-mini-judge", "claude-3-haiku"],
-            "generate": ["gpt-4o-mini", "claude-3-haiku"],
-            "embed": ["text-embedding-3-small"],
-            "classify": ["gpt-4o-mini", "claude-3-haiku"],
-        },
+        "id": model_name,
+        "provider": provider or "litellm",
+        "model_id": model_name,
+        "display_name": bare or model_name,
+        "max_tokens": None,
+        "cost_per_1k_input": None,
+        "cost_per_1k_output": None,
+        "latency_class": "unknown",
+        "capabilities": [],
+        "known": False,
     }
+
+
+def _task_models() -> dict[ModelTask, str]:
+    settings = get_settings()
+    return {
+        ModelTask.chat: settings.litellm_model,
+        ModelTask.judge: settings.litellm_judge_model,
+        # Generation reuses the chat model by design: studio output is the same
+        # task as chat, just with a JSON-returning prompt.
+        ModelTask.generate: settings.litellm_model,
+        ModelTask.classify: settings.litellm_model,
+        ModelTask.embed: settings.embedding_model,
+    }
+
+
+def _fallback_chain(task: ModelTask, primary: str) -> list[str]:
+    """Cheaper alternatives for ``task``, never including the primary model.
+
+    Ordered by cost so a fallback always trades some quality for latency. The
+    chain is advisory — it's what the pipeline would reach for, not a guarantee,
+    and the UI labels it as such.
+    """
+    settings = get_settings()
+    pool = {
+        "gpt-4o-mini",
+        "claude-3-haiku",
+        "text-embedding-3-small",
+    } if task is not ModelTask.embed else {"text-embedding-3-small"}
+    # A local model is never a *fallback*: if one is configured it's a deliberate
+    # privacy choice, and silently routing a fallback to it would send data off-box.
+    if settings.litellm_base_url:
+        return []
+    priced = [
+        m for m in pool
+        if m != primary
+        and MODEL_CATALOG[m]["cost_per_1k_input"] <= MODEL_CATALOG.get(
+            primary, {"cost_per_1k_input": 0.0}
+        )["cost_per_1k_input"]
+    ]
+    priced.sort(key=lambda m: MODEL_CATALOG[m]["cost_per_1k_input"])
+    return priced
 
 
 @router.get("/catalog")
-async def list_models() -> dict[str, list[dict]]:
-    """List all available models grouped by provider."""
+async def list_models(_user: UserDep) -> dict:
+    """Model catalog grouped by provider, with routing status per entry."""
+    task_models = _task_models()
+    routed_by: dict[str, list[str]] = {}
+    for task, name in task_models.items():
+        routed_by.setdefault(name, []).append(task.value)
+
     by_provider: dict[str, list[dict]] = {}
-    for model_id, info in MODEL_CATALOG.items():
-        provider = info["provider"]
-        if provider not in by_provider:
-            by_provider[provider] = []
-        by_provider[provider].append({"id": model_id, **info})
-    return {"models": by_provider}
+    for name in dict.fromkeys([*MODEL_CATALOG, *routed_by]):
+        entry = _entry_for(name)
+        entry["is_default_for"] = sorted(routed_by.get(name, []))
+        by_provider.setdefault(entry["provider"], []).append(entry)
+
+    for entries in by_provider.values():
+        entries.sort(key=lambda e: (not e["is_default_for"], e["display_name"]))
+
+    return {"models": by_provider, "proxy_configured": bool(get_settings().litellm_base_url)}
 
 
-@router.get("/config", response_model=dict)
-async def get_router_config() -> dict:
-    """Get current model router configuration."""
-    return _get_current_config()
-
-
-# TODO: Add PATCH /config for admin updates (requires auth)
-# TODO: Add per-user/model preferences
+@router.get("/config", response_model=ModelRouterConfig)
+async def get_router_config(_user: UserDep) -> ModelRouterConfig:
+    """The routing table the pipeline actually runs with."""
+    task_models = _task_models()
+    return ModelRouterConfig(
+        chat_model=task_models[ModelTask.chat],
+        judge_model=task_models[ModelTask.judge],
+        generate_model=task_models[ModelTask.generate],
+        embed_model=task_models[ModelTask.embed],
+        classify_model=task_models[ModelTask.classify],
+        fallbacks={
+            task.value: _fallback_chain(task, name)
+            for task, name in task_models.items()
+        },
+    )
 
 
 @router.get("/defaults")
-async def get_task_defaults() -> dict[str, str]:
-    """Get default model ID for each task."""
-    s = get_settings()
-    return {
-        "chat": s.litellm_chat_model,
-        "judge": s.litellm_judge_model,
-        "generate": s.litellm_chat_model,
-        "embed": s.litellm_embed_model,
-        "classify": s.litellm_chat_model,
-    }
+async def get_task_defaults(_user: UserDep) -> dict[str, str]:
+    """Flat ``task -> model`` map, the shape the Settings panel binds to."""
+    return {task.value: name for task, name in _task_models().items()}
