@@ -21,7 +21,9 @@
 | Session protection | ✅ | Short-lived JWT; refresh via Supabase; `autoRefreshToken` client-side |
 | Dependency vulnerability scan | ✅ | `pip audit`/`npm audit` runs in CI |
 | Record-level access tests | ✅ | `test_rls.py` |
-| Security headers | ✅ | `X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy`, `Permissions-Policy`, `HSTS`, `no-store` on `/api/*` |
+| Security headers | ✅ | `vercel.json` (production) and `frontend/nginx.conf` (docker): `X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy`, `Permissions-Policy`, CSP; HSTS on Vercel; backend `no-store` on `/api/*` |
+| Content-Security-Policy | ✅ | `script-src` is `'self'` + sha256 of the two inline scripts — no `unsafe-inline`, no `unsafe-eval`; `tests/csp.test.js` recomputes those hashes from `index.html` and fails if either config drifts, or if an env placeholder reappears inside a script |
+| Injected markup cannot execute | ✅ | `mdToHtml` escapes before formatting and links are scheme-restricted; `tests/markdown-safety.test.js` pins it with 25 XSS vectors |
 | Cookie banner + legal pages | ✅ | `/privacy`, `/terms`, `/thanks`, cookie consent |
 | Custom 404 + Security + Contact pages | ✅ | NotFound on unknown routes; /security publishes the hardening checklist, /contact holds the real address and a validated form |
 | Per-route meta title + description + OG | ✅ | RouteMeta in App.jsx sets title, description, OG/Twitter tags and canonical URL on every route |

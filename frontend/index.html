@@ -84,11 +84,15 @@
       href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap"
       rel="stylesheet"
     />
+    <!-- The analytics id lives here rather than inside the script below so
+         that script's text — and therefore its CSP hash — is identical in
+         every build, whatever VITE_GA_ID is set to. -->
+    <meta name="studyspace:analytics-id" content="%VITE_GA_ID%" />
     <script>
       // Analytics is installed but inert until you set VITE_GA_ID in .env.
       // Page views are sent on every SPA route change (see src/main.jsx).
       (function () {
-        var id = "%VITE_GA_ID%";
+        var id = document.querySelector('meta[name="studyspace:analytics-id"]').content;
         if (!id || id.charAt(0) === "%") return;
         var s = document.createElement("script");
         s.async = true;
