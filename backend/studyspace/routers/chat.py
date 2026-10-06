@@ -4,17 +4,18 @@ from __future__ import annotations
 
 import json
 import uuid
-from typing import Any, AsyncIterator
+from collections.abc import AsyncIterator
+from typing import Any
 
 from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import StreamingResponse
 
 from studyspace.config import get_settings
+from studyspace.db import user_conn
 from studyspace.deps import DbDep, UserDep
 from studyspace.models.chat import ChatHistory, ChatMessage, ChatRequest, ChatThread
 from studyspace.rate_limit import rate_limit
 from studyspace.services.rag import ChatContext, run_chat
-from studyspace.db import user_conn
 
 router = APIRouter(prefix="/spaces/{space_id}/chat", tags=["chat"])
 

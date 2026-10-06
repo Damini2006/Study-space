@@ -9,8 +9,8 @@ rest of the app (no service-role key in the request path).
 
 from __future__ import annotations
 
-import json
-from typing import Any, Callable
+from collections.abc import Callable
+from typing import Any
 
 from langgraph.checkpoint.base import BaseCheckpointSaver, CheckpointTuple
 

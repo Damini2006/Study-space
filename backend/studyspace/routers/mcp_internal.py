@@ -1,10 +1,8 @@
 """MCP token verification endpoint for the MCP server to call."""
 
-from fastapi import APIRouter, Depends, Header, HTTPException, status
+from fastapi import APIRouter, HTTPException
 
 from studyspace.db_service import service_conn
-from studyspace.config import get_settings
-from studyspace.security import hash_token
 
 router = APIRouter(prefix="/me/mcp-tokens", tags=["mcp-internal"])
 

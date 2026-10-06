@@ -9,8 +9,8 @@ chunks and results on behalf of users whose rows they own.
 
 from __future__ import annotations
 
+from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
-from typing import AsyncIterator
 
 import asyncpg
 

@@ -2,15 +2,16 @@
 
 from __future__ import annotations
 
-from typing import Annotated, Any, AsyncIterator, Callable
+from collections.abc import AsyncIterator, Callable
+from typing import Annotated, Any
 
 import asyncpg
 from fastapi import Depends, Header, HTTPException, Request, status
 
-from studyspace.config import get_settings
 from studyspace.db import user_conn
 from studyspace.rate_limit import rate_limit
 from studyspace.security import AuthError, VerifiedUser, verify_token
+
 
 async def get_verified_user(
     request: Request,

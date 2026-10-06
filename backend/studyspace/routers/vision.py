@@ -8,6 +8,7 @@ so nothing is ever publicly readable.
 from __future__ import annotations
 
 import uuid
+from typing import Annotated
 
 import httpx
 from fastapi import APIRouter, File, HTTPException, Request, UploadFile
@@ -85,7 +86,7 @@ async def create_item(body: VisionItemCreate, db: DbDep) -> VisionItemOut:
 
 @router.post("/upload", response_model=VisionItemOut, status_code=201)
 async def upload_image(
-    request: Request, db: DbDep, file: UploadFile = File(...)
+    request: Request, db: DbDep, file: Annotated[UploadFile, File()]
 ) -> VisionItemOut:
     """Store an image in the `vision` bucket and create its board item."""
     settings = get_settings()

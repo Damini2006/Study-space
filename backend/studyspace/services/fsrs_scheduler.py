@@ -97,9 +97,9 @@ def review(snapshot: CardSnapshot, rating: int, *, now: datetime | None = None) 
         result = scheduler.review(card, rating_enum, review_datetime=now or datetime.now(timezone.utc))
 
     if isinstance(result, tuple):
-        new_card, log = result
+        new_card, _ = result
     else:
-        new_card, log = card, getattr(card, "last_log", None)
+        new_card = card
 
     due = new_card.due
     if due is not None and getattr(due, "tzinfo", None) is None:

@@ -9,17 +9,16 @@ import uuid
 
 from fastapi import APIRouter, HTTPException
 
+from studyspace.db import user_conn
 from studyspace.deps import DbDep, UserDep
 from studyspace.models.planner import (
-    GhostTask,
-    PlanTaskOut,
     PlannerApprove,
     PlannerRunCreate,
     PlannerRunOut,
+    PlanTaskOut,
 )
 from studyspace.services.checkpoints import PostgresCheckpointer
 from studyspace.services.planner import resume_run, start_run
-from studyspace.db import user_conn
 
 router = APIRouter(prefix="/planner", tags=["planner"])
 
@@ -80,7 +79,6 @@ async def create_run(body: PlannerRunCreate, db: DbDep, user: UserDep) -> Planne
         raise HTTPException(status_code=502, detail="Planning failed — please try again.") from exc
 
     interrupt_payload = state.get("__interrupt__")
-    status = "awaiting_approval"
     proposal = state.get("proposal")
     if not proposal and not interrupt_payload:
         await db.execute(

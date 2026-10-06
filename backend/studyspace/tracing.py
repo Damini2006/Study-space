@@ -9,9 +9,10 @@ the code base never needs to branch on configuration.
 from __future__ import annotations
 
 import uuid
+from collections.abc import Iterator
 from contextlib import contextmanager
 from dataclasses import dataclass, field
-from typing import Any, Iterator
+from typing import Any
 
 from studyspace.config import get_settings
 

@@ -9,8 +9,9 @@ from __future__ import annotations
 
 import os
 import re
+from collections.abc import Sequence
 from dataclasses import dataclass, field
-from typing import Any, Sequence
+from typing import Any
 
 import asyncpg
 
@@ -157,7 +158,7 @@ def reciprocal_rank_fusion(
     """RRF: score(d) = Σ 1/(k + rank_i(d)) over each ranked list."""
     weights = list(weights) if weights else [1.0] * len(ranked_lists)
     scores: dict[str, float] = {}
-    for weight, ranked in zip(weights, ranked_lists):
+    for weight, ranked in zip(weights, ranked_lists, strict=False):
         for rank, doc_id in enumerate(ranked, start=1):
             scores[doc_id] = scores.get(doc_id, 0.0) + weight * (1.0 / (k + rank))
     return scores
@@ -190,7 +191,7 @@ def lexical_rerank(query: str, candidates: list[Candidate]) -> list[Candidate]:
 
     k1, b = 1.5, 0.75
     n = len(docs)
-    for cand, tokens in zip(candidates, docs):
+    for cand, tokens in zip(candidates, docs, strict=False):
         tf: dict[str, int] = {}
         for t in tokens:
             tf[t] = tf.get(t, 0) + 1
@@ -238,7 +239,7 @@ async def cohere_rerank(query: str, candidates: list[Candidate]) -> list[Candida
         cand.rerank_score = float(item.get("relevance_score", 0.0))
         ordered.append(cand)
         seen.add(cand.chunk_id)
-    for i, cand in enumerate(candidates):
+    for cand in candidates:
         if cand.chunk_id not in seen:
             cand.rerank_score = float(cand.fused_score)
             ordered.append(cand)
@@ -256,7 +257,7 @@ def cross_encoder_rerank(query: str, candidates: list[Candidate]) -> list[Candid
         model = CrossEncoder(settings.reranker_model)
         pairs = [(query, c.content[:2000]) for c in candidates]
         scores = model.predict(pairs)
-        for cand, score in zip(candidates, scores):
+        for cand, score in zip(candidates, scores, strict=False):
             cand.rerank_score = float(score)
         return candidates
     except Exception:

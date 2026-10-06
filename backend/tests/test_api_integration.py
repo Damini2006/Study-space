@@ -4,10 +4,9 @@ and claims-aware DB access) against a real Postgres."""
 from __future__ import annotations
 
 import pytest
+from conftest import headers_for
 
 pytestmark = pytest.mark.asyncio
-
-from conftest import headers_for
 
 USER = {"id": "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa", "email": "alice@test.dev"}
 OTHER = {"id": "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb", "email": "bob@test.dev"}
@@ -76,7 +75,6 @@ async def test_notes_and_habits_and_focus_roundtrip(api_client, migrated_db, two
         headers=h,
     )
     assert create_note.status_code == 201, create_note.text
-    note = create_note.json()
 
     searched = await api_client.get("/api/notes?q=mitosis", headers=h)
     assert any(n["title"] == "Mitosis" for n in searched.json())
@@ -107,9 +105,8 @@ async def test_review_cards_updates_state_and_logs(api_client, migrated_db, two_
     # create a card directly through SQL via a service row (API only does
     # generation through studio — here we seed it directly as the user)
     # Use realistic FSRS initial values (after first review: stability~2.3, difficulty~2.1)
-    from studyspace.db import get_pool, user_conn
+    from studyspace.db import user_conn
 
-    pool = get_pool()
     async with user_conn({"sub": USER["id"], "role": "authenticated"}) as conn:
         card_id = await conn.fetchval(
             "insert into public.cards (space_id, front, back, tags) values ($1, 'ATP yield?', 'About 36-38', $2::text[]) returning id",
@@ -161,6 +158,7 @@ async def test_focus_analytics_and_plans_roundtrip(api_client, migrated_db, two_
 
     # manually approve a draft plan would go through planner; just insert a task
     import asyncpg
+
     from studyspace.db import set_pool, user_conn
 
     pool = await asyncpg.create_pool(dsn=migrated_db, min_size=1, max_size=4)

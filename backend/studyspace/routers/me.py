@@ -2,9 +2,7 @@
 
 from __future__ import annotations
 
-import json
-
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter
 from fastapi.responses import JSONResponse
 
 from studyspace.deps import DbDep, UserDep

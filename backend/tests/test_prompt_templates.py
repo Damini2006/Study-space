@@ -118,10 +118,10 @@ class TestBuiltInConsistency:
     def test_every_builtin_renders_with_its_declared_variables(self):
         """The proof that `variables` is not decorative: it is exactly what
         makes each built-in render."""
-        for type_, info in SYSTEM_TEMPLATES.items():
+        for info in SYSTEM_TEMPLATES.values():
             values = {name: f"<{name}>" for name in info["variables"]}
             out = _render(info["template"], values)
-            for name, value in values.items():
+            for value in values.values():
                 assert value in out
 
     def test_entries_carry_a_name_and_description(self):

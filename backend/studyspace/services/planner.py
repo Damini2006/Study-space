@@ -12,10 +12,9 @@ approval — enforced both by the graph structure and by a test.
 
 from __future__ import annotations
 
-import json
-import uuid
+from collections.abc import Callable
 from datetime import date, timedelta
-from typing import Annotated, Any, Callable, TypedDict
+from typing import Any, TypedDict
 
 from langgraph.graph import END, START, StateGraph
 from langgraph.types import Command, interrupt
@@ -23,7 +22,6 @@ from langgraph.types import Command, interrupt
 from studyspace.config import get_settings
 from studyspace.services import llm
 from studyspace.tracing import span as trace_span
-
 
 # ---------------------------------------------------------------------------
 # State
@@ -123,8 +121,8 @@ async def draft_plan(state: PlannerState, *, conn_factory: Callable) -> dict:
     prompt = (
         f"Today is {today.isoformat()} (horizon: {horizon} days, max {max_tasks} tasks).\n\n"
         f"Exam dates:\n" + ("\n".join(exam_lines) or "- none given") + "\n\n"
-        f"Weekly availability:\n" + ("\n".join(avail_lines) or "- flexible") + "\n\n"
-        f"Weak topics (from flashcard lapses + student input): "
+        "Weekly availability:\n" + ("\n".join(avail_lines) or "- flexible") + "\n\n"
+        "Weak topics (from flashcard lapses + student input): "
         + (", ".join(weak) or "none") + "\n\n"
         f"Open tasks already planned: {context.get('open_tasks', 0)}; due flashcards: {context.get('due_cards', 0)}.\n\n"
         f"Available Spaces (use only these ids in space_id):\n" + ("\n".join(space_lines) or "- none") + "\n\n"

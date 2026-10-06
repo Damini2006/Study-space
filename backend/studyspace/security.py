@@ -8,7 +8,8 @@ from dataclasses import dataclass
 from typing import Any
 
 import httpx
-from joserfc import jwk, jwt as jose_jwt
+from joserfc import jwk
+from joserfc import jwt as jose_jwt
 from joserfc.errors import JoseError
 
 from studyspace.config import Settings, get_settings
@@ -74,7 +75,8 @@ async def verify_token(token: str, settings: Settings | None = None) -> Verified
     issuer, audience = _expected_claims(settings)
 
     try:
-        import base64, json as _json
+        import base64
+        import json as _json
 
         seg = token.split(".", 1)[0]
         pad = "=" * (-len(seg) % 4)

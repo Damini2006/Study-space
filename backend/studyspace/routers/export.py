@@ -9,12 +9,12 @@ import uuid
 import zipfile
 from datetime import datetime
 from enum import Enum
+from typing import Annotated
 
 from fastapi import APIRouter, HTTPException, Query
 from fastapi.responses import StreamingResponse
 
 from studyspace.deps import DbDep
-from studyspace.models.spaces import SpaceOut
 
 router = APIRouter(prefix="/spaces", tags=["export"])
 
@@ -37,7 +37,7 @@ def _make_filename(space_title: str, fmt: ExportFormat) -> str:
 async def export_space(
     db: DbDep,
     space_id: uuid.UUID,
-    fmt: ExportFormat = Query(ExportFormat.markdown),
+    fmt: Annotated[ExportFormat, Query()] = ExportFormat.markdown,
 ) -> StreamingResponse:
     """Export a space as Anki deck, PDF, Markdown zip, or Notion CSV."""
 
@@ -46,9 +46,8 @@ async def export_space(
         "select * from public.spaces where id = $1 and user_id = auth.uid()", space_id
     )
     if space is None:
-        # Check shared access via token in header
-        share_token = None
-        # In practice, share token would come from a custom header or query param
+        # Shared access via token is not wired up yet: in practice it would come
+        # from a custom header or query param, and fall through here if absent.
         raise HTTPException(status_code=404, detail="Space not found or not yours.")
 
     # Fetch all related data

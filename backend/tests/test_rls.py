@@ -36,8 +36,9 @@ async def test_every_table_has_rls(migrated_db):
 
 
 async def test_spaces_invisible_to_other_users(migrated_db, two_users):
-    from studyspace.db import set_pool, user_conn
     import asyncpg
+
+    from studyspace.db import set_pool, user_conn
 
     settings_pool = await asyncpg.create_pool(dsn=migrated_db, min_size=1, max_size=4)
     set_pool(settings_pool)
@@ -60,8 +61,9 @@ async def test_spaces_invisible_to_other_users(migrated_db, two_users):
 
 
 async def test_insert_as_other_user_blocked(migrated_db, two_users):
-    from studyspace.db import set_pool, user_conn
     import asyncpg
+
+    from studyspace.db import set_pool, user_conn
 
     pool = await asyncpg.create_pool(dsn=migrated_db, min_size=1, max_size=4)
     set_pool(pool)
@@ -95,8 +97,9 @@ async def test_insert_as_other_user_blocked(migrated_db, two_users):
 
 
 async def test_chunks_and_sources_follow_rls(migrated_db, two_users):
-    from studyspace.db import set_pool, user_conn
     import asyncpg
+
+    from studyspace.db import set_pool, user_conn
 
     pool = await asyncpg.create_pool(dsn=migrated_db, min_size=1, max_size=4)
     set_pool(pool)
@@ -133,6 +136,7 @@ async def test_chunks_and_sources_follow_rls(migrated_db, two_users):
 
 async def test_chat_and_study_tables_respect_rls(migrated_db, two_users):
     import asyncpg
+
     from studyspace.db import set_pool, user_conn
 
     pool = await asyncpg.create_pool(dsn=migrated_db, min_size=1, max_size=4)

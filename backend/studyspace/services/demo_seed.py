@@ -13,7 +13,6 @@ import json
 import random
 from datetime import date, datetime, timedelta, timezone
 
-from studyspace.config import get_settings
 from studyspace.queue import enqueue_ingest
 
 DEMO_SOURCES = [
@@ -166,7 +165,6 @@ DEMO_HABITS = [
 
 async def seed_demo(user_id: str, conn) -> dict:
     """Seed the demo workspace using an already-authenticated user connection."""
-    settings = get_settings()
     now = datetime.now(timezone.utc)
     space_id = await conn.fetchval(
         "insert into public.spaces (user_id, title, description, subject, color) values ($1, $2, $3, $4, $5) returning id",

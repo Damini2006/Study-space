@@ -34,7 +34,8 @@ async def main() -> int:
             return 1
         token = r.json()["access_token"]
 
-    import base64, json as _json
+    import base64
+    import json as _json
 
     seg = token.split(".", 1)[0]
     header = _json.loads(base64.urlsafe_b64decode(seg + "=" * (-len(seg) % 4)))

@@ -31,7 +31,7 @@ def _local_embed(text: str, dim: int) -> list[float]:
     vec = [0.0] * dim
     tokens = _TOKEN_RE.findall(text.lower())
     grams = list(tokens)
-    grams += [f"{a} {b}" for a, b in zip(tokens, tokens[1:])]
+    grams += [f"{a} {b}" for a, b in zip(tokens, tokens[1:], strict=False)]
 
     for gram in grams:
         digest = hashlib.md5(gram.encode("utf-8")).digest()

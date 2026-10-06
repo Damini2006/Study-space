@@ -9,12 +9,13 @@ access uses signed URLs.
 from __future__ import annotations
 
 import uuid
+from typing import Annotated
 
 import httpx
 from fastapi import APIRouter, File, HTTPException, Request, UploadFile
 
 from studyspace.config import get_settings
-from studyspace.deps import DbDep, UserDep
+from studyspace.deps import DbDep
 from studyspace.models.sources import PastedTextInput, SourceOut, UploadResponse
 from studyspace.queue import enqueue_ingest
 from studyspace.rate_limit import quota_used_bytes, rate_limit
@@ -129,7 +130,7 @@ async def upload_source(
     request: Request,
     space_id: uuid.UUID,
     db: DbDep,
-    file: UploadFile = File(...),
+    file: Annotated[UploadFile, File()],
 ) -> UploadResponse:
     settings = get_settings()
     user = request.state.verified_user
@@ -171,13 +172,13 @@ async def upload_source(
             source_id=row_id, user_id=user.id, space_id=space_id,
             storage_path=storage_path, file_type=file_type, title=safe_name,
         )
-    except Exception:
+    except Exception as exc:
         await db.execute(
             "update public.sources set status = 'failed', error = $2 where id = $1",
             row_id,
             "Background queue unavailable — start Redis (docker compose up -d redis) and retry.",
         )
-        raise HTTPException(status_code=503, detail="Job queue unavailable. Please retry shortly.")
+        raise HTTPException(status_code=503, detail="Job queue unavailable. Please retry shortly.") from exc
 
     row = await db.fetchrow(_SOURCE_SELECT + " where s.id = $1", row_id)
     return UploadResponse(source=_to_out(row))
@@ -216,13 +217,13 @@ async def add_pasted_text(
             title=body.title,
             pasted_text=body.content,
         )
-    except Exception:
+    except Exception as exc:
         await db.execute(
             "update public.sources set status = 'failed', error = $2 where id = $1",
             row_id,
             "Background queue unavailable — start Redis (docker compose up -d redis) and retry.",
         )
-        raise HTTPException(status_code=503, detail="Job queue unavailable. Please retry shortly.")
+        raise HTTPException(status_code=503, detail="Job queue unavailable. Please retry shortly.") from exc
 
     row = await db.fetchrow(_SOURCE_SELECT + " where s.id = $1", row_id)
     return UploadResponse(source=_to_out(row))
@@ -232,7 +233,6 @@ async def add_pasted_text(
 async def delete_source(
     request: Request, space_id: uuid.UUID, source_id: uuid.UUID, db: DbDep
 ) -> None:
-    user = request.state.verified_user
     row = await db.fetchrow(
         "select id, storage_path from public.sources where id = $1 and space_id = $2 and user_id = auth.uid()",
         source_id, space_id,

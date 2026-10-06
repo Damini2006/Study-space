@@ -39,14 +39,14 @@ async def list_habits(db: DbDep, days: int = Query(default=30, ge=7, le=180)) ->
     today = date.today()
     out: list[HabitOut] = []
     for h in habits:
-        h_logs = [l for l in logs if l["habit_id"] == h["id"]]
-        log_dates = {l["log_date"] for l in h_logs}
+        h_logs = [entry for entry in logs if entry["habit_id"] == h["id"]]
+        log_dates = {entry["log_date"] for entry in h_logs}
         out.append(
             HabitOut(
                 id=h["id"], name=h["name"], color=h["color"], icon=h["icon"],
                 target_days=h["target_days"], archived=h["archived"],
                 created_at=h["created_at"], updated_at=h["updated_at"],
-                logs=[HabitLogOut(**dict(l)) for l in h_logs[:60]],
+                logs=[HabitLogOut(**dict(entry)) for entry in h_logs[:60]],
                 done_today=today in log_dates,
                 streak=_streak(log_dates, today),
             )
@@ -136,12 +136,12 @@ async def _habit_with_logs(habit_id: uuid.UUID, db) -> HabitOut:
         "where habit_id = $1 order by log_date desc limit 60",
         habit_id,
     )
-    log_dates = {l["log_date"] for l in logs}
+    log_dates = {entry["log_date"] for entry in logs}
     return HabitOut(
         id=h["id"], name=h["name"], color=h["color"], icon=h["icon"],
         target_days=h["target_days"], archived=h["archived"],
         created_at=h["created_at"], updated_at=h["updated_at"],
-        logs=[HabitLogOut(**dict(l)) for l in logs],
+        logs=[HabitLogOut(**dict(entry)) for entry in logs],
         done_today=date.today() in log_dates,
         streak=_streak(log_dates, date.today()),
     )

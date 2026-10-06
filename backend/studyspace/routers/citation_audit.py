@@ -23,14 +23,16 @@ out which space or which document it belonged to.
 from __future__ import annotations
 
 from datetime import datetime, timezone
-from typing import Optional
 from uuid import UUID
 
 from fastapi import APIRouter, HTTPException
 
 from studyspace.deps import DbDep
 from studyspace.models.ai_intelligence import (
-    CitationAuditItem, CitationAuditReport, CitationAuditRequest, CitationAuditStatus,
+    CitationAuditItem,
+    CitationAuditReport,
+    CitationAuditRequest,
+    CitationAuditStatus,
 )
 
 router = APIRouter(prefix="/spaces", tags=["citation-audit"])
@@ -45,11 +47,11 @@ MAX_ITEMS = 2_000
 
 
 def _classify(
-    chunk_id: Optional[UUID],
-    source_id: Optional[UUID],
-    source_updated_at: Optional[datetime],
-    created_at: Optional[datetime],
-    score: Optional[float],
+    chunk_id: UUID | None,
+    source_id: UUID | None,
+    source_updated_at: datetime | None,
+    created_at: datetime | None,
+    score: float | None,
     verified: bool,
 ) -> tuple[CitationAuditStatus, str]:
     """Map one citation row onto a status and a human explanation.

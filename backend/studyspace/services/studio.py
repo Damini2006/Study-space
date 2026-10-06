@@ -14,12 +14,13 @@ import asyncpg
 from studyspace.config import get_settings
 from studyspace.models.ai_intelligence import RagConfig
 from studyspace.models.studio import StudioGenerateRequest, StudioType
+from studyspace.security import SOURCE_UNTRUSTED_MARKER, wrap_untrusted
 from studyspace.services import llm
 from studyspace.services.embeddings import embed_query
 from studyspace.services.rag_config import global_rag_config, resolve_rag_config
 from studyspace.services.retrieval import Candidate, hybrid_search
-from studyspace.security import SOURCE_UNTRUSTED_MARKER, wrap_untrusted
-from studyspace.tracing import new_trace_id, span as trace_span
+from studyspace.tracing import new_trace_id
+from studyspace.tracing import span as trace_span
 
 MAX_CONTEXT_CHARS = 24_000  # ~6k tokens of evidence per generation
 _CITE_RE = re.compile(r"\[(\d{1,3})\]")

@@ -5,13 +5,18 @@ from __future__ import annotations
 import secrets
 import uuid
 
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, HTTPException
 
-from studyspace.deps import DbDep, UserDep
+from studyspace.deps import DbDep
 from studyspace.models.spaces import (
-    SpaceCreate, SpaceOut, SpaceUpdate,
-    ShareRole, SpaceShareCreate, SpaceShareOut, SpaceShareListItem,
-    SpacePublicCreate, SpacePublicOut,
+    SpaceCreate,
+    SpaceOut,
+    SpacePublicCreate,
+    SpacePublicOut,
+    SpaceShareCreate,
+    SpaceShareListItem,
+    SpaceShareOut,
+    SpaceUpdate,
 )
 
 router = APIRouter(prefix="/spaces", tags=["spaces"])

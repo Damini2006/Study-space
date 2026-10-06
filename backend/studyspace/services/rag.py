@@ -17,10 +17,10 @@ from __future__ import annotations
 
 import re
 import time
-import uuid
+from collections.abc import AsyncIterator, Callable
 from dataclasses import dataclass
-from datetime import datetime, timezone
-from typing import Any, AsyncIterator, Callable
+from datetime import datetime
+from typing import Any
 
 import asyncpg
 from pydantic import BaseModel
@@ -28,12 +28,13 @@ from pydantic import BaseModel
 from studyspace.config import get_settings
 from studyspace.models.ai_intelligence import RagConfig
 from studyspace.models.chat import ChatRequest, LayerToggles
-from studyspace.services.rag_config import describe, global_rag_config, resolve_rag_config
+from studyspace.security import SOURCE_UNTRUSTED_MARKER, wrap_untrusted
 from studyspace.services import llm
 from studyspace.services.embeddings import embed_query
+from studyspace.services.rag_config import describe, global_rag_config, resolve_rag_config
 from studyspace.services.retrieval import Candidate, hybrid_search
-from studyspace.security import SOURCE_UNTRUSTED_MARKER, wrap_untrusted
-from studyspace.tracing import new_trace_id, span as trace_span
+from studyspace.tracing import new_trace_id
+from studyspace.tracing import span as trace_span
 
 CitationLabel = int
 
@@ -622,8 +623,8 @@ async def run_chat(ctx: ChatContext) -> AsyncIterator[dict[str, Any]]:
 
 
 def _safe_error(exc: Exception) -> str:
-    from studyspace.services.llm import LLMError
     from studyspace.services.embeddings import EmbeddingError
+    from studyspace.services.llm import LLMError
 
     if isinstance(exc, (LLMError, EmbeddingError)):
         return "The assistant is temporarily unavailable. Please try again."

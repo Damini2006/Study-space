@@ -18,7 +18,7 @@ SECRET = "test-secret-that-is-long-enough-for-hs256-000"
 
 
 def _jwt(claims: dict, key: str = SECRET) -> str:
-    from joserfc import jwt, jwk
+    from joserfc import jwk, jwt
 
     return jwt.encode({"alg": "HS256", "typ": "JWT"}, claims, jwk.import_key(key.encode(), "oct"))
 

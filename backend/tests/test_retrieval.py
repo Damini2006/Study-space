@@ -62,7 +62,6 @@ class TestChunking:
 
 class TestRRF:
     def test_reciprocal_rank_fusion_adds_scores(self):
-        doc_a = "doc-a"
         d1 = ["doc-a", "doc-b", "doc-c"]
         d2 = ["doc-c", "doc-a"]
         rrf = reciprocal_rank_fusion([d1, d2], k=60)

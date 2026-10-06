@@ -145,7 +145,7 @@ async def two_users(migrated_db):
 
 
 def make_token(user_id: str, email: str, secret: str = "test-secret-that-is-long-enough-for-hs256-000") -> str:
-    from joserfc import jwt, jwk
+    from joserfc import jwk, jwt
 
     now = int(time.time())
     claims = {

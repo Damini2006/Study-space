@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-import random
-
 from fastapi import APIRouter
 
 from studyspace.deps import DbDep

@@ -4,13 +4,11 @@ from __future__ import annotations
 
 from datetime import datetime
 from enum import Enum
-from typing import Any, Optional
 from uuid import UUID
 
 from pydantic import BaseModel, Field
 
 from studyspace.config import get_settings
-
 
 # ============================================================
 # Model Router
@@ -76,43 +74,43 @@ class PromptTemplateType(str, Enum):
 
 
 class PromptTemplate(BaseModel):
-    id: Optional[UUID] = None
+    id: UUID | None = None
     name: str = Field(min_length=1, max_length=100)
-    description: Optional[str] = None
+    description: str | None = None
     type: PromptTemplateType
     template: str  # Jinja2 template
     variables: list[str] = []  # expected template variables
     version: int = 1
     is_system: bool = False  # built-in templates
-    space_id: Optional[UUID] = None  # null = global
-    created_by: Optional[UUID] = None
-    created_at: Optional[datetime] = None
-    updated_at: Optional[datetime] = None
+    space_id: UUID | None = None  # null = global
+    created_by: UUID | None = None
+    created_at: datetime | None = None
+    updated_at: datetime | None = None
 
 
 class PromptTemplateCreate(BaseModel):
     name: str = Field(min_length=1, max_length=100)
-    description: Optional[str] = Field(default=None, max_length=500)
+    description: str | None = Field(default=None, max_length=500)
     type: PromptTemplateType
     template: str = Field(min_length=1)
     variables: list[str] = Field(default_factory=list)
     # Required — templates always belong to a space, so there's no shared global
     # slot for two users to collide in. Accepted in the body for client
     # convenience; the router prefers a `?space_id=` query param when both appear.
-    space_id: Optional[UUID] = None
+    space_id: UUID | None = None
 
 
 class PromptTemplateUpdate(BaseModel):
-    name: Optional[str] = Field(default=None, min_length=1, max_length=100)
-    description: Optional[str] = Field(default=None, max_length=500)
-    template: Optional[str] = Field(default=None, min_length=1)
-    variables: Optional[list[str]] = None
+    name: str | None = Field(default=None, min_length=1, max_length=100)
+    description: str | None = Field(default=None, max_length=500)
+    template: str | None = Field(default=None, min_length=1)
+    variables: list[str] | None = None
 
 
 class PromptTemplateRendered(BaseModel):
     """A rendered template, shaped for whichever role the type expects."""
-    system: Optional[str] = None
-    user: Optional[str] = None
+    system: str | None = None
+    user: str | None = None
     messages: list[dict[str, str]] = Field(default_factory=list)
 
 
@@ -157,34 +155,34 @@ class RagSettings(BaseModel):
     max_tokens: int = Field(default_factory=lambda: get_settings().llm_max_output_tokens)
     socratic_mode: bool = False
     # Model overrides
-    chat_model: Optional[str] = None
-    judge_model: Optional[str] = None
-    generate_model: Optional[str] = None
-    created_at: Optional[datetime] = None
-    updated_at: Optional[datetime] = None
+    chat_model: str | None = None
+    judge_model: str | None = None
+    generate_model: str | None = None
+    created_at: datetime | None = None
+    updated_at: datetime | None = None
 
     model_config = {"from_attributes": True}
 
 
 class RagSettingsUpdate(BaseModel):
     """Patch payload. Every field is optional; unset fields are left alone."""
-    top_k: Optional[int] = Field(default=None, ge=1, le=50)
-    vector_weight: Optional[float] = Field(default=None, ge=0.0, le=1.0)
-    fts_weight: Optional[float] = Field(default=None, ge=0.0, le=1.0)
-    rrf_k: Optional[int] = Field(default=None, ge=1, le=1000)
-    rerank_enabled: Optional[bool] = None
-    rerank_model: Optional[str] = Field(default=None, max_length=200)
-    rerank_top_n: Optional[int] = Field(default=None, ge=1, le=20)
-    relevance_gate: Optional[bool] = None
-    relevance_threshold: Optional[float] = Field(default=None, ge=0.0, le=1.0)
-    citation_validation: Optional[bool] = None
-    claim_verification: Optional[bool] = None
-    temperature: Optional[float] = Field(default=None, ge=0.0, le=2.0)
-    max_tokens: Optional[int] = Field(default=None, ge=256, le=8192)
-    socratic_mode: Optional[bool] = None
-    chat_model: Optional[str] = Field(default=None, max_length=200)
-    judge_model: Optional[str] = Field(default=None, max_length=200)
-    generate_model: Optional[str] = Field(default=None, max_length=200)
+    top_k: int | None = Field(default=None, ge=1, le=50)
+    vector_weight: float | None = Field(default=None, ge=0.0, le=1.0)
+    fts_weight: float | None = Field(default=None, ge=0.0, le=1.0)
+    rrf_k: int | None = Field(default=None, ge=1, le=1000)
+    rerank_enabled: bool | None = None
+    rerank_model: str | None = Field(default=None, max_length=200)
+    rerank_top_n: int | None = Field(default=None, ge=1, le=20)
+    relevance_gate: bool | None = None
+    relevance_threshold: float | None = Field(default=None, ge=0.0, le=1.0)
+    citation_validation: bool | None = None
+    claim_verification: bool | None = None
+    temperature: float | None = Field(default=None, ge=0.0, le=2.0)
+    max_tokens: int | None = Field(default=None, ge=256, le=8192)
+    socratic_mode: bool | None = None
+    chat_model: str | None = Field(default=None, max_length=200)
+    judge_model: str | None = Field(default=None, max_length=200)
+    generate_model: str | None = Field(default=None, max_length=200)
 
 
 class RagSettingsResolved(BaseModel):
@@ -214,9 +212,9 @@ class RagConfig(BaseModel):
     max_tokens: int
     socratic_mode: bool
     # Per-task model overrides; None means "use the deployment default".
-    chat_model: Optional[str] = None
-    judge_model: Optional[str] = None
-    generate_model: Optional[str] = None
+    chat_model: str | None = None
+    judge_model: str | None = None
+    generate_model: str | None = None
 
 
 # ============================================================
@@ -236,17 +234,17 @@ class CitationAuditItem(BaseModel):
     message_id: UUID
     # Nullable: these are exactly the fields that go null when the evidence is
     # deleted, which is the case the audit exists to report.
-    chunk_id: Optional[UUID] = None
-    source_id: Optional[UUID] = None
+    chunk_id: UUID | None = None
+    source_id: UUID | None = None
     source_title: str = "(deleted source)"
     label: int
     quote: str = ""
-    score: Optional[float] = None
+    score: float | None = None
     verified: bool = False
     status: CitationAuditStatus
     details: str
     created_at: datetime
-    source_updated_at: Optional[datetime] = None
+    source_updated_at: datetime | None = None
 
 
 class CitationAuditReport(BaseModel):
@@ -262,5 +260,5 @@ class CitationAuditReport(BaseModel):
 
 
 class CitationAuditRequest(BaseModel):
-    source_ids: Optional[list[UUID]] = None
-    since: Optional[datetime] = None  # only audit citations after this date
+    source_ids: list[UUID] | None = None
+    since: datetime | None = None  # only audit citations after this date

@@ -14,7 +14,7 @@ through the same code path as production is the only honest option.
 from __future__ import annotations
 
 import json
-from typing import Any, Optional
+from typing import Annotated, Any
 from uuid import UUID
 
 from fastapi import APIRouter, HTTPException, Query
@@ -22,7 +22,10 @@ from jinja2 import Environment, StrictUndefined, TemplateError
 
 from studyspace.deps import DbDep, UserDep
 from studyspace.models.ai_intelligence import (
-    PromptTemplateCreate, PromptTemplateRendered, PromptTemplateType, PromptTemplateUpdate,
+    PromptTemplateCreate,
+    PromptTemplateRendered,
+    PromptTemplateType,
+    PromptTemplateUpdate,
 )
 
 router = APIRouter(prefix="/prompt-templates", tags=["prompt-templates"])
@@ -190,8 +193,8 @@ def _hydrate(row: Any) -> dict[str, Any]:
 @router.get("")
 async def list_templates(
     db: DbDep,
-    space_id: UUID | None = Query(None),
-    type_: str | None = Query(None, alias="type"),
+    space_id: Annotated[UUID | None, Query()] = None,
+    type_: Annotated[str | None, Query(alias="type")] = None,
 ) -> list[dict]:
     """List templates visible in a space: its own, the global ones, and built-ins."""
     try:
@@ -229,7 +232,7 @@ async def list_templates(
 
 @router.post("", status_code=201)
 async def create_template(
-    db: DbDep, user: UserDep, body: PromptTemplateCreate, space_id: UUID | None = Query(None)
+    db: DbDep, user: UserDep, body: PromptTemplateCreate, space_id: Annotated[UUID | None, Query()] = None
 ) -> dict:
     """Create a custom template for a space.
 

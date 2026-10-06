@@ -38,13 +38,13 @@ async def start_run(body: EvalRunCreate, db: DbDep, admin: AdminDep) -> EvalRunO
             "run_evals", str(row["id"]), admin.id,
             _job_id=f"evals:{row['id']}",
         )
-    except Exception:
+    except Exception as exc:
         await db.execute(
             "update public.eval_runs set status = 'failed', error = $2 where id = $1",
             row["id"],
             "Job queue unavailable — start Redis and retry.",
         )
-        raise HTTPException(status_code=503, detail="Job queue unavailable.")
+        raise HTTPException(status_code=503, detail="Job queue unavailable.") from exc
     return _run_out(row)
 
 
