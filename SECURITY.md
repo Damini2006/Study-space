@@ -19,7 +19,7 @@
 | Server-side logic secured | ✅ | LLM calls server-side; service-role DB only in worker, never in routers |
 | API response minimization | ✅ | Endpoints return only the fields the UI needs (Pydantic response models) |
 | Session protection | ✅ | Short-lived JWT; refresh via Supabase; `autoRefreshToken` client-side |
-| Dependency vulnerability scan | ✅ | `pip audit`/`npm audit` runs in CI |
+| Dependency vulnerability scan | ✅ | CI runs `pip-audit` on the backend and `npm audit --omit=dev --audit-level=high` on what actually ships; backend tree and production frontend tree are both at 0 known vulnerabilities (dev toolchain is reported but non-blocking — see the comment in `ci.yml`) |
 | Record-level access tests | ✅ | `test_rls.py` |
 | Security headers | ✅ | `vercel.json` (production) and `frontend/nginx.conf` (docker): `X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy`, `Permissions-Policy`, CSP; HSTS on Vercel; backend `no-store` on `/api/*` |
 | Content-Security-Policy | ✅ | `script-src` is `'self'` + sha256 of the two inline scripts — no `unsafe-inline`, no `unsafe-eval`; `tests/csp.test.js` recomputes those hashes from `index.html` and fails if either config drifts, or if an env placeholder reappears inside a script |

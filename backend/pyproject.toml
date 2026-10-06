@@ -33,6 +33,7 @@ dev = [
   "fakeredis>=2.26",
   "ruff>=0.6",
   "anyio>=4.4",
+  "pip-audit>=2.7",
 ]
 
 [build-system]

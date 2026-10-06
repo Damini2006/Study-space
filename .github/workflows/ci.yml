@@ -40,6 +40,11 @@ jobs:
           cd backend
           pip install -e ".[dev]"
 
+      - name: Audit backend dependencies
+        run: |
+          cd backend
+          pip-audit .
+
       - name: Run backend lint
         run: |
           cd backend
@@ -61,6 +66,17 @@ jobs:
         run: |
           cd frontend
           npm ci
+
+      - name: Audit frontend dependencies
+        # Production tree only, and only high/critical fail the build. The
+        # dev toolchain (vite, tailwind, vitest) carries advisories with no
+        # non-breaking fix, and a build tool that never ships must not be
+        # able to freeze every unrelated PR — which is exactly the position
+        # tiptap was in for months before 3.30.4 landed. audit-level only
+        # changes the exit code, so every finding is still printed here.
+        run: |
+          cd frontend
+          npm audit --omit=dev --audit-level=high
 
       - name: Run frontend lint
         run: |
