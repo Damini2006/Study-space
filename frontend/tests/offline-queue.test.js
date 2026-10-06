@@ -29,8 +29,12 @@ describe("offline review queue", () => {
   });
 
   it("gives each grade a stable idempotency key", async () => {
-    const a = await enqueueReview(entry("card-1"));
-    const b = await enqueueReview(entry("card-1"));
+    // One entry, queued twice: the key has to come from the record, not from
+    // the moment it happened to be built. (A freshly built entry would carry a
+    // later `graded_at` and, as the test below asserts, a different key.)
+    const review = entry("card-1");
+    const a = await enqueueReview(review);
+    const b = await enqueueReview(review);
     expect(a.key).toBe(b.key);
   });
 
