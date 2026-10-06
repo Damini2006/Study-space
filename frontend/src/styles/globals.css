@@ -86,8 +86,11 @@
   --accent-DEFAULT: var(--accent);
   --destructive: var(--danger);
   --destructive-foreground: #ffffff;
-  --input: var(--border);
-  --ring: var(--primary-soft);
+  /* Form controls get their own outline token. WCAG 1.4.11 wants 3:1 for a
+     boundary that is the only thing identifying a control; the divider
+     hairline this used to alias sits far below that, on purpose. */
+  --input: #7f8cc3;
+  --ring: var(--primary);
   --success-foreground: #ffffff;
   --warning-foreground: #ffffff;
   --info-foreground: #ffffff;
@@ -101,6 +104,7 @@
   --surface: #171a2e;
   --surface-2: #1f2340;
   --border: #2a2f52;
+  --input: #5963aa;
   --text: #e8eaf6;
   --text-muted: #9aa1c0;
   --primary: #8b95ff;
@@ -140,9 +144,10 @@
   --surface: #fffaf1;
   --surface-2: #f3e8d6;
   --border: #eadfcb;
+  --input: #aa8645;
   --text: #3b2f2a;
-  --text-muted: #7a6a5f;
-  --primary: #b4572e;
+  --text-muted: #75665b;
+  --primary: #a6502a;
   --primary-soft: #d3824f;
   --on-primary: #ffffff;
   --accent: #7a9a7e;
@@ -161,6 +166,7 @@
   --surface: #ffffff;
   --surface-2: #f3eafc;
   --border: #eadff7;
+  --input: #a87ade;
   --text: #2a2140;
   --text-muted: #6b5f82;
   --primary: #7a55c9;
@@ -181,6 +187,7 @@
     --surface: #171a2e;
     --surface-2: #1f2340;
     --border: #2a2f52;
+    --input: #5963aa;
     --text: #e8eaf6;
     --text-muted: #9aa1c0;
     --primary: #8b95ff;
@@ -316,7 +323,7 @@
     color: var(--citation-text);
   }
 
-  /* visible focus rings everywhere (primary-soft) */
+  /* visible focus rings everywhere */
   :focus-visible {
     outline: 2px solid var(--ring);
     outline-offset: 2px;
