@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useRef } from "react";
+import { createContext, useContext, useEffect, useId, useRef } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { X } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -10,58 +10,99 @@ import { cn } from "@/lib/utils";
 export function Dialog({ open, onClose, title, description, children, className, footer }) {
   const dialogRef = useRef(null);
   const previousFocusRef = useRef(null);
+  const titleId = useId();
+  const descriptionId = useId();
+
+  // Read through a ref so the effect below depends only on `open`. An inline
+  // `onClose` gives the dialog a fresh identity on every parent render, and
+  // each new identity tears the effect down and rebuilds it — pulling focus
+  // back to the top of the dialog while someone is typing inside it.
+  const onCloseRef = useRef(onClose);
+  onCloseRef.current = onClose;
 
   useEffect(() => {
     if (!open) return undefined;
 
-    // Store previously focused element
     previousFocusRef.current = document.activeElement;
 
-    const onKey = (e) => {
-      if (e.key === "Escape") {
-        onClose?.();
+    // Disabled controls have to be left out: if the first control is a
+    // disabled button, `activeElement === first` can never be true and
+    // Shift+Tab walks straight out of the dialog.
+    const focusableSelector =
+      'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), ' +
+      'textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
+
+    const getFocusable = () => {
+      const nodes = dialogRef.current?.querySelectorAll(focusableSelector) ?? [];
+      return Array.from(nodes).filter(
+        (node) => !node.hidden && node.getAttribute("aria-hidden") !== "true"
+      );
+    };
+
+    const onKey = (event) => {
+      if (event.key === "Escape") {
+        onCloseRef.current?.();
+        return;
+      }
+      if (event.key !== "Tab") return;
+
+      const focusable = getFocusable();
+      if (focusable.length === 0) {
+        event.preventDefault();
         return;
       }
 
-      // Focus trap: Tab key cycles through focusable elements
-      if (e.key === "Tab" && dialogRef.current) {
-        const focusable = dialogRef.current.querySelectorAll(
-          'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
-        );
-        if (focusable.length === 0) return;
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      const active = document.activeElement;
+      const isInside = Boolean(active) && dialogRef.current?.contains(active);
 
-        const first = focusable[0];
-        const last = focusable[focusable.length - 1];
-
-        if (e.shiftKey && document.activeElement === first) {
-          e.preventDefault();
-          last.focus();
-        } else if (!e.shiftKey && document.activeElement === last) {
-          e.preventDefault();
-          first.focus();
-        }
+      if (!isInside) {
+        // Focus has been stranded outside the dialog, and Tab would then walk
+        // into the page behind it. Pull it back before moving on.
+        event.preventDefault();
+        (event.shiftKey ? last : first).focus();
+      } else if (event.shiftKey && active === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && active === last) {
+        event.preventDefault();
+        first.focus();
       }
     };
 
     document.addEventListener("keydown", onKey);
-    const prev = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
 
-    // Focus the dialog on open
-    requestAnimationFrame(() => {
-      const focusable = dialogRef.current?.querySelector(
-        'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
-      );
-      focusable?.focus();
-    });
+    // Hiding the scrollbar narrows the viewport by its own width, which shifts
+    // the page sideways every time a dialog opens. Put that width back — but
+    // only where there was a scrollbar to lose.
+    const root = document.documentElement;
+    const scrollbarWidth =
+      root.scrollHeight > root.clientHeight ? window.innerWidth - root.clientWidth : 0;
+    const previousOverflow = document.body.style.overflow;
+    const previousPadding = document.body.style.paddingRight;
+    document.body.style.overflow = "hidden";
+    if (scrollbarWidth > 0) {
+      document.body.style.paddingRight = `${scrollbarWidth}px`;
+    }
+
+    // Focus the dialog element itself rather than its first control, so a
+    // screen reader announces the title and description before anything
+    // inside it — landing on the close button announced only "Close dialog".
+    const frame = requestAnimationFrame(() => dialogRef.current?.focus());
 
     return () => {
       document.removeEventListener("keydown", onKey);
-      document.body.style.overflow = prev;
-      // Restore previous focus
-      previousFocusRef.current?.focus();
+      cancelAnimationFrame(frame);
+      document.body.style.overflow = previousOverflow;
+      document.body.style.paddingRight = previousPadding;
+      const previous = previousFocusRef.current;
+      // Whatever triggered the close usually unmounts the trigger with it, and
+      // focus() on a detached node silently does nothing — focus would land
+      // on <body> and the next Tab would restart from the top of the page.
+      if (previous && previous.isConnected) previous.focus();
     };
-  }, [open, onClose]);
+  }, [open]);
 
   return (
     <AnimatePresence>
@@ -80,7 +121,10 @@ export function Dialog({ open, onClose, title, description, children, className,
             ref={dialogRef}
             role="dialog"
             aria-modal="true"
-            aria-label={typeof title === "string" ? title : "Dialog"}
+            aria-labelledby={title ? titleId : undefined}
+            aria-label={title ? undefined : "Dialog"}
+            aria-describedby={description ? descriptionId : undefined}
+            tabIndex={-1}
             initial={{ opacity: 0, y: 14, scale: 0.985 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 8, scale: 0.99 }}
@@ -88,13 +132,18 @@ export function Dialog({ open, onClose, title, description, children, className,
             className={cn(
               "relative max-h-[88vh] w-full overflow-auto rounded-xl border border-border bg-card p-5 shadow-[var(--shadow-lg)]",
               "max-w-lg scrollbar-thin",
+              "focus:outline-none",
               className
             )}
           >
             <div className="mb-3 flex items-start justify-between gap-4">
               <div>
-                <h2 className="text-base font-semibold">{title}</h2>
-                {description && <p className="mt-1 text-xs text-muted-foreground">{description}</p>}
+                <h2 id={titleId} className="text-base font-semibold">{title}</h2>
+                {description && (
+                  <p id={descriptionId} className="mt-1 text-xs text-muted-foreground">
+                    {description}
+                  </p>
+                )}
               </div>
               <button
                 type="button"

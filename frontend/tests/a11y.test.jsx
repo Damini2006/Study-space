@@ -1,8 +1,9 @@
+import { useState } from "react";
 import { describe, expect, it, vi } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
-import { Select } from "@/components/ui/dialog";
+import { Dialog, Select } from "@/components/ui/dialog";
 
 const OPTIONS = [
   { value: "1", label: "1 day" },
@@ -100,5 +101,161 @@ describe("Select", () => {
     // platform rather than from code that can drift out of sync with it.
     expect(container.querySelector("select")).not.toBeNull();
     expect(screen.getByRole("combobox")).toBe(container.querySelector("select"));
+  });
+});
+
+function DialogTrigger() {
+  const [open, setOpen] = useState(false);
+  return (
+    <>
+      <button type="button" onClick={() => setOpen(true)}>
+        Open
+      </button>
+      <Dialog open={open} onClose={() => setOpen(false)} title="Modal">
+        <input aria-label="Search" />
+        <button type="button">Inside</button>
+      </Dialog>
+    </>
+  );
+}
+
+describe("Dialog", () => {
+  it("takes its name from the title and its description from the copy", () => {
+    render(
+      <Dialog
+        open
+        onClose={() => {}}
+        title="Share this space"
+        description="Invite people by link."
+      >
+        <p>body</p>
+      </Dialog>
+    );
+
+    expect(
+      screen.getByRole("dialog", { name: "Share this space" })
+    ).toBeInTheDocument();
+    expect(screen.getByRole("dialog")).toHaveAccessibleDescription(
+      "Invite people by link."
+    );
+  });
+
+  it("focuses the dialog itself so the title is read before its contents", async () => {
+    render(
+      <Dialog open onClose={() => {}} title="Modal">
+        <button type="button">Inside</button>
+      </Dialog>
+    );
+
+    await waitFor(() => expect(screen.getByRole("dialog")).toHaveFocus());
+    // Landing on the close button announced only "Close dialog", with no
+    // hint of what the dialog was for.
+    expect(screen.getByRole("button", { name: "Close dialog" })).not.toHaveFocus();
+  });
+
+  it("closes on Escape", async () => {
+    const onClose = vi.fn();
+    render(
+      <Dialog open onClose={onClose} title="Modal">
+        <button type="button">Inside</button>
+      </Dialog>
+    );
+
+    await userEvent.keyboard("{Escape}");
+
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
+  it("wraps Tab forward past controls that cannot hold focus", () => {
+    render(
+      <Dialog open onClose={() => {}} title="Modal">
+        <button type="button">Kept</button>
+        <button type="button" disabled>
+          Disabled last
+        </button>
+      </Dialog>
+    );
+
+    screen.getByRole("button", { name: "Kept" }).focus();
+    fireEvent.keyDown(document, { key: "Tab" });
+
+    // A disabled trailing control cannot be focused, so if it is counted as
+    // the last one the wrap never triggers and Tab leaves the dialog.
+    expect(screen.getByRole("button", { name: "Close dialog" })).toHaveFocus();
+  });
+
+  it("wraps Shift+Tab backward from the first control", () => {
+    render(
+      <Dialog open onClose={() => {}} title="Modal">
+        <button type="button">Kept</button>
+      </Dialog>
+    );
+
+    screen.getByRole("button", { name: "Close dialog" }).focus();
+    fireEvent.keyDown(document, { key: "Tab", shiftKey: true });
+
+    expect(screen.getByRole("button", { name: "Kept" })).toHaveFocus();
+  });
+
+  it("returns focus to whatever opened it once it closes", async () => {
+    render(<DialogTrigger />);
+
+    const opener = screen.getByRole("button", { name: "Open" });
+    await userEvent.click(opener);
+    await waitFor(() => expect(screen.getByRole("dialog")).toHaveFocus());
+
+    await userEvent.keyboard("{Escape}");
+
+    await waitFor(() => expect(opener).toHaveFocus());
+  });
+
+  it("leaves focus alone when a parent re-renders with a new onClose", async () => {
+    // Every call site passes `onClose` inline, so it is a fresh function on
+    // each render. Depending on it made the open effect re-run whenever any
+    // parent state changed, yanking focus out of the field being typed in.
+    function Parent({ label }) {
+      const [open] = useState(true);
+      return (
+        <Dialog open={open} onClose={() => {}} title={label}>
+          <input aria-label="Search" />
+        </Dialog>
+      );
+    }
+
+    const { rerender } = render(<Parent label="First" />);
+    await waitFor(() => expect(screen.getByRole("dialog")).toHaveFocus());
+
+    const field = screen.getByLabelText("Search");
+    field.focus();
+    rerender(<Parent label="Second" />);
+
+    // The effect schedules its focus request on the next frame, so wait one:
+    // a rebuild would land the focus back on the dialog here.
+    await new Promise((resolve) => requestAnimationFrame(resolve));
+
+    expect(field).toHaveFocus();
+  });
+
+  it("locks page scrolling only while it is open", () => {
+    const { rerender } = render(
+      <Dialog open={false} onClose={() => {}} title="Modal">
+        <p>body</p>
+      </Dialog>
+    );
+    expect(document.body.style.overflow).toBe("");
+
+    rerender(
+      <Dialog open onClose={() => {}} title="Modal">
+        <p>body</p>
+      </Dialog>
+    );
+    expect(document.body.style.overflow).toBe("hidden");
+
+    rerender(
+      <Dialog open={false} onClose={() => {}} title="Modal">
+        <p>body</p>
+      </Dialog>
+    );
+    expect(document.body.style.overflow).toBe("");
   });
 });
