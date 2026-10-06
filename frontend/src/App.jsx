@@ -1,8 +1,8 @@
 import { Navigate, Route, Routes, useLocation } from "react-router-dom";
 import { lazy, Suspense, useEffect } from "react";
 import { motion } from "framer-motion";
-import { useAuth } from "@/hooks/useAuth";
 import AppShell from "@/components/layout/AppShell";
+import Protected from "@/components/Protected";
 import Landing from "@/pages/Landing";
 import AuthPage from "@/pages/Auth";
 import Dashboard from "@/pages/Dashboard";
@@ -45,22 +45,6 @@ function RouteFallback() {
       <span className="sr-only">Loading page…</span>
     </div>
   );
-}
-
-function Protected({ children }) {
-  const { isAuthenticated, initialising } = useAuth();
-  const location = useLocation();
-  if (initialising) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-background">
-        <div className="h-8 w-8 animate-spin rounded-full border-2 border-border border-t-primary" aria-label="Loading" />
-      </div>
-    );
-  }
-  if (!isAuthenticated) {
-    return <Navigate to="/auth" replace state={{ from: location.pathname }} />;
-  }
-  return children;
 }
 
 const PAGE_META = {
