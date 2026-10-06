@@ -72,25 +72,31 @@ export default function ExportDialog({ spaceId, spaceTitle, open, onClose }) {
           Choose a format. Large spaces may take a moment to prepare.
         </p>
 
-        <RadioGroup value={format} onValueChange={setFormat} className="space-y-2">
+        <RadioGroup
+          value={format}
+          onValueChange={setFormat}
+          ariaLabel="Export format"
+          className="space-y-2"
+        >
           {FORMATS.map((f) => (
-            <label
+            <RadioGroupItem
               key={f.id}
+              value={f.id}
+              hideIndicator
               className={cn(
-                "relative flex items-center gap-3 p-3 rounded-lg border-2 transition-all cursor-pointer",
+                "items-start gap-3 border-2 p-3 text-base transition-all",
                 format === f.id
-                  ? "border-primary bg-primary/5 ring-2 ring-primary/20"
+                  ? "border-primary"
                   : "border-border hover:border-primary/30"
               )}
             >
-              <RadioGroupItem value={f.id} className="sr-only" />
               <f.icon className="size-5 text-primary shrink-0" aria-hidden />
               <div className="flex-1 text-left">
                 <div className="font-medium">{f.label}</div>
                 <div className="text-xs text-muted-foreground">{f.desc}</div>
               </div>
               <ArrowDown className="size-4 text-muted-foreground" />
-            </label>
+            </RadioGroupItem>
           ))}
         </RadioGroup>
 

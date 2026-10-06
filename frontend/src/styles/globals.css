@@ -568,6 +568,14 @@
 /* Focus visibility, consistent across themes */
 :focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
 
+/* A radio card wraps a screen-reader-only input, so focus lands on the input
+   and the card around it never matches :focus-visible. Carry the same
+   outline out to the element the eye can actually see. */
+label:has(input[type="radio"]:focus-visible) {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+
 /* --------------------------------------------------------------------------
    Feature ticker — CSS keyframes (deterministic, GPU-composited)
    -------------------------------------------------------------------------- */

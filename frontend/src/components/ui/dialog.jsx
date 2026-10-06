@@ -306,10 +306,11 @@ export function TabsContent({ value, children, className }) {
   );
 }
 
-export function Switch({ checked, onChange, label, disabled }) {
+export function Switch({ id, checked, onChange, label, disabled }) {
   return (
     <button
       type="button"
+      id={id}
       role="switch"
       aria-checked={checked}
       aria-label={label}
@@ -393,17 +394,36 @@ export function Select({
  */
 const RadioContext = createContext(null);
 
-export function RadioGroup({ value, onValueChange, children, className, disabled }) {
+/**
+ * RadioGroup — a named group of radio cards.
+ *
+ * `RadioGroupItem` owns its own `<label>`, so callers pass their content as
+ * children instead of wrapping it in a second one. Nesting a `<label>` in a
+ * `<label>` is invalid, and it gave the input two competing sources for its
+ * accessible name.
+ */
+export function RadioGroup({
+  value,
+  onValueChange,
+  children,
+  className,
+  disabled,
+  ariaLabel,
+}) {
   return (
     <RadioContext.Provider value={{ value, onValueChange, disabled }}>
-      <div role="radiogroup" className={cn("flex flex-col gap-1", className)}>
+      <div
+        role="radiogroup"
+        aria-label={ariaLabel}
+        className={cn("flex flex-col gap-1", className)}
+      >
         {children}
       </div>
     </RadioContext.Provider>
   );
 }
 
-export function RadioGroupItem({ value, children, className, disabled }) {
+export function RadioGroupItem({ value, children, className, disabled, hideIndicator }) {
   const ctx = useContext(RadioContext);
   const isSelected = ctx?.value === value;
   const isDisabled = disabled || ctx?.disabled;
@@ -412,9 +432,8 @@ export function RadioGroupItem({ value, children, className, disabled }) {
     <label
       className={cn(
         "relative flex cursor-pointer items-center gap-2 rounded-lg border p-2 text-sm transition-colors",
-        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
         isDisabled ? "cursor-not-allowed opacity-50" : "hover:bg-surface-2",
-        isSelected && "border-primary/40 bg-primary/5",
+        isSelected && "border-primary bg-primary/5 ring-2 ring-primary/20",
         className
       )}
     >
@@ -426,18 +445,18 @@ export function RadioGroupItem({ value, children, className, disabled }) {
         disabled={isDisabled}
         className="sr-only"
       />
-      <span
-        className={cn(
-          "relative flex h-4 w-4 items-center justify-center rounded-full border-2 transition-colors",
-          isSelected ? "border-primary bg-primary" : "border-border",
-          isDisabled && "opacity-50"
-        )}
-      >
-        {isSelected && <span className="absolute size-2 rounded-full bg-white" />}
-      </span>
-      <span className={cn("font-medium", isSelected ? "text-foreground" : "text-muted-foreground")}>
-        {children}
-      </span>
+      {hideIndicator ? null : (
+        <span
+          className={cn(
+            "relative flex h-4 w-4 shrink-0 items-center justify-center rounded-full border-2 transition-colors",
+            isSelected ? "border-primary bg-primary" : "border-border",
+            isDisabled && "opacity-50"
+          )}
+        >
+          {isSelected && <span className="absolute size-2 rounded-full bg-white" />}
+        </span>
+      )}
+      {children}
     </label>
   );
 }

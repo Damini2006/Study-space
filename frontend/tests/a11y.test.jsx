@@ -3,7 +3,17 @@ import { describe, expect, it, vi } from "vitest";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
-import { Dialog, Select, Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/dialog";
+import {
+  Dialog,
+  RadioGroup,
+  RadioGroupItem,
+  Select,
+  Switch,
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from "@/components/ui/dialog";
 
 const OPTIONS = [
   { value: "1", label: "1 day" },
@@ -374,5 +384,97 @@ describe("Tabs", () => {
     await userEvent.click(screen.getByRole("tab", { name: "One" }));
 
     expect(screen.getByRole("tabpanel", { name: "One" })).toBeInTheDocument();
+  });
+});
+
+describe("Switch", () => {
+  it("carries the id its visible label points at", () => {
+    render(
+      <>
+        <label htmlFor="notify">Notification settings</label>
+        <Switch id="notify" checked={false} onChange={() => {}} label="Review reminders" />
+      </>
+    );
+
+    const control = screen.getByRole("switch", { name: "Review reminders" });
+    // `id` was accepted at the call site and dropped, so the label aimed at
+    // nothing and clicking the setting's own text did nothing at all.
+    expect(control).toHaveAttribute("id", "notify");
+    expect(screen.getByText("Notification settings")).toHaveAttribute("for", "notify");
+  });
+
+  it("names itself and reports its state", () => {
+    render(<Switch checked onChange={() => {}} label="Review reminders" />);
+
+    expect(screen.getByRole("switch", { name: "Review reminders" })).toHaveAttribute(
+      "aria-checked",
+      "true"
+    );
+  });
+});
+
+function RadioFixture({ initial = "pdf", itemProps = {} }) {
+  const [format, setFormat] = useState(initial);
+  return (
+    <RadioGroup
+      value={format}
+      onValueChange={setFormat}
+      ariaLabel="Export format"
+      className="space-y-2"
+    >
+      <RadioGroupItem value="pdf" {...itemProps}>
+        PDF
+      </RadioGroupItem>
+      <RadioGroupItem value="csv">CSV</RadioGroupItem>
+    </RadioGroup>
+  );
+}
+
+describe("RadioGroup", () => {
+  it("names the group it contains", () => {
+    render(<RadioFixture />);
+
+    expect(
+      screen.getByRole("radiogroup", { name: "Export format" })
+    ).toBeInTheDocument();
+  });
+
+  it("does not put a label inside a label", () => {
+    const { container } = render(<RadioFixture itemProps={{ hideIndicator: true, className: "border-2 p-3" }} />);
+
+    // The item's own <label> used to sit inside the caller's, which is
+    // invalid HTML and gave the input two competing accessible names.
+    expect(container.querySelectorAll("label label")).toHaveLength(0);
+    expect(container.querySelectorAll("label")).toHaveLength(2);
+  });
+
+  it("takes the visible text inside the card as the option's name", () => {
+    render(<RadioFixture itemProps={{ hideIndicator: true }} />);
+
+    expect(screen.getByRole("radio", { name: "PDF" })).toBeInTheDocument();
+    expect(screen.getByRole("radio", { name: "PDF" })).toBeChecked();
+  });
+
+  it("reports a choice back through the group", async () => {
+    const onValueChange = vi.fn();
+    render(
+      <RadioGroup ariaLabel="Format" value="pdf" onValueChange={onValueChange}>
+        <RadioGroupItem value="pdf">PDF</RadioGroupItem>
+        <RadioGroupItem value="csv">CSV</RadioGroupItem>
+      </RadioGroup>
+    );
+
+    await userEvent.click(screen.getByRole("radio", { name: "CSV" }));
+
+    expect(onValueChange).toHaveBeenCalledWith("csv");
+  });
+
+  it("keeps its built-in dot unless the caller draws its own", () => {
+    const { container } = render(<RadioFixture itemProps={{ hideIndicator: true }} />);
+    const cards = [...container.querySelectorAll("label")];
+
+    // `hideIndicator` on the first, none on the second.
+    expect(cards[0].querySelectorAll("span")).toHaveLength(0);
+    expect(cards[1].querySelectorAll("span")).toHaveLength(1);
   });
 });
