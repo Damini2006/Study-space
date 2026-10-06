@@ -138,3 +138,73 @@ export async function signInViaForm(page) {
     .fill("correct horse battery staple");
   await page.locator('button[type="submit"]').click();
 }
+
+/**
+ * An in-memory stand-in for /notes — the one endpoint that has to remember
+ * what it was told.
+ *
+ * A static fixture would answer the refetch that follows a save with the
+ * list it had before the save, so a test could pass without ever exercising
+ * the write path. Here the mutation changes the array the next read is built
+ * from, which is the whole point.
+ *
+ * Registered after `stubApi` on purpose: Playwright consults routes
+ * newest-first, so this takes /api/notes away from the catch-all.
+ *
+ * `q` and `tag` are read but deliberately not acted on. The page filters the
+ * list it gets client-side, so honouring search here would only have the
+ * stub testing itself.
+ */
+export async function stubNotesApi(page, seed = []) {
+  const notes = seed.map((note, index) => ({
+    id: `seed-${index + 1}`,
+    ...note,
+  }));
+  let nextId = 1;
+
+  await page.route("**/api/notes**", async (route) => {
+    const request = route.request();
+    const method = request.method();
+    const id = new URL(request.url()).pathname.split("/").pop();
+
+    if (method === "GET") {
+      return route.fulfill({ json: notes });
+    }
+
+    if (method === "POST") {
+      const now = new Date().toISOString();
+      const note = {
+        id: `note-${nextId++}`,
+        title: "Untitled",
+        content: null,
+        tags: [],
+        pinned: false,
+        ...(request.postDataJSON() ?? {}),
+        updated_at: now,
+      };
+      notes.push(note);
+      return route.fulfill({ json: note });
+    }
+
+    if (method === "PATCH") {
+      const index = notes.findIndex((note) => note.id === id);
+      if (index === -1) {
+        return route.fulfill({ status: 404, json: { detail: "Not found" } });
+      }
+      notes[index] = {
+        ...notes[index],
+        ...(request.postDataJSON() ?? {}),
+        updated_at: new Date().toISOString(),
+      };
+      return route.fulfill({ json: notes[index] });
+    }
+
+    if (method === "DELETE") {
+      const index = notes.findIndex((note) => note.id === id);
+      if (index >= 0) notes.splice(index, 1);
+      return route.fulfill({ json: { ok: true } });
+    }
+
+    return route.fulfill({ json: {} });
+  });
+}

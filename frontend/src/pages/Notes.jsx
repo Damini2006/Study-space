@@ -180,6 +180,14 @@ export default function Notes() {
   const [tagFilter, setTagFilter] = useState("");
   const [sort, setSort] = useState("updated");
   const [editingNote, setEditingNote] = useState(null);
+  // Separate from `editingNote`, because they used to be the same variable
+  // and could not be told apart: `null` meant both "a new note" and "nothing
+  // open", so the dialog was mounted on arrival and onClose wrote back the
+  // value already in state — Cancel, the X, the backdrop and Escape all left
+  // it on screen. Only this flag decides whether the editor is mounted, which
+  // means its fields start empty on every open rather than keeping the last
+  // note's title.
+  const [editorOpen, setEditorOpen] = useState(false);
   
   const { data: notes = [] } = useQuery({ queryKey: ["notes", { search, tag: tagFilter, sort }], queryFn: () => notesApi.list({ q: search, tag: tagFilter, sort }) });
   
@@ -187,13 +195,13 @@ export default function Notes() {
   
   const createMutation = useMutation({
     mutationFn: (body) => notesApi.create(body),
-    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["notes"] }); success("Note created."); },
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["notes"] }); success("Note created."); setEditorOpen(false); },
     onError: error,
   });
   
   const updateMutation = useMutation({
     mutationFn: ({ id, body }) => notesApi.update(id, body),
-    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["notes"] }); success("Note updated."); setEditingNote(null); },
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["notes"] }); success("Note updated."); setEditorOpen(false); },
     onError: error,
   });
   
@@ -216,7 +224,7 @@ export default function Notes() {
           <h1 className="text-2xl font-bold tracking-tight">Notes</h1>
           <p className="mt-0.5 text-sm text-muted-foreground">Rich-text notes with tags, pinning and search.</p>
         </div>
-        <Button onClick={() => setEditingNote(null)}>
+        <Button onClick={() => { setEditingNote(null); setEditorOpen(true); }}>
           <Plus className="size-4 mr-1" /> New note
         </Button>
       </div>
@@ -265,15 +273,17 @@ export default function Notes() {
         </div>
       )}
 
-      <NoteEditor
-        note={editingNote}
-        allTags={allTags}
-        onClose={() => setEditingNote(null)}
-        onSave={(body) => {
-          if (editingNote) updateMutation.mutate({ id: editingNote.id, body });
-          else createMutation.mutate(body);
-        }}
-      />
+      {editorOpen && (
+        <NoteEditor
+          note={editingNote}
+          allTags={allTags}
+          onClose={() => setEditorOpen(false)}
+          onSave={(body) => {
+            if (editingNote) updateMutation.mutate({ id: editingNote.id, body });
+            else createMutation.mutate(body);
+          }}
+        />
+      )}
     </div>
   );
 }
