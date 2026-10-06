@@ -9,7 +9,7 @@ import { useToast } from "@/components/ui/toast";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge, Input, Label, Textarea } from "@/components/ui/input";
-import { Dialog, Select, SelectContent, SelectItem, SelectTrigger } from "@/components/ui/dialog";
+import { Dialog, Select } from "@/components/ui/dialog";
 import { extractVariables } from "@/lib/prompt-templates";
 import { cn } from "@/lib/utils";
 import { Eye, FileText, Loader2, Pencil, Plus, Trash2 } from "lucide-react";
@@ -218,17 +218,17 @@ export default function PromptTemplatesPanel({ spaceId }) {
           <Label htmlFor="tpl_filter" className="text-xs text-muted-foreground">
             Filter
           </Label>
-          <Select value={filter} onValueChange={setFilter}>
-            <SelectTrigger placeholder="All types" className="max-w-56" />
-            <SelectContent>
-              <SelectItem value="all">All types</SelectItem>
-              {TEMPLATE_TYPES.map((t) => (
-                <SelectItem key={t.value} value={t.value}>
-                  {t.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <Select
+            id="tpl_filter"
+            className="max-w-56"
+            value={filter}
+            onValueChange={setFilter}
+            placeholder="All types"
+            options={[
+              { value: "all", label: "All types" },
+              ...TEMPLATE_TYPES.map((t) => ({ value: t.value, label: t.label })),
+            ]}
+          />
         </div>
       </Card>
 
@@ -278,16 +278,13 @@ export default function PromptTemplatesPanel({ spaceId }) {
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="tpl_type">Type</Label>
-              <Select value={type} onValueChange={setType}>
-                <SelectTrigger placeholder="Choose a type" />
-                <SelectContent>
-                  {TEMPLATE_TYPES.map((t) => (
-                    <SelectItem key={t.value} value={t.value}>
-                      {t.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Select
+                id="tpl_type"
+                value={type}
+                onValueChange={setType}
+                placeholder="Choose a type"
+                options={TEMPLATE_TYPES.map((t) => ({ value: t.value, label: t.label }))}
+              />
             </div>
           </div>
 

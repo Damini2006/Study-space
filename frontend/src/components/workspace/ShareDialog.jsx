@@ -3,7 +3,7 @@ import { Copy, Clock, Trash2, Check } from "lucide-react";
 import { Dialog } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/dialog";
+import { Select } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/input";
 import { useToast } from "@/components/ui/toast";
 import { formatDate } from "@/lib/utils";
@@ -136,29 +136,35 @@ export default function ShareDialog({ spaceId, open, onClose }) {
 
         <div className="grid grid-cols-2 gap-3">
           <div className="space-y-1.5">
-            <Label>Role</Label>
-            <Select value={newShareRole} onValueChange={setNewShareRole}>
-              <SelectTrigger><SelectValue placeholder="Select role" /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="viewer">Viewer — read only</SelectItem>
-                <SelectItem value="editor">Editor — full access</SelectItem>
-              </SelectContent>
-            </Select>
+            <Label htmlFor="share_role">Role</Label>
+            <Select
+              id="share_role"
+              value={newShareRole}
+              onValueChange={setNewShareRole}
+              placeholder="Select role"
+              options={[
+                { value: "viewer", label: "Viewer — read only" },
+                { value: "editor", label: "Editor — full access" },
+              ]}
+            />
             <p className="text-[11px] text-muted-foreground">{ROLE_DESC[newShareRole]}</p>
           </div>
 
           <div className="space-y-1.5">
-            <Label>Expires in</Label>
-            <Select value={String(newShareExpires)} onValueChange={(v) => setNewShareExpires(Number(v))}>
-              <SelectTrigger><SelectValue placeholder="Never" /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="1">1 day</SelectItem>
-                <SelectItem value="7">1 week</SelectItem>
-                <SelectItem value="30">1 month</SelectItem>
-                <SelectItem value="90">3 months</SelectItem>
-                <SelectItem value="0">Never</SelectItem>
-              </SelectContent>
-            </Select>
+            <Label htmlFor="share_expires">Expires in</Label>
+            <Select
+              id="share_expires"
+              value={String(newShareExpires)}
+              onValueChange={(v) => setNewShareExpires(Number(v))}
+              placeholder="Never"
+              options={[
+                { value: "1", label: "1 day" },
+                { value: "7", label: "1 week" },
+                { value: "30", label: "1 month" },
+                { value: "90", label: "3 months" },
+                { value: "0", label: "Never" },
+              ]}
+            />
           </div>
         </div>
 

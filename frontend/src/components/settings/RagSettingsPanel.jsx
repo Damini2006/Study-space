@@ -14,7 +14,7 @@ import { useToast } from "@/components/ui/toast";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/input";
-import { Switch, Select, SelectContent, SelectItem, SelectTrigger } from "@/components/ui/dialog";
+import { Switch, Select } from "@/components/ui/dialog";
 import { Loader2, RotateCcw, Save, SlidersHorizontal } from "lucide-react";
 
 const PRESETS = {
@@ -369,19 +369,15 @@ export default function RagSettingsPanel({ spaceId }) {
             <div key={key} className="space-y-1.5">
               <Label htmlFor={`model_${key}`}>{label}</Label>
               <Select
+                id={`model_${key}`}
                 value={draft[key] ?? ""}
                 onValueChange={(v) => set(key, v || null)}
-              >
-                <SelectTrigger placeholder="Deployment default" />
-                <SelectContent>
-                  <SelectItem value="">Deployment default</SelectItem>
-                  {chatModels.map((m) => (
-                    <SelectItem key={m.id} value={m.id}>
-                      {m.display_name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+                placeholder="Deployment default"
+                options={[
+                  { value: "", label: "Deployment default" },
+                  ...chatModels.map((m) => ({ value: m.id, label: m.display_name })),
+                ]}
+              />
             </div>
           ))}
         </div>

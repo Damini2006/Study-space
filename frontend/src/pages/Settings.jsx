@@ -14,7 +14,7 @@ import { studyApi } from "@/services/api-services";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge, Input, Label } from "@/components/ui/input";
-import { Dialog, Select, SelectContent, SelectItem, SelectTrigger } from "@/components/ui/dialog";
+import { Dialog, Select } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/dialog";
 import { cn, formatDate } from "@/lib/utils";
 import { Copy, Loader2, Plus, X } from "lucide-react";
@@ -288,16 +288,14 @@ export default function MCPManagement() {
             <div className="space-y-4">
               <Card className="p-4">
                 <Label htmlFor="rag_space">Space</Label>
-                <Select value={activeSpaceId} onValueChange={setActiveSpaceId}>
-                  <SelectTrigger placeholder="Choose a space" className="mt-1.5 max-w-sm" />
-                  <SelectContent>
-                    {spaces.map((s) => (
-                      <SelectItem key={s.id} value={s.id}>
-                        {s.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <Select
+                  id="rag_space"
+                  className="mt-1.5 max-w-sm"
+                  value={activeSpaceId}
+                  onValueChange={setActiveSpaceId}
+                  placeholder="Choose a space"
+                  options={spaces.map((s) => ({ value: s.id, label: s.name }))}
+                />
                 <p className="mt-2 text-xs text-muted-foreground">
                   Retrieval settings are stored per space, so each subject can have its own tuning.
                 </p>
@@ -314,16 +312,14 @@ export default function MCPManagement() {
             <div className="space-y-4">
               <Card className="p-4">
                 <Label htmlFor="audit_space">Space</Label>
-                <Select value={activeSpaceId} onValueChange={setActiveSpaceId}>
-                  <SelectTrigger placeholder="Choose a space" className="mt-1.5 max-w-sm" />
-                  <SelectContent>
-                    {spaces.map((s) => (
-                      <SelectItem key={s.id} value={s.id}>
-                        {s.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <Select
+                  id="audit_space"
+                  className="mt-1.5 max-w-sm"
+                  value={activeSpaceId}
+                  onValueChange={setActiveSpaceId}
+                  placeholder="Choose a space"
+                  options={spaces.map((s) => ({ value: s.id, label: s.name }))}
+                />
               </Card>
               <CitationAuditPanel spaceId={activeSpaceId} />
             </div>

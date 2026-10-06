@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useRef } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { Check, X } from "lucide-react";
+import { X } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 /**
@@ -203,85 +203,59 @@ export function Switch({ checked, onChange, label, disabled }) {
 }
 
 /**
- * Select — native <select> with consistent styling.
- * Use with SelectTrigger, SelectValue, SelectContent, SelectItem.
+ * Select — a native `<select>` styled to match the rest of the design system.
+ *
+ * Deliberately the platform control rather than a hand-built listbox: for a
+ * flat list of options, native gives keyboard navigation, screen-reader
+ * support and the mobile picker for free, and none of it is code we can get
+ * subtly wrong. Options arrive as data, so every choice is a real `<option>`
+ * and the trigger can never be showing something that isn't one of them.
+ *
+ * `placeholder` becomes a disabled `<option>` only while `value` matches
+ * nothing in `options`. That test is against the list rather than against the
+ * string, because `""` is a legitimate value — the model selectors use it for
+ * "Deployment default".
+ *
+ * `options` is `{ value, label, disabled? }[]`.
  */
-const SelectContext = createContext(null);
-
-export function Select({ value, onValueChange, children, disabled }) {
-  return (
-    <SelectContext.Provider value={{ value, onValueChange, disabled }}>
-      {children}
-    </SelectContext.Provider>
-  );
-}
-
-export function SelectTrigger({ value, placeholder, className, disabled }) {
-  const ctx = useContext(SelectContext);
-  const isDisabled = disabled || ctx?.disabled;
-  const currentValue = value ?? ctx?.value;
-  const handleChange = (e) => ctx?.onValueChange?.(e.target.value);
+export function Select({
+  value,
+  onValueChange,
+  options = [],
+  placeholder,
+  id,
+  disabled,
+  className,
+  ariaLabel,
+}) {
+  const current = value == null ? "" : String(value);
+  const currentIsAnOption = options.some((option) => String(option.value) === current);
 
   return (
     <select
-      value={currentValue ?? ""}
-      onChange={handleChange}
-      disabled={isDisabled}
+      id={id}
+      value={currentIsAnOption ? current : ""}
+      onChange={(event) => onValueChange?.(event.target.value)}
+      disabled={disabled}
       className={cn(
         "flex h-9 w-full items-center gap-2 rounded-lg border border-border bg-background px-3 py-2 text-sm transition-colors",
         "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
         "disabled:cursor-not-allowed disabled:opacity-50",
         className
       )}
-      aria-label={placeholder}
+      aria-label={ariaLabel}
     >
-      {!currentValue && <option value="" disabled>{placeholder}</option>}
-      {currentValue && <option value={currentValue} selected>{currentValue}</option>}
-    </select>
-  );
-}
-
-export function SelectValue({ placeholder }) {
-  // Used as a placeholder in the trigger
-  return <span className="text-muted-foreground">{placeholder}</span>;
-}
-
-export function SelectContent({ children, className }) {
-  return (
-    <div className={cn("relative z-50 max-h-60 overflow-y-auto rounded-lg border border-border bg-popover p-1 shadow-lg", className)}>
-      {children}
-    </div>
-  );
-}
-
-export function SelectItem({ value, children, disabled, className }) {
-  const ctx = useContext(SelectContext);
-  const isSelected = ctx?.value === value;
-  const handleClick = () => {
-    if (disabled) return;
-    ctx?.onValueChange?.(value);
-  };
-
-  return (
-    <div
-      role="option"
-      aria-selected={isSelected}
-      aria-disabled={disabled}
-      onClick={handleClick}
-      className={cn(
-        "relative flex cursor-pointer select-none items-center rounded-sm py-1.5 pl-8 pr-2 text-sm outline-none",
-        "focus:bg-primary focus:text-primary-foreground",
-        "data-[disabled]:pointer-events-none data-[disabled]:opacity-50",
-        isSelected && "bg-primary text-primary-foreground",
-        className
+      {currentIsAnOption ? null : (
+        <option value="" disabled hidden>
+          {placeholder}
+        </option>
       )}
-      data-disabled={disabled}
-    >
-      <span className="absolute left-2 flex h-3.5 w-3.5 items-center justify-center">
-        {isSelected && <Check className="size-3.5" />}
-      </span>
-      {children}
-    </div>
+      {options.map((option) => (
+        <option key={option.value} value={option.value} disabled={option.disabled}>
+          {option.label}
+        </option>
+      ))}
+    </select>
   );
 }
 
