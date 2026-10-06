@@ -74,21 +74,27 @@ export default function ShareDialog({ spaceId, open, onClose }) {
   const [newShareExpires, setNewShareExpires] = useState(7); // days
 
   useEffect(() => {
-    if (open) {
-      loadShares();
-    }
-  }, [open]);
-
-  const loadShares = async () => {
-    try {
-      const data = await spacesApi.listShares(spaceId);
-      setShares(data);
-    } catch (e) {
-      error("Failed to load shares");
-    } finally {
-      setLoading(false);
-    }
-  };
+    if (!open) return;
+    // Loading lives inside the effect so the fetch is covered by exactly the
+    // values it reads: opening, and the space being viewed. Fetching outside
+    // meant a `spaceId` change while the dialog was up kept the previous
+    // space's links on screen. The guard stops a slow response from landing
+    // after the dialog has moved on.
+    let cancelled = false;
+    (async () => {
+      try {
+        const data = await spacesApi.listShares(spaceId);
+        if (!cancelled) setShares(data);
+      } catch {
+        if (!cancelled) error("Failed to load shares");
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [open, spaceId, error]);
 
   const handleCreate = async (e) => {
     e.preventDefault();

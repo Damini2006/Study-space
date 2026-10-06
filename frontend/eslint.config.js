@@ -39,7 +39,18 @@ export default [
       // white-screen at runtime. This rule closes that gap.
       "react/jsx-no-undef": ["error", { allowGlobals: false }],
 
-      "react-refresh/only-export-components": ["warn", { allowConstantExport: true }],
+      "react-refresh/only-export-components": [
+        "warn",
+        {
+          allowConstantExport: true,
+          // A provider and the hook that reads it belong in one module:
+          // splitting `ToastProvider` from `useToast` would need a third file
+          // merely to hold the context, and HMR never rewrites the hook on its
+          // own. `buttonVariants` is the cva recipe <Button> renders from and
+          // the component tests assert against it directly.
+          allowExportNames: ["useAuth", "useToast", "buttonVariants"],
+        },
+      ],
 
       // Catch the class of bug that white-screens a page: a symbol that was
       // never imported or declared. `unused-imports/no-unused-vars` reports the
