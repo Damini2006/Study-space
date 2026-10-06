@@ -38,18 +38,28 @@ cd frontend && npm install && npm run dev
 
 ### Quality checks
 
-CI runs these three on every push and pull request to `main`. Run them locally before
-opening a PR — all three must pass.
+CI runs these on every push and pull request to `main`. Run them locally before
+opening a PR — they all have to pass.
+
+**Backend** — from `backend/`:
 
 ```bash
-cd frontend
+python -m ruff check .   # E, F, I, UP, B — line length 110
+python -m pytest -q
+```
 
+Integration and RLS tests **skip rather than fail** when no database is
+reachable, so the suite stays green on a machine without Postgres.
+
+**Frontend** — from `frontend/`:
+
+```bash
 npm run lint     # ESLint flat config: undefined identifiers, unused code, React hooks
 npm run test     # Vitest: lib unit tests + component render tests (jsdom)
 npm run build    # Vite production build (code-split, vendor chunks)
 ```
 
-A single command that runs all three in order:
+A single command that runs all three frontend checks in order:
 
 ```bash
 npm run check
@@ -57,8 +67,11 @@ npm run check
 
 Notes:
 
-- `npm run lint` fails on **errors** and reports `react-refresh` / `exhaustive-deps`
-  as warnings, so hot-reload and hook-dependency notices don't block a merge.
+- `npm run lint` exits non-zero only on **errors** — warnings never block a
+  merge, and the suite is currently warning-free.
+- `react-refresh/only-export-components` whitelists `useAuth`, `useToast` and
+  `buttonVariants` by name. A provider and the hook that reads it belong in one
+  module; separating them would need a third file merely to hold the context.
 - The lint config includes `react/jsx-uses-vars` and `react/jsx-no-undef`. Without
   the first, ESLint treats every component referenced only from JSX as dead code
   and `--fix` will delete it; without the second, a missing component import ships
