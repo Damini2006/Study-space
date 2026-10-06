@@ -9,6 +9,8 @@ from uuid import UUID
 
 from pydantic import BaseModel, Field
 
+from studyspace.config import get_settings
+
 
 # ============================================================
 # Model Router
@@ -119,25 +121,40 @@ class PromptTemplateRendered(BaseModel):
 # ============================================================
 
 class RagSettings(BaseModel):
-    """Effective retrieval config — what the pipeline actually runs with."""
+    """Effective retrieval config — what the pipeline actually runs with.
+
+    Config-derived fields are defaulted from `get_settings()` rather than
+    hardcoded, so they stay identical to `global_rag_config()`. Three places used
+    to spell the global baseline out separately (`RagSettings`, `_defaults()` and
+    `global_rag_config()`) and they had already drifted: this model claimed
+    top_k=12 and threshold=0.35 while the pipeline ran 6 and 0.30. Anything that
+    built a `RagSettings` from defaults alone reported a baseline the app would
+    never actually use.
+    """
     space_id: UUID
     # Retrieval
-    top_k: int = 12
+    top_k: int = Field(default_factory=lambda: get_settings().rag_top_k)
     vector_weight: float = 0.7
     fts_weight: float = 0.3
-    rrf_k: int = 60
+    rrf_k: int = Field(default_factory=lambda: get_settings().rag_rrf_k)
     # Reranking
-    rerank_enabled: bool = True
-    rerank_model: str = "cross-encoder/ms-marco-MiniLM-L-6-v2"
+    rerank_enabled: bool = Field(default_factory=lambda: get_settings().reranker != "none")
+    rerank_model: str = Field(default_factory=lambda: get_settings().reranker_model)
     rerank_top_n: int = 8
     # Layers
-    relevance_gate: bool = True
-    relevance_threshold: float = 0.35
-    citation_validation: bool = True
-    claim_verification: bool = True
+    relevance_gate: bool = Field(default_factory=lambda: get_settings().layer_relevance_gate)
+    relevance_threshold: float = Field(
+        default_factory=lambda: float(get_settings().relevance_threshold)
+    )
+    citation_validation: bool = Field(
+        default_factory=lambda: get_settings().layer_citation_validation
+    )
+    claim_verification: bool = Field(
+        default_factory=lambda: get_settings().layer_claim_verification
+    )
     # Generation
     temperature: float = 0.3
-    max_tokens: int = 2048
+    max_tokens: int = Field(default_factory=lambda: get_settings().llm_max_output_tokens)
     socratic_mode: bool = False
     # Model overrides
     chat_model: Optional[str] = None

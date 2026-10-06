@@ -20,8 +20,11 @@ from fastapi import APIRouter, HTTPException
 from studyspace.config import get_settings
 from studyspace.deps import DbDep
 from studyspace.models.ai_intelligence import (
-    RagConfig, RagSettings, RagSettingsResolved, RagSettingsUpdate,
+    RagSettings,
+    RagSettingsResolved,
+    RagSettingsUpdate,
 )
+from studyspace.services.rag_config import global_rag_config
 
 router = APIRouter(prefix="/spaces", tags=["rag"])
 
@@ -31,34 +34,32 @@ router = APIRouter(prefix="/spaces", tags=["rag"])
 # in the DB.
 _UPDATABLE = set(RagSettingsUpdate.model_fields)
 
-# Fields that make a resolved config self-inconsistent if set independently.
-_WEIGHT_PAIRS = ("vector_weight", "fts_weight")
+# Which arm of the hybrid score each weight controls. Spelled out rather than
+# inferred from the field name: this used to pick the arm with a ternary and had
+# the two labels swapped, so the error told people that zeroing the *full-text*
+# weight would disable *semantic* search — the one thing they needed to know,
+# stated backwards.
+_WEIGHT_ARMS = {
+    "vector_weight": "semantic",
+    "fts_weight": "full-text",
+}
 
 
 def _defaults(space_id: UUID) -> dict[str, Any]:
-    """Global defaults, shaped as a `RagSettings` row would be."""
-    s = get_settings()
+    """The global baseline, shaped as a `RagSettings` row would be.
+
+    Derived from `global_rag_config()` — the exact object the answer pipeline
+    reads — so the settings panel cannot show a default the pipeline doesn't
+    use. `RagConfig` carries every tuning knob; the rest here are the columns it
+    deliberately doesn't care about.
+    """
+    cfg = global_rag_config().model_dump()
     return {
         "space_id": space_id,
-        "top_k": s.rag_top_k,
-        "vector_weight": 0.70,
-        "fts_weight": 0.30,
-        "rrf_k": s.rag_rrf_k,
-        "rerank_enabled": s.reranker != "none",
-        "rerank_model": s.reranker_model,
-        "rerank_top_n": 8,
-        "relevance_gate": s.layer_relevance_gate,
-        "relevance_threshold": float(s.relevance_threshold),
-        "citation_validation": s.layer_citation_validation,
-        "claim_verification": s.layer_claim_verification,
-        "temperature": 0.30,
-        "max_tokens": s.llm_max_output_tokens,
-        "socratic_mode": False,
-        "chat_model": None,
-        "judge_model": None,
-        "generate_model": None,
+        "rerank_model": get_settings().reranker_model,
         "created_at": None,
         "updated_at": None,
+        **cfg,
     }
 
 
@@ -69,15 +70,14 @@ def _validate_weights(row: dict[str, Any]) -> None:
     search rather than erroring — a space would stop matching on keywords and
     nobody would know why. Keeping a floor on each side makes the intent explicit.
     """
-    for field in _WEIGHT_PAIRS:
+    for field, arm in _WEIGHT_ARMS.items():
         value = row.get(field)
         if value is not None and not (0.05 <= float(value) <= 1.0):
             raise HTTPException(
                 status_code=400,
                 detail=(
                     f"{field} must be between 0.05 and 1.0 — a weight of 0 disables "
-                    f"{'semantic' if field == 'fts_weight' else 'full-text'} search "
-                    "entirely, which is rarely what you want."
+                    f"{arm} search entirely, which is rarely what you want."
                 ),
             )
 
@@ -99,14 +99,21 @@ async def _require_owned(db: DbDep, space_id: UUID) -> None:
 
 
 def _respond(space_id: UUID, row: dict[str, Any] | None) -> RagSettingsResolved:
-    merged = {**_defaults(space_id), **(row or {})}
-    overrides = sorted(set(merged) & set(_UPDATABLE) - {"space_id"})
-    # Only report a field as overridden if it actually differs from the default;
-    # otherwise the UI would badge every row as customised after a no-op save.
-    defaults = _defaults(space_id)
-    overrides = [k for k in overrides if merged.get(k) != defaults.get(k)]
+    # Both sides go through RagSettings before anything is compared, because
+    # asyncpg returns `numeric` columns as Decimal and Decimal("0.70") != 0.70.
+    # Comparing the raw row against the raw defaults reported every numeric
+    # column as overridden on any space that had ever saved once, badge and all.
+    # Deriving `resolved` first also makes the badge and the value agree by
+    # construction: it is literally the value being reported that decides.
+    resolved = RagSettings(**{**_defaults(space_id), **(row or {})})
+    defaults = RagSettings(**_defaults(space_id))
+    overrides = [
+        field
+        for field in sorted(_UPDATABLE)
+        if getattr(resolved, field) != getattr(defaults, field)
+    ]
     return RagSettingsResolved(
-        resolved=RagSettings(**merged),
+        resolved=resolved,
         overridden=overrides,
         is_default=row is None,
     )

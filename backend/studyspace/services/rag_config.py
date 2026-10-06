@@ -88,7 +88,9 @@ async def resolve_rag_config(
     # the global default is a no-op either way, and skipping absent keys keeps a
     # future nullable column from injecting None into a typed field.
     overrides = {
-        k: v for k, v in dict(row).items() if k in base.model_fields
+        # `type(x).model_fields`, not `x.model_fields`: Pydantic 2.11 deprecates
+        # the instance form (removed in 3.0) and emits a warning per lookup.
+        k: v for k, v in dict(row).items() if k in type(base).model_fields
     }
     if not overrides:
         return base
@@ -108,4 +110,8 @@ def describe(cfg: RagConfig, defaults: RagConfig | None = None) -> dict[str, Any
     """Provenance for tracing: which knobs differ from the global baseline."""
     if defaults is None:
         defaults = global_rag_config()
-    return {k: getattr(cfg, k) for k in cfg.model_fields if getattr(cfg, k) != getattr(defaults, k)}
+    return {
+        k: getattr(cfg, k)
+        for k in type(cfg).model_fields
+        if getattr(cfg, k) != getattr(defaults, k)
+    }
