@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
@@ -10,6 +10,7 @@ import {
   Loader2,
   Plus,
   Quote,
+  RotateCcw,
   Sparkles,
   Timer,
 } from "lucide-react";
@@ -22,6 +23,7 @@ import { Input, Label } from "@/components/ui/input";
 import { Dialog } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/input";
 import { cn, formatDate, relativeTime } from "@/lib/utils";
+import { usePullToRefresh } from "@/hooks/useGestures";
 
 export default function Dashboard() {
   const { profile } = useAuth();
@@ -64,8 +66,39 @@ export default function Dashboard() {
     onError: (err) => error(err.message),
   });
 
+  // Pull-to-refresh on mobile. Every tile on this page comes from a different
+  // query key, so a partial refresh would leave the dashboard quietly
+  // inconsistent with itself.
+  const refreshAll = useCallback(async () => {
+    await Promise.all([
+      queryClient.invalidateQueries({ queryKey: ["spaces"] }),
+      queryClient.invalidateQueries({ queryKey: ["study", "due"] }),
+      queryClient.invalidateQueries({ queryKey: ["analytics"] }),
+      queryClient.invalidateQueries({ queryKey: ["habits"] }),
+      queryClient.invalidateQueries({ queryKey: ["plan", "tasks"] }),
+    ]);
+  }, [queryClient]);
+
+  const pull = usePullToRefresh({ onRefresh: refreshAll });
+
   return (
-    <div className="mx-auto max-w-6xl space-y-6">
+    <div ref={pull.ref} {...pull.bind} className="mx-auto max-w-6xl space-y-6" style={{ touchAction: "pan-y" }}>
+      {pull.pullDistance > 0 ? (
+        <div
+          aria-hidden
+          className="flex justify-center"
+          style={{ opacity: pull.indicator.opacity }}
+        >
+          <RotateCcw
+            className={cn("size-4", pull.refreshing && "animate-spin")}
+            style={{
+              transform: pull.indicator.transform,
+              color: pull.indicator.armed ? "var(--color-primary)" : undefined,
+            }}
+          />
+        </div>
+      ) : null}
+
       {/* Greeting */}
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>

@@ -40,7 +40,12 @@ export function useHaptics(enabled = true) {
  * @param {(dir: "left"|"right") => void} options.onSwipe
  * @param {() => void} [options.onStart]
  * @param {() => void} [options.onCancel]
- * @returns {{bind: object, dx: number, dy: number, swiping: boolean, progress: number}}
+ * @returns {{bind: object, dx: number, dy: number, swiping: boolean, progress: number, travel: {current: number}}}
+ *
+ * `travel.current` is the furthest horizontal distance of the gesture that just
+ * ended, reset on the next pointerdown. Callers need it because browsers fire
+ * `click` after `pointerup` even when the pointer moved — without this, a swipe
+ * that started on a button also triggers that button's onClick.
  */
 export function useSwipe({
   threshold = 90,
@@ -55,12 +60,14 @@ export function useSwipe({
   const [swiping, setSwiping] = useState(false);
   const start = useRef(null);
   const fired = useRef(false);
+  const travel = useRef(0);
 
   const onPointerDown = useCallback(
     (e) => {
       if (!enabled || fired.current) return;
       if (e.pointerType === "mouse" && e.button !== 0) return;
       start.current = { x: e.clientX, y: e.clientY, id: e.pointerId };
+      travel.current = 0;
       setSwiping(true);
       onStart?.();
     },
@@ -80,6 +87,7 @@ export function useSwipe({
         onCancel?.();
         return;
       }
+      travel.current = Math.max(travel.current, Math.abs(nextDx));
       setDx(nextDx);
       setDy(nextDy);
     },
@@ -123,8 +131,24 @@ export function useSwipe({
     dx,
     dy,
     swiping,
+    travel,
     progress: Math.min(1, Math.abs(dx) / threshold),
   };
+}
+
+/**
+ * Is the given element scrolled to the top of its scroll chain?
+ *
+ * The naive check — `el.scrollTop > 0` — is wrong for an element that can't
+ * scroll at all, which is the common case when the page body scrolls instead.
+ * There `scrollTop` is permanently 0, so pull-to-refresh would arm even when the
+ * user had scrolled halfway down and pulling would fight the bounce.
+ */
+function isAtTop(el) {
+  if (el && el.scrollTop > 0) return false;
+  const elScrolls = Boolean(el && el.scrollHeight > el.clientHeight + 1);
+  if (!elScrolls && typeof window !== "undefined" && window.scrollY > 0) return false;
+  return true;
 }
 
 /**
@@ -147,8 +171,7 @@ export function usePullToRefresh({ onRefresh, threshold = 72, maxPull = 110 } = 
   );
 
   const onTouchStart = useCallback((e) => {
-    const el = scrollEl.current;
-    if (!el || el.scrollTop > 0 || refreshing) return;
+    if (!isAtTop(scrollEl.current) || refreshing) return;
     startY.current = e.touches[0].clientY;
   }, [refreshing]);
 
@@ -183,6 +206,10 @@ export function usePullToRefresh({ onRefresh, threshold = 72, maxPull = 110 } = 
     setPullDistance(maxPull);
     try {
       await onRefresh?.();
+    } catch {
+      // A failed refresh is not something the gesture can act on, and letting
+      // the rejection escape would surface as an unhandled rejection from a
+      // touchend handler. The spinner still has to come down either way.
     } finally {
       setRefreshing(false);
       setPullDistance(0);
