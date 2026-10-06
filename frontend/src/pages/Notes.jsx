@@ -18,9 +18,8 @@ import { Badge } from "@/components/ui/input";
 import { notesApi } from "@/services/api-services";
 import { useToast } from "@/components/ui/toast";
 import { cn, tiptapToText } from "@/lib/utils";
-import { Editor, EditorContent } from "@tiptap/react";
-import StarterKit from "@tiptap/starter-kit";
-import Placeholder from "@tiptap/extension-placeholder";
+import { EditorContent } from "@tiptap/react";
+import { createNoteEditor } from "@/lib/editor";
 
 const COLORS = ["#FFF9B3", "#FFD6A5", "#A0E7E5", "#BDB2FF", "#FFB3D9", "#C6F6D5"];
 
@@ -75,9 +74,8 @@ function NoteEditor({ note, onSave, onClose, allTags }) {
   // this previously did) allocated a fresh editor on every keystroke.
   const editor = useMemo(
     () =>
-      new Editor({
-        extensions: [StarterKit, Placeholder.configure({ placeholder: "Start writing…" })],
-        content: note?.content || { type: "doc", content: [] },
+      createNoteEditor({
+        content: note?.content,
         onUpdate: ({ editor: e }) => setContent(e.getJSON()),
       }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
