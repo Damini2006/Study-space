@@ -156,6 +156,8 @@ export const modelsApi = {
 };
 
 export const promptTemplatesApi = {
+  // Built-in templates are addressable by their type name ("chat_system"), custom
+  // ones by UUID — so `render` and `get` accept either without the caller caring.
   list: ({ spaceId, type } = {}) => {
     const q = new URLSearchParams();
     if (spaceId) q.set("space_id", spaceId);
@@ -163,16 +165,24 @@ export const promptTemplatesApi = {
     const qs = q.toString();
     return api.get(`/prompt-templates${qs ? `?${qs}` : ""}`);
   },
-  get: (id) => api.get(`/prompt-templates/${id}`),
-  create: (body) => api.post("/prompt-templates", body),
-  update: (id, body) => api.patch(`/prompt-templates/${id}`, body),
-  remove: (id) => api.delete(`/prompt-templates/${id}`),
-  render: (id, variables) => api.post(`/prompt-templates/${id}/render`, variables),
+  get: (id) => api.get(`/prompt-templates/${encodeURIComponent(id)}`),
+  create: (body) => {
+    const { space_id: spaceId, ...rest } = body;
+    const q = spaceId ? `?space_id=${encodeURIComponent(spaceId)}` : "";
+    return api.post(`/prompt-templates${q}`, rest);
+  },
+  update: (id, body) => api.patch(`/prompt-templates/${encodeURIComponent(id)}`, body),
+  remove: (id) => api.delete(`/prompt-templates/${encodeURIComponent(id)}`),
+  render: (id, variables) =>
+    api.post(`/prompt-templates/${encodeURIComponent(id)}/render`, variables),
 };
 
 export const ragApi = {
   getSettings: (spaceId) => api.get(`/spaces/${spaceId}/rag`),
   updateSettings: (spaceId, body) => api.patch(`/spaces/${spaceId}/rag`, body),
   resetSettings: (spaceId) => api.delete(`/spaces/${spaceId}/rag`),
-  auditCitations: (spaceId, body = {}) => api.post(`/spaces/${spaceId}/citation-audit`, body),
+  // Optional filters go in the request body (not the query string) so
+  // `source_ids` arrives as a real UUID array rather than a comma-joined string.
+  auditCitations: (spaceId, filters = {}) =>
+    api.post(`/spaces/${spaceId}/citation-audit`, filters),
 };
