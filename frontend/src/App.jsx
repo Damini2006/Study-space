@@ -9,7 +9,6 @@ import Dashboard from "@/pages/Dashboard";
 import Workspace from "@/pages/Workspace";
 import Study from "@/pages/Study";
 import Planner from "@/pages/Planner";
-import Notes from "@/pages/Notes";
 import Focus from "@/pages/Focus";
 import AuthCallback from "@/pages/AuthCallback";
 import NotFound from "@/pages/NotFound";
@@ -20,6 +19,12 @@ import CookieBanner from "@/components/layout/CookieBanner";
 const Analytics = lazy(() => import("@/pages/Analytics"));
 const VisionBoard = lazy(() => import("@/pages/VisionBoard"));
 const Finance = lazy(() => import("@/pages/Finance"));
+// Notes carries the rich-text editor: tiptap and its whole ProseMirror
+// tree. Notes.jsx is the only module importing either (verified by
+// grep — @tiptap and @/lib/editor appear nowhere else), so splitting it
+// here takes all of it out of the first load. A stranger at / was paying
+// for an editor they cannot reach without signing in first.
+const Notes = lazy(() => import("@/pages/Notes"));
 const Settings = lazy(() => import("@/pages/Settings"));
 const AdminEvals = lazy(() => import("@/pages/AdminEvals"));
 const Privacy = lazy(() => import("@/pages/Privacy"));

@@ -32,11 +32,13 @@ import { expect, test } from "@playwright/test";
  * by a filter that would quietly stop meaning anything.
  */
 const BUDGETS = {
-  // Measured baseline: 370.0 kB across 6 files (entry, react, motion,
-  // icons, query, supabase) plus this page's own code. The headroom is
-  // for incidental growth; the real tightening happens when code moves
-  // out of the first load.
-  jsBytes: 400 * 1024,
+  // Measured baselines, tightened as code leaves the first load:
+  //   370.0 kB across six files before any splitting;
+  //   246.2 kB once Notes — and with it tiptap and the whole ProseMirror
+  //   tree, 395 kB of the entry chunk — became a lazy route.
+  // Headroom is for incidental growth, not for going eager: a new import
+  // of any weight still trips this.
+  jsBytes: 260 * 1024,
   // One stylesheet: the bundled index CSS, 15.9 kB as served.
   cssBytes: 20 * 1024,
   // Ceiling, not a target — see above.
