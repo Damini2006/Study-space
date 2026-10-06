@@ -142,6 +142,19 @@ def _task_models() -> dict[ModelTask, str]:
     }
 
 
+# Models that only produce embeddings. They are never a fallback for a text
+# task: the call either fails outright or returns a vector where an answer was
+# expected, and nothing downstream checks for that — the chat stream would emit
+# a base64 blob as prose. An earlier version of `_fallback_chain` had one of
+# these in the shared pool and offered it as a chat fallback.
+_EMBED_ONLY = frozenset({"text-embedding-3-small", "text-embedding-3-large"})
+
+# Chat-capable alternatives a text task may fall back to. Deliberately excludes
+# the local model: if one is configured it is a privacy choice, and silently
+# routing traffic to it is the opposite of what the operator asked for.
+_TEXT_FALLBACKS = frozenset({"gpt-4o-mini", "claude-3-haiku"})
+
+
 def _fallback_chain(task: ModelTask, primary: str) -> list[str]:
     """Cheaper alternatives for ``task``, never including the primary model.
 
@@ -150,24 +163,24 @@ def _fallback_chain(task: ModelTask, primary: str) -> list[str]:
     and the UI labels it as such.
     """
     settings = get_settings()
-    pool = {
-        "gpt-4o-mini",
-        "claude-3-haiku",
-        "text-embedding-3-small",
-    } if task is not ModelTask.embed else {"text-embedding-3-small"}
-    # A local model is never a *fallback*: if one is configured it's a deliberate
-    # privacy choice, and silently routing a fallback to it would send data off-box.
+    # With a proxy configured, the deployment's own model list is authoritative
+    # and may not address public models at all, so proposing fallbacks would
+    # name endpoints the operator never enabled.
     if settings.litellm_base_url:
         return []
-    priced = [
-        m for m in pool
-        if m != primary
-        and MODEL_CATALOG[m]["cost_per_1k_input"] <= MODEL_CATALOG.get(
-            primary, {"cost_per_1k_input": 0.0}
-        )["cost_per_1k_input"]
+
+    pool = _EMBED_ONLY if task is ModelTask.embed else _TEXT_FALLBACKS
+    primary_cost = MODEL_CATALOG.get(primary, {}).get("cost_per_1k_input")
+    if primary_cost is None:
+        # Undocumented primary: without a price there is no honest way to claim
+        # an alternative would be cheaper.
+        return []
+
+    return [
+        m
+        for m in sorted(pool - {primary}, key=lambda m: MODEL_CATALOG[m]["cost_per_1k_input"])
+        if MODEL_CATALOG[m]["cost_per_1k_input"] <= primary_cost
     ]
-    priced.sort(key=lambda m: MODEL_CATALOG[m]["cost_per_1k_input"])
-    return priced
 
 
 @router.get("/catalog")
