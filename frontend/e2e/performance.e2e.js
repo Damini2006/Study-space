@@ -35,10 +35,12 @@ const BUDGETS = {
   // Measured baselines, tightened as code leaves the first load:
   //   370.0 kB across six files before any splitting;
   //   246.2 kB once Notes — and with it tiptap and the whole ProseMirror
-  //   tree, 395 kB of the entry chunk — became a lazy route.
+  //   tree, 395 kB of the entry chunk — became a lazy route;
+  //   205.9 kB once the rest of /app followed it out (the entry chunk is
+  //   94 kB now, down from 631 kB, and is Landing plus shared glue).
   // Headroom is for incidental growth, not for going eager: a new import
   // of any weight still trips this.
-  jsBytes: 260 * 1024,
+  jsBytes: 220 * 1024,
   // One stylesheet: the bundled index CSS, 15.9 kB as served.
   cssBytes: 20 * 1024,
   // Ceiling, not a target — see above.

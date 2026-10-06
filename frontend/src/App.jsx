@@ -1,21 +1,26 @@
 import { Navigate, Route, Routes, useLocation } from "react-router-dom";
 import { lazy, Suspense, useEffect } from "react";
 import { motion } from "framer-motion";
-import AppShell from "@/components/layout/AppShell";
 import Protected from "@/components/Protected";
 import Landing from "@/pages/Landing";
-import AuthPage from "@/pages/Auth";
-import Dashboard from "@/pages/Dashboard";
-import Workspace from "@/pages/Workspace";
-import Study from "@/pages/Study";
-import Planner from "@/pages/Planner";
-import Focus from "@/pages/Focus";
 import AuthCallback from "@/pages/AuthCallback";
 import NotFound from "@/pages/NotFound";
 import CookieBanner from "@/components/layout/CookieBanner";
 
-// Secondary routes are code-split so the first paint only pulls in what the
-// landing page and dashboard actually need.
+// Everything behind a route is code-split, so the first paint pulls in
+// only what a stranger at / actually sees: Landing, the 404 fallback, the
+// OAuth callback (tiny, and someone is waiting on it while it runs), the
+// cookie banner, and Protected — the gate every /app route passes
+// through. Each route already renders RouteFallback while its chunk
+// arrives, so this is the behaviour the secondary routes have always
+// had, applied to the rest of them.
+const AppShell = lazy(() => import("@/components/layout/AppShell"));
+const AuthPage = lazy(() => import("@/pages/Auth"));
+const Dashboard = lazy(() => import("@/pages/Dashboard"));
+const Workspace = lazy(() => import("@/pages/Workspace"));
+const Study = lazy(() => import("@/pages/Study"));
+const Planner = lazy(() => import("@/pages/Planner"));
+const Focus = lazy(() => import("@/pages/Focus"));
 const Analytics = lazy(() => import("@/pages/Analytics"));
 const VisionBoard = lazy(() => import("@/pages/VisionBoard"));
 const Finance = lazy(() => import("@/pages/Finance"));
