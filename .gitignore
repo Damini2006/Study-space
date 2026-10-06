@@ -21,6 +21,7 @@ build/
 # Node
 node_modules/
 frontend/dist/
+frontend/dist-e2e/
 .vite/
 *.tsbuildinfo
 

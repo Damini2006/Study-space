@@ -199,7 +199,11 @@ export default function AuthPage() {
   }, [initialMode]);
 
   const strength = scorePassword(password);
-  const from = "/app/dashboard";
+  // Where the visitor was actually headed. Protected drops the path into
+  // location.state when it bounces an anonymous visitor here, so honouring it
+  // is what makes following a shared link survive the sign-in in front of it.
+  // Anyone arriving at /auth directly still lands on the dashboard.
+  const from = location.state?.from ?? "/app/dashboard";
 
   const switchMode = (next) => {
     setMode(next);

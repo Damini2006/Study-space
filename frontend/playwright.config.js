@@ -32,8 +32,9 @@ export default defineConfig({
   webServer: {
     // The build happens in the `test:e2e` script rather than here, so a
     // build failure surfaces as a build failure instead of "webserver did
-    // not start in time".
-    command: `npm run preview -- --port ${PORT} --strictPort`,
+    // not start in time". It writes dist-e2e and not dist: the suite drives
+    // the .env.e2e build, while `npm run check` keeps producing a clean one.
+    command: `npx vite preview --outDir dist-e2e --port ${PORT} --strictPort`,
     url: URL,
     reuseExistingServer: !process.env.CI,
     timeout: 60_000,
