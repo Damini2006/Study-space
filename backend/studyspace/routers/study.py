@@ -14,6 +14,11 @@ from studyspace.services import fsrs_scheduler as fsrs
 
 router = APIRouter(prefix="/study", tags=["study"])
 
+# Rolling window for the recall-rate figure on the review stats panel. Long enough
+# that a couple of bad days don't swing it, short enough to react to a change in
+# how the student is studying.
+RETENTION_WINDOW_DAYS = 30
+
 _CARD_SELECT = """
 select c.id, c.space_id, sp.title as space_title, c.front, c.back, c.tags,
        c.source_chunk_id, c.created_at,
@@ -72,12 +77,27 @@ async def due_cards(db: DbDep, limit: int = 50) -> DueOut:
         "from public.card_state cs join public.cards c on c.id = cs.card_id "
         "where cs.user_id = auth.uid() and not cs.suspended"
     )
+    # Real recall rate over the window: the share of logged reviews the student
+    # rated Good or Easy. A user with no reviews in the window gets None, not 0,
+    # so the UI can say "no reviews yet" instead of showing 0% retention.
+    recall = await db.fetchrow(
+        "select count(*)::int as graded, "
+        "count(*) filter (where rating >= 3)::int as recalled "
+        "from public.review_logs "
+        "where user_id = auth.uid() and reviewed_at >= now() - make_interval(days => $1)",
+        RETENTION_WINDOW_DAYS,
+    )
+    graded = recall["graded"]
+    retention = round(recall["recalled"] / graded, 4) if graded else None
+
     return DueOut(
         due_count=counts["due"],
         new_count=counts["fresh"],
         learning_count=counts["learning"],
         review_count=counts["review"],
         total_cards=counts["total"],
+        retention=retention,
+        retention_window_days=RETENTION_WINDOW_DAYS,
         cards=cards,
     )
 

@@ -38,6 +38,12 @@ class DueOut(BaseModel):
     learning_count: int = 0
     review_count: int = 0
     total_cards: int = 0
+    # Share of reviews in the window that were rated Good or Easy (rating >= 3),
+    # i.e. how often recall actually succeeded. Null rather than 0 when nothing
+    # has been reviewed in the window — "no data" and "you never get these right"
+    # are very different facts and the UI must not conflate them.
+    retention: float | None = None
+    retention_window_days: int = 30
     cards: list[CardOut] = Field(default_factory=list)
 
 
