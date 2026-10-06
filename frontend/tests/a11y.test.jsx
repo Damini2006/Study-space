@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
-import { Dialog, Select } from "@/components/ui/dialog";
+import { Dialog, Select, Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/dialog";
 
 const OPTIONS = [
   { value: "1", label: "1 day" },
@@ -257,5 +257,122 @@ describe("Dialog", () => {
       </Dialog>
     );
     expect(document.body.style.overflow).toBe("");
+  });
+});
+
+function TabFixture({ initial = "one", onSelect }) {
+  const [value, setValue] = useState(initial);
+  const change = (next) => {
+    setValue(next);
+    onSelect?.(next);
+  };
+
+  return (
+    <Tabs value={value} onValueChange={change} ariaLabel="Views">
+      <TabsList>
+        <TabsTrigger value="one">One</TabsTrigger>
+        <TabsTrigger value="two">Two</TabsTrigger>
+        <TabsTrigger value="three">Three</TabsTrigger>
+      </TabsList>
+      <TabsContent value="one">Panel one</TabsContent>
+      <TabsContent value="two">Panel two</TabsContent>
+      <TabsContent value="three">Panel three</TabsContent>
+    </Tabs>
+  );
+}
+
+describe("Tabs", () => {
+  it("has exactly one tablist, and keeps the panels outside it", () => {
+    render(<TabFixture initial="two" />);
+
+    const tablists = screen.getAllByRole("tablist");
+    expect(tablists).toHaveLength(1);
+    // Both `Tabs` and `TabsList` used to carry the role, nesting one
+    // tablist inside another and leaving the triggers ambiguously owned.
+    expect(tablists[0].querySelectorAll('[role="tablist"]')).toHaveLength(0);
+    expect(tablists[0].querySelectorAll('[role="tabpanel"]')).toHaveLength(0);
+    expect(tablists[0].querySelectorAll('[role="tab"]')).toHaveLength(3);
+    expect(screen.getAllByRole("tabpanel")).toHaveLength(1);
+  });
+
+  it("exposes the accessible name it was given", () => {
+    render(<TabFixture initial="one" />);
+
+    expect(screen.getByRole("tablist", { name: "Views" })).toBeInTheDocument();
+  });
+
+  it("puts only the selected tab in the page's Tab order", () => {
+    render(<TabFixture initial="two" />);
+
+    const selected = screen.getByRole("tab", { name: "Two" });
+    expect(selected).toHaveAttribute("tabindex", "0");
+    expect(selected).toHaveAttribute("aria-selected", "true");
+
+    for (const name of ["One", "Three"]) {
+      expect(screen.getByRole("tab", { name })).toHaveAttribute("tabindex", "-1");
+      expect(screen.getByRole("tab", { name })).toHaveAttribute("aria-selected", "false");
+    }
+  });
+
+  it("links the selected tab to its panel in both directions", () => {
+    render(<TabFixture initial="two" />);
+
+    const tab = screen.getByRole("tab", { name: "Two" });
+    const panel = screen.getByRole("tabpanel", { name: "Two" });
+
+    expect(panel).toHaveAttribute("aria-labelledby", tab.getAttribute("id"));
+    expect(tab).toHaveAttribute("aria-controls", panel.getAttribute("id"));
+    // Unselected tabs name no panel, because it is unmounted — a reference
+    // to an id that isn't in the document helps nobody.
+    expect(screen.getByRole("tab", { name: "One" })).not.toHaveAttribute("aria-controls");
+    expect(panel).toHaveAttribute("tabindex", "0");
+  });
+
+  it("moves with the arrow keys, wrapping at both ends", () => {
+    render(<TabFixture initial="three" />);
+
+    screen.getByRole("tab", { name: "Three" }).focus();
+    fireEvent.keyDown(screen.getByRole("tablist"), { key: "ArrowRight" });
+    expect(screen.getByRole("tab", { name: "One" })).toHaveFocus();
+
+    fireEvent.keyDown(screen.getByRole("tablist"), { key: "ArrowLeft" });
+    expect(screen.getByRole("tab", { name: "Three" })).toHaveFocus();
+
+    fireEvent.keyDown(screen.getByRole("tablist"), { key: "Home" });
+    expect(screen.getByRole("tab", { name: "One" })).toHaveFocus();
+
+    fireEvent.keyDown(screen.getByRole("tablist"), { key: "End" });
+    expect(screen.getByRole("tab", { name: "Three" })).toHaveFocus();
+
+    // Focus alone is not enough — following focus is what makes the panel
+    // change with it.
+    expect(screen.getByRole("tabpanel", { name: "Three" })).toBeInTheDocument();
+  });
+
+  it("selects from defaultValue when nothing controls it", async () => {
+    // Analytics passes `defaultValue`, which `Tabs` did not accept: the value
+    // stayed unset, every panel compared unequal to it, and the page's whole
+    // tabbed section rendered nothing at all.
+    render(
+      <Tabs defaultValue="two" ariaLabel="Views">
+        <TabsList>
+          <TabsTrigger value="one">One</TabsTrigger>
+          <TabsTrigger value="two">Two</TabsTrigger>
+        </TabsList>
+        <TabsContent value="one">Panel one</TabsContent>
+        <TabsContent value="two">Panel two</TabsContent>
+      </Tabs>
+    );
+
+    expect(screen.getByRole("tab", { name: "Two" })).toHaveAttribute(
+      "aria-selected",
+      "true"
+    );
+    expect(screen.getByRole("tabpanel", { name: "Two" })).toBeInTheDocument();
+    expect(screen.queryByRole("tabpanel", { name: "One" })).toBeNull();
+
+    await userEvent.click(screen.getByRole("tab", { name: "One" }));
+
+    expect(screen.getByRole("tabpanel", { name: "One" })).toBeInTheDocument();
   });
 });

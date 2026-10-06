@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useId, useRef } from "react";
+import { createContext, useContext, useEffect, useId, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { X } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -170,16 +170,46 @@ const TAB_VARIANTS = {
 
 const TabsContext = createContext(null);
 
-export function Tabs({ value, onValueChange, children, variant = "line", className, ariaLabel }) {
+/**
+ * Tabs — a WAI-ARIA tab set.
+ *
+ * `TabsList` owns `role="tablist"`; `Tabs` is only the wrapper. Putting the
+ * role on both nested a tablist inside another, which meant the triggers
+ * were ambiguously owned and the inner list was an unexpected child of the
+ * outer one.
+ *
+ * Selection uses a roving tabindex: the selected tab is the one in the
+ * page's Tab order and the arrow keys move between the rest, selecting as
+ * they go. Automatic activation is right here because the panels are cheap.
+ */
+export function Tabs({
+  value,
+  defaultValue,
+  onValueChange,
+  children,
+  variant = "line",
+  className,
+  ariaLabel,
+}) {
+  const baseId = useId();
+
+  // `value` controls the selection whenever it is present. Without one,
+  // `defaultValue` seeds an internal selection instead — Analytics passes
+  // `defaultValue`, which was silently ignored, so nothing was ever equal to
+  // the unset value and every panel returned null.
+  const [selected, setSelected] = useState(defaultValue);
+  const active = value !== undefined ? value : selected;
+
+  const select = (next) => {
+    setSelected(next);
+    onValueChange?.(next);
+  };
+
   return (
-    <TabsContext.Provider value={{ value, onValueChange }}>
-      <div
-        className={cn(TAB_VARIANTS[variant], className)}
-        data-variant={variant}
-        role="tablist"
-        aria-label={ariaLabel}
-        aria-orientation="horizontal"
-      >
+    <TabsContext.Provider
+      value={{ value: active, onValueChange: select, ariaLabel, baseId }}
+    >
+      <div className={cn(TAB_VARIANTS[variant], className)} data-variant={variant}>
         {children}
       </div>
     </TabsContext.Provider>
@@ -187,8 +217,44 @@ export function Tabs({ value, onValueChange, children, variant = "line", classNa
 }
 
 export function TabsList({ children, className }) {
+  const ctx = useContext(TabsContext);
+
+  // Arrow keys are required by the pattern, and are the only way between
+  // tabs once the roving tabindex leaves a single tab in the Tab order.
+  const onKeyDown = (event) => {
+    if (!["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) return;
+
+    const tabs = Array.from(
+      event.currentTarget.querySelectorAll('[role="tab"]:not([disabled])')
+    );
+    if (tabs.length === 0) return;
+
+    const current = tabs.findIndex((tab) => tab === document.activeElement);
+    let index;
+    if (event.key === "Home") {
+      index = 0;
+    } else if (event.key === "End") {
+      index = tabs.length - 1;
+    } else if (current < 0) {
+      index = event.key === "ArrowRight" ? 0 : tabs.length - 1;
+    } else {
+      const step = event.key === "ArrowRight" ? 1 : -1;
+      index = (current + step + tabs.length) % tabs.length;
+    }
+
+    event.preventDefault();
+    tabs[index].focus();
+    tabs[index].click();
+  };
+
   return (
-    <div role="tablist" className={cn("flex gap-1", className)}>
+    <div
+      role="tablist"
+      aria-label={ctx?.ariaLabel}
+      aria-orientation="horizontal"
+      onKeyDown={onKeyDown}
+      className={cn("flex gap-1", className)}
+    >
       {children}
     </div>
   );
@@ -201,7 +267,13 @@ export function TabsTrigger({ value, children, className }) {
     <button
       type="button"
       role="tab"
+      id={ctx ? `${ctx.baseId}-tab-${value}` : undefined}
+      // Only the selected tab points at a panel, because only that panel is
+      // mounted — an aria-controls naming an id that isn't in the document
+      // is a broken reference rather than a useful one.
+      aria-controls={ctx && active ? `${ctx.baseId}-panel-${value}` : undefined}
       aria-selected={active}
+      tabIndex={active ? 0 : -1}
       onClick={() => ctx?.onValueChange?.(value)}
       className={cn(
         "rounded-md px-3 py-1.5 text-sm font-medium transition-colors",
@@ -220,7 +292,15 @@ export function TabsContent({ value, children, className }) {
   const ctx = useContext(TabsContext);
   if (ctx && ctx.value !== value) return null;
   return (
-    <div role="tabpanel" className={cn("focus:outline-none", className)}>
+    <div
+      role="tabpanel"
+      id={ctx ? `${ctx.baseId}-panel-${value}` : undefined}
+      aria-labelledby={ctx ? `${ctx.baseId}-tab-${value}` : undefined}
+      // Focusable so that a panel holding nothing focusable is still
+      // reachable — there is only ever one of these in the tab order.
+      tabIndex={0}
+      className={cn("focus:outline-none", className)}
+    >
       {children}
     </div>
   );
