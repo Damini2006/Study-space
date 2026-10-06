@@ -146,16 +146,43 @@ jobs:
     runs-on: ubuntu-latest
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     steps:
+      # `secrets` is not available in an `if:` expression, so an unset secret
+      # has to be tested here instead — via `env`, which does accept it.
       - name: Deploy to Render (backend)
-        if: ${{ secrets.RENDER_BACKEND_DEPLOY_HOOK != '' }}
-        run: curl -X POST "${{ secrets.RENDER_BACKEND_DEPLOY_HOOK }}"
+        env:
+          DEPLOY_HOOK: ${{ secrets.RENDER_BACKEND_DEPLOY_HOOK }}
+        run: |
+          if [ -z "$DEPLOY_HOOK" ]; then
+            echo "RENDER_BACKEND_DEPLOY_HOOK is not configured; skipping."
+            exit 0
+          fi
+          curl -X POST "$DEPLOY_HOOK"
 
       - name: Deploy to Render (worker)
-        if: ${{ secrets.RENDER_WORKER_DEPLOY_HOOK != '' }}
-        run: curl -X POST "${{ secrets.RENDER_WORKER_DEPLOY_HOOK }}"
+        env:
+          DEPLOY_HOOK: ${{ secrets.RENDER_WORKER_DEPLOY_HOOK }}
+        run: |
+          if [ -z "$DEPLOY_HOOK" ]; then
+            echo "RENDER_WORKER_DEPLOY_HOOK is not configured; skipping."
+            exit 0
+          fi
+          curl -X POST "$DEPLOY_HOOK"
+
+      # A step carrying `uses:` cannot also run shell, so the guard is a
+      # separate step whose output the deploy step tests.
+      - name: Check Vercel credentials
+        id: vercel
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+        run: |
+          if [ -n "$VERCEL_TOKEN" ]; then
+            echo "enabled=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "enabled=false" >> "$GITHUB_OUTPUT"
+          fi
 
       - name: Deploy to Vercel (frontend)
-        if: ${{ secrets.VERCEL_TOKEN != '' }}
+        if: steps.vercel.outputs.enabled == 'true'
         uses: amondnet/vercel-action@v25
         with:
           vercel-token: ${{ secrets.VERCEL_TOKEN }}
