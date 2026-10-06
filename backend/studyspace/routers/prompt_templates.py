@@ -173,15 +173,23 @@ def _system_row(type_: PromptTemplateType) -> dict[str, Any]:
 
 
 def _hydrate(row: Any) -> dict[str, Any]:
-    """Normalise a DB row to the JSON shape the client expects."""
+    """Normalise a DB row to the JSON shape the client expects.
+
+    The contract the client relies on is that `variables` is always a list —
+    it renders with `variables.map(...)`, so a scalar here is a crash rather
+    than an empty dropdown.
+    """
     out = dict(row)
-    # `variables` is jsonb; a caller may reasonably have written a bare list.
-    if isinstance(out.get("variables"), str):
+    # `variables` is jsonb, so it may legitimately arrive as a bare list, as a
+    # string containing one, or (if something upstream wrote the wrong shape)
+    # as a scalar. Only the first two are a list by the time they get here.
+    variables = out.get("variables")
+    if isinstance(variables, str):
         try:
-            out["variables"] = json.loads(out["variables"])
+            variables = json.loads(variables)
         except json.JSONDecodeError:
-            out["variables"] = []
-    out["variables"] = out.get("variables") or []
+            variables = None
+    out["variables"] = variables if isinstance(variables, list) else []
     out["is_system"] = False
     return out
 

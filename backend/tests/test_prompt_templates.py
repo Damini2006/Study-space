@@ -173,6 +173,23 @@ class TestHydrate:
         # A malformed jsonb must not raise and take the whole listing with it.
         assert _hydrate({"variables": "not json"})["variables"] == []
 
+    @pytest.mark.parametrize(
+        "bogus",
+        [
+            pytest.param(42, id="jsonb-number"),
+            pytest.param(0, id="jsonb-zero"),
+            pytest.param(True, id="jsonb-bool"),
+            pytest.param({"name": "topic"}, id="jsonb-object"),
+            pytest.param('"[\"a\"]"', id="double-encoded-string"),
+        ],
+    )
+    def test_anything_that_is_not_a_list_becomes_an_empty_list(self, bogus):
+        # `or []` used to let a truthy non-list (42, a dict) straight through,
+        # and the client would then call `.map()` on it. Unreachable through
+        # the API — the column is only ever written from list[str] — but a
+        # wrong-shaped row should degrade, not crash the whole listing.
+        assert _hydrate({"variables": bogus})["variables"] == []
+
     def test_a_custom_row_is_never_marked_system(self):
         # Forced false: only `_system_row` may claim built-in status, so a
         # stored row can't masquerade as read-only (or vice versa).
