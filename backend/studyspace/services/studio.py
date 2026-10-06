@@ -12,9 +12,11 @@ from typing import Any
 import asyncpg
 
 from studyspace.config import get_settings
+from studyspace.models.ai_intelligence import RagConfig
 from studyspace.models.studio import StudioGenerateRequest, StudioType
 from studyspace.services import llm
 from studyspace.services.embeddings import embed_query
+from studyspace.services.rag_config import global_rag_config, resolve_rag_config
 from studyspace.services.retrieval import Candidate, hybrid_search
 from studyspace.security import SOURCE_UNTRUSTED_MARKER, wrap_untrusted
 from studyspace.tracing import new_trace_id, span as trace_span
@@ -30,6 +32,7 @@ async def _load_context(
     source_ids: list[str],
     topic: str | None,
     want: int = 24,
+    config: RagConfig | None = None,
 ) -> list[Candidate]:
     """Collect evidence: hybrid search when a topic is given, otherwise the
     beginning of each selected source (best for whole-document summaries)."""
@@ -43,6 +46,7 @@ async def _load_context(
                 space_id=space_id,
                 source_ids=source_ids or None,
                 top_k=want,
+                config=config,
             )
             if found:
                 return found
@@ -128,7 +132,16 @@ def _strip_invalid(text: str, n: int) -> str:
 # Generators (each returns the jsonb `content` for studio_outputs)
 # ---------------------------------------------------------------------------
 
-async def _generate_summary(candidates: list[Candidate], topic: str | None) -> dict[str, Any]:
+async def _generate_summary(
+    candidates: list[Candidate],
+    topic: str | None,
+    count: int,
+    config: RagConfig | None = None,
+) -> dict[str, Any]:
+    # `count` is unused here (a summary has no fixed item count) but keeping the
+    # signature uniform means _GENERATORS can be called without per-type branching.
+    del count
+    cfg = config or global_rag_config()
     messages = [
         {"role": "system", "content": _system_prompt("write a concise markdown study summary")},
         {
@@ -141,12 +154,22 @@ async def _generate_summary(candidates: list[Candidate], topic: str | None) -> d
             ),
         },
     ]
-    markdown = await llm.chat(messages, temperature=0.3)
+    markdown = await llm.chat(
+        messages, temperature=cfg.temperature, max_tokens=cfg.max_tokens,
+        model=cfg.chat_model,
+    )
     markdown = _strip_invalid(markdown, len(candidates))
     return {"markdown": markdown, "citations": resolve_labels(markdown, candidates)}
 
 
-async def _generate_guide(candidates: list[Candidate], topic: str | None) -> dict[str, Any]:
+async def _generate_guide(
+    candidates: list[Candidate],
+    topic: str | None,
+    count: int,
+    config: RagConfig | None = None,
+) -> dict[str, Any]:
+    del count  # a guide's section count comes from the model, not the request
+    cfg = config or global_rag_config()
     messages = [
         {"role": "system", "content": _system_prompt("write a structured study guide as JSON")},
         {
@@ -160,7 +183,7 @@ async def _generate_guide(candidates: list[Candidate], topic: str | None) -> dic
             ),
         },
     ]
-    data = await llm.chat_json(messages)
+    data = await llm.chat_json(messages, model=cfg.generate_model or cfg.chat_model)
     sections = []
     for s in (data.get("sections") or [])[:8]:
         labels = [int(x) for x in (s.get("citations") or []) if 1 <= int(x) <= len(candidates)]
@@ -179,8 +202,9 @@ async def _generate_guide(candidates: list[Candidate], topic: str | None) -> dic
 
 
 async def _generate_flashcards(
-    candidates: list[Candidate], topic: str | None, count: int
+    candidates: list[Candidate], topic: str | None, count: int, config: RagConfig | None = None
 ) -> dict[str, Any]:
+    cfg = config or global_rag_config()
     messages = [
         {"role": "system", "content": _system_prompt("create flashcards as JSON")},
         {
@@ -194,7 +218,7 @@ async def _generate_flashcards(
             ),
         },
     ]
-    data = await llm.chat_json(messages)
+    data = await llm.chat_json(messages, model=cfg.generate_model or cfg.chat_model)
     cards = []
     for c in (data.get("cards") or [])[: count * 2]:
         front = str(c.get("front", "")).strip()
@@ -217,8 +241,9 @@ async def _generate_flashcards(
 
 
 async def _generate_quiz(
-    candidates: list[Candidate], topic: str | None, count: int
+    candidates: list[Candidate], topic: str | None, count: int, config: RagConfig | None = None
 ) -> dict[str, Any]:
+    cfg = config or global_rag_config()
     messages = [
         {"role": "system", "content": _system_prompt("create a multiple-choice quiz as JSON")},
         {
@@ -233,7 +258,7 @@ async def _generate_quiz(
             ),
         },
     ]
-    data = await llm.chat_json(messages)
+    data = await llm.chat_json(messages, model=cfg.generate_model or cfg.chat_model)
     questions = []
     for q in (data.get("questions") or [])[: count * 2]:
         question = str(q.get("question", "")).strip()
@@ -283,9 +308,11 @@ async def generate_studio_output(
     request: StudioGenerateRequest,
 ) -> dict[str, Any]:
     """Generate + persist a studio output; flashcards are also written to FSRS."""
-    settings = get_settings()
     trace_id = new_trace_id()
     source_ids = [str(s) for s in request.source_ids]
+    # Studio honours the same per-space tuning as chat: retrieval weights decide
+    # which passages the model sees, and generation knobs decide how it writes.
+    cfg = await resolve_rag_config(conn, space_id)
 
     with trace_span(
         f"studio.{request.type}", user_id=user_id, metadata={"space_id": space_id}
@@ -301,15 +328,17 @@ async def generate_studio_output(
             raise ValueError("This Space has no ready sources yet. Upload a document first.")
 
         candidates = await _load_context(
-            conn, space_id=space_id, source_ids=source_ids, topic=request.topic
+            conn, space_id=space_id, source_ids=source_ids, topic=request.topic, config=cfg
         )
         if not candidates:
             raise ValueError("No indexed passages found for the selected sources.")
 
         count = request.count or _DEFAULT_COUNTS.get(request.type, 8)
         generator = _GENERATORS[request.type]
-        content = await generator(candidates, request.topic, count)
-        sp.set_output({"type": request.type, "context_chunks": len(candidates)})
+        content = await generator(candidates, request.topic, count, cfg)
+        sp.set_output(
+            {"type": request.type, "context_chunks": len(candidates), "top_k": cfg.top_k}
+        )
 
         title = (
             request.topic

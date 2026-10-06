@@ -15,6 +15,8 @@ from typing import Any, Sequence
 import asyncpg
 
 from studyspace.config import get_settings
+from studyspace.models.ai_intelligence import RagConfig
+from studyspace.services.rag_config import global_rag_config
 
 _WORD_RE = re.compile(r"[a-z0-9']+")
 
@@ -82,11 +84,11 @@ fused as (
 )
 select id, source_id, source_title, content, page, vector_score, fts_score,
        vector_rank, fts_rank,
-       coalesce(1.0 / ($7 + vector_rank), 0) +
-       coalesce(1.0 / ($7 + fts_rank), 0) as fused_score
+       coalesce($7::float8 / ($9 + vector_rank), 0) +
+       coalesce($8::float8 / ($9 + fts_rank), 0) as fused_score
 from fused
 order by fused_score desc, coalesce(vector_rank, 9999), coalesce(fts_rank, 9999)
-limit $8
+limit $10
 """
 
 
@@ -97,7 +99,17 @@ async def fetch_candidates(
     space_id: str,
     query_text: str,
     source_ids: list[str] | None = None,
+    vector_weight: float = 0.7,
+    fts_weight: float = 0.3,
+    rrf_k: int | None = None,
 ) -> list[Candidate]:
+    """Generate fused candidates for one query.
+
+    ``vector_weight`` and ``fts_weight`` weight each arm's RRF contribution. The
+    weights are passed in rather than read from settings so a per-space override
+    actually reaches the ranking — reading them here is what made the tuning UI a
+    no-op before.
+    """
     settings = get_settings()
     vec_literal = "[" + ",".join(f"{float(v):.6f}" for v in query_embedding) + "]"
     rows = await conn.fetch(
@@ -108,7 +120,9 @@ async def fetch_candidates(
         settings.rag_vector_candidates,
         query_text,
         settings.rag_fts_candidates,
-        settings.rag_rrf_k,
+        float(vector_weight),
+        float(fts_weight),
+        rrf_k or settings.rag_rrf_k,
         max(settings.rag_vector_candidates, settings.rag_fts_candidates) * 2,
     )
     out: list[Candidate] = []
@@ -280,15 +294,39 @@ async def hybrid_search(
     space_id: str,
     source_ids: list[str] | None = None,
     top_k: int | None = None,
+    config: RagConfig | None = None,
 ) -> list[Candidate]:
-    """End-to-end retrieval: candidates → RRF (in SQL) → rerank → top_k."""
+    """End-to-end retrieval: candidates → weighted RRF (in SQL) → rerank → top_k.
+
+    ``config`` carries a space's resolved tuning; omit it to use global defaults.
+    When present, its weights, rrf_k, rerank depth and top_k all apply.
+    """
     settings = get_settings()
+    cfg = config or global_rag_config()
     candidates = await fetch_candidates(
         conn,
         query_embedding=query_embedding,
         space_id=space_id,
         query_text=query_text,
         source_ids=source_ids,
+        vector_weight=cfg.vector_weight,
+        fts_weight=cfg.fts_weight,
+        rrf_k=cfg.rrf_k,
     )
-    ordered = await rerank(query_text, candidates)
-    return ordered[: top_k or settings.rag_top_k]
+
+    if cfg.rerank_enabled:
+        # `rerank_top_n` is the cut before the reranker sees the list: the head of
+        # the fused ranking gets rescored, the tail keeps its fused order. This is
+        # what makes wide recall affordable — rerank cost scales with depth, not
+        # with how many candidates were fetched.
+        depth = max(cfg.rerank_top_n, 1)
+        head, tail = ordered[:depth], ordered[depth:]
+        ordered = await rerank(query_text, head) + tail
+    else:
+        # Reranking off still needs a defined order, so rank by the fused score
+        # rather than returning candidates in whatever order the SQL emitted.
+        ordered = sorted(
+            ordered, key=lambda c: (-c.fused_score, c.vector_rank or 9999)
+        )
+
+    return ordered[: top_k or cfg.top_k]

@@ -24,6 +24,14 @@ create table public.prompt_templates (
 create index prompt_templates_space_idx on public.prompt_templates (space_id);
 create index prompt_templates_type_idx on public.prompt_templates (type);
 
+-- One template per (space, type): a custom template replaces the built-in of the
+-- same type rather than sitting beside it, which is what makes "the pipeline
+-- sends my version" true instead of order-dependent. The router upserts on this
+-- key, so re-saving an edited template is the normal path, not a conflict.
+create unique index prompt_templates_scope_type_idx
+    on public.prompt_templates (space_id, type)
+    where space_id is not null;
+
 -- RLS
 alter table public.prompt_templates enable row level security;
 

@@ -19,9 +19,9 @@ class LLMError(RuntimeError):
     """A provider-level failure (surfaced as a safe message to clients)."""
 
 
-def _client_kwargs() -> dict[str, Any]:
+def _client_kwargs(model: str | None = None) -> dict[str, Any]:
     settings = get_settings()
-    kwargs: dict[str, Any] = {"model": settings.litellm_model}
+    kwargs: dict[str, Any] = {"model": model or settings.litellm_model}
     if settings.litellm_api_key:
         kwargs["api_key"] = settings.litellm_api_key
     if settings.litellm_base_url:
@@ -39,9 +39,7 @@ async def chat(
 ) -> str:
     """One-shot completion; returns the text content."""
     settings = get_settings()
-    kwargs = _client_kwargs()
-    if model:
-        kwargs["model"] = model
+    kwargs = _client_kwargs(model)
     kwargs.update(
         messages=messages,
         temperature=temperature,
@@ -66,9 +64,7 @@ async def stream(
 ) -> AsyncIterator[str]:
     """Yield text deltas as they arrive from the provider."""
     settings = get_settings()
-    kwargs = _client_kwargs()
-    if model:
-        kwargs["model"] = model
+    kwargs = _client_kwargs(model)
     kwargs.update(
         messages=messages,
         temperature=temperature,
@@ -124,12 +120,24 @@ async def chat_json(
     *,
     model: str | None = None,
     temperature: float = 0.0,
+    max_tokens: int | None = None,
 ) -> Any:
-    """Completion in JSON mode with tolerant parsing."""
+    """Completion in JSON mode with tolerant parsing.
+
+    Defaults to temperature 0 — structured output wants determinism, not the
+    creative setting used for prose. Retries once without JSON mode because
+    several providers reject `response_format` for non-OpenAI models.
+    """
     try:
-        raw = await chat(messages, model=model, temperature=temperature, json_mode=True)
+        raw = await chat(
+            messages, model=model, temperature=temperature,
+            max_tokens=max_tokens, json_mode=True,
+        )
     except LLMError:
-        raw = await chat(messages, model=model, temperature=temperature, json_mode=False)
+        raw = await chat(
+            messages, model=model, temperature=temperature,
+            max_tokens=max_tokens, json_mode=False,
+        )
     return extract_json(raw)
 
 

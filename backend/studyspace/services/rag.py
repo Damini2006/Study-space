@@ -26,7 +26,9 @@ import asyncpg
 from pydantic import BaseModel
 
 from studyspace.config import get_settings
+from studyspace.models.ai_intelligence import RagConfig
 from studyspace.models.chat import ChatRequest, LayerToggles
+from studyspace.services.rag_config import describe, global_rag_config, resolve_rag_config
 from studyspace.services import llm
 from studyspace.services.embeddings import embed_query
 from studyspace.services.retrieval import Candidate, hybrid_search
@@ -72,20 +74,30 @@ class ResolvedLayers:
         return out
 
 
-def resolve_layers(overrides: LayerToggles | None = None) -> ResolvedLayers:
-    settings = get_settings()
+def resolve_layers(
+    overrides: LayerToggles | None = None,
+    config: RagConfig | None = None,
+) -> ResolvedLayers:
+    """Merge per-request toggles over the space's saved layer settings.
+
+    Precedence is per field, not wholesale: a request that turns off only claim
+    verification inherits the space's gate and citation settings rather than
+    silently reverting them to global defaults.
+    """
+    cfg = config or global_rag_config()
     return ResolvedLayers(
         relevance_gate=(
-            settings.layer_relevance_gate if overrides is None or overrides.relevance_gate is None
+            cfg.relevance_gate
+            if overrides is None or overrides.relevance_gate is None
             else overrides.relevance_gate
         ),
         citation_validation=(
-            settings.layer_citation_validation
+            cfg.citation_validation
             if overrides is None or overrides.citation_validation is None
             else overrides.citation_validation
         ),
         claim_verification=(
-            settings.layer_claim_verification
+            cfg.claim_verification
             if overrides is None or overrides.claim_verification is None
             else overrides.claim_verification
         ),
@@ -243,8 +255,14 @@ class ClaimVerdict(BaseModel):
     score: float
 
 
-async def judge_claims(question: str, claims: list[Sentence], evidence: dict[int, Candidate]) -> dict[int, ClaimVerdict]:
+async def judge_claims(
+    question: str,
+    claims: list[Sentence],
+    evidence: dict[int, Candidate],
+    config: RagConfig | None = None,
+) -> dict[int, ClaimVerdict]:
     """Batched entailment judge: is each cited claim supported by its chunks?"""
+    cfg = config or global_rag_config()
     verdicts: dict[int, ClaimVerdict] = {}
     batch_size = 8
     for start in range(0, len(claims), batch_size):
@@ -271,7 +289,9 @@ async def judge_claims(question: str, claims: list[Sentence], evidence: dict[int
                     {"role": "system", "content": "Return only valid JSON. No commentary."},
                     {"role": "user", "content": payload},
                 ],
-                model=get_settings().litellm_judge_model,
+                # A space can route claim verification to a cheaper model: the
+                # judge is a high-volume, low-stakes classification task.
+                model=cfg.judge_model or None,
             )
             items = data.get("claims", data) if isinstance(data, dict) else data
             for item in items:
@@ -359,8 +379,6 @@ def not_found_message() -> str:
 
 async def run_chat(ctx: ChatContext) -> AsyncIterator[dict[str, Any]]:
     """Yield SSE-ready events; persists messages/citations/claims itself."""
-    settings = get_settings()
-    layers = resolve_layers(ctx.request.layers)
     trace_id = new_trace_id()
     started = time.monotonic()
     final: dict[str, Any] | None = None
@@ -369,7 +387,7 @@ async def run_chat(ctx: ChatContext) -> AsyncIterator[dict[str, Any]]:
         "chat.rag",
         input=ctx.request.message,
         user_id=ctx.user_id,
-        metadata={"space_id": ctx.space_id, "layers": layers.enabled_names},
+        metadata={"space_id": ctx.space_id},
     ) as sp:
         trace_id = sp.trace_id or trace_id
         try:
@@ -389,6 +407,14 @@ async def run_chat(ctx: ChatContext) -> AsyncIterator[dict[str, Any]]:
             yield {"type": "thread", "thread_id": thread_id, "trace_id": trace_id}
 
             # --- retrieval ------------------------------------------------
+            async with ctx.conn_factory() as conn:
+                cfg = await resolve_rag_config(conn, ctx.space_id)
+            # A per-request toggle beats the space's saved config, so the UI can
+            # A/B the layers without editing and re-saving the space.
+            layers = resolve_layers(ctx.request.layers, cfg)
+            # Explicit socratic in the request wins; otherwise the space's default.
+            socratic = ctx.request.socratic or cfg.socratic_mode
+
             with trace_span("chat.retrieval", user_id=ctx.user_id) as rsp:
                 query_emb = await embed_query(ctx.request.message)
                 source_ids = [str(s) for s in ctx.request.source_ids] or None
@@ -399,9 +425,10 @@ async def run_chat(ctx: ChatContext) -> AsyncIterator[dict[str, Any]]:
                         query_embedding=query_emb,
                         space_id=ctx.space_id,
                         source_ids=source_ids,
-                        top_k=settings.rag_top_k,
+                        top_k=cfg.top_k,
+                        config=cfg,
                     )
-                rsp.set_output({"candidates": len(candidates)})
+                rsp.set_output({"candidates": len(candidates), "top_k": cfg.top_k})
 
             retrieval_event = {
                 "type": "retrieval",
@@ -423,11 +450,19 @@ async def run_chat(ctx: ChatContext) -> AsyncIterator[dict[str, Any]]:
             yield retrieval_event
 
             # --- layer 1: relevance gate ---------------------------------
-            best_sim = max(
-                (c.vector_score for c in candidates if c.vector_score is not None),
-                default=0.0,
+            # Only candidates the vector arm actually scored can inform the
+            # similarity gate. A pure full-text match (an exact term the
+            # embeddings happen not to capture — a formula, a code identifier)
+            # has no vector score at all, and treating that as similarity 0.0
+            # would gate out exactly the questions keyword search answers best.
+            # So when nothing was scored, the gate abstains rather than vetoes.
+            scored = [c.vector_score for c in candidates if c.vector_score is not None]
+            best_sim = max(scored, default=None)
+            gate_failed = not candidates or (
+                layers.relevance_gate
+                and best_sim is not None
+                and best_sim < cfg.relevance_threshold
             )
-            gate_failed = not candidates or (layers.relevance_gate and best_sim < settings.relevance_threshold)
             if gate_failed:
                 content = not_found_message()
                 final = await _persist_assistant(
@@ -435,8 +470,15 @@ async def run_chat(ctx: ChatContext) -> AsyncIterator[dict[str, Any]]:
                     citations=[], claims=[], trace_id=trace_id,
                     meta={
                         "layers": layers.enabled_names,
-                        "reason": "relevance_gate" if layers.relevance_gate else "no_candidates",
-                        "best_similarity": round(best_sim, 4),
+                        "reason": (
+                            "relevance_gate" if layers.relevance_gate else "no_candidates"
+                        ),
+                        "best_similarity": (
+                            round(best_sim, 4) if best_sim is not None else None
+                        ),
+                        # Tells the reader the gate abstained rather than failed,
+                        # so a "no answer here" is never mistaken for "nothing matched".
+                        "gate_basis": "vector_similarity" if best_sim is not None else "fts_only",
                         "latency_ms": int((time.monotonic() - started) * 1000),
                     },
                 )
@@ -446,11 +488,13 @@ async def run_chat(ctx: ChatContext) -> AsyncIterator[dict[str, Any]]:
 
             # --- generation ----------------------------------------------
             messages = build_messages(
-                ctx.request.message, candidates, history, socratic=ctx.request.socratic
+                ctx.request.message, candidates, history, socratic=socratic
             )
             buffer: list[str] = []
             with trace_span("chat.generate", user_id=ctx.user_id) as gsp:
-                async for delta in llm.stream(messages):
+                async for delta in llm.stream(
+                    messages, temperature=cfg.temperature, max_tokens=cfg.max_tokens
+                ):
                     buffer.append(delta)
                     yield {"type": "token", "text": delta}
                 raw_answer = "".join(buffer)
@@ -474,7 +518,10 @@ async def run_chat(ctx: ChatContext) -> AsyncIterator[dict[str, Any]]:
             if layers.claim_verification and status != "not_found" and sentences:
                 with trace_span("chat.claim_verification", user_id=ctx.user_id) as csp:
                     cited = [s for s in sentences if s.labels]
-                    verdicts = await judge_claims(ctx.request.message, cited, evidence) if cited else {}
+                    verdicts = (
+                        await judge_claims(ctx.request.message, cited, evidence, cfg)
+                        if cited else {}
+                    )
                     unsupported_texts: list[str] = []
                     kept: list[str] = []
                     cited_idx = -1
@@ -554,10 +601,15 @@ async def run_chat(ctx: ChatContext) -> AsyncIterator[dict[str, Any]]:
                 claims=claim_records, trace_id=trace_id,
                 meta={
                     "layers": layers.enabled_names,
+                    # Record the resolved config so a surprising answer can be
+                    # explained after the fact — "top_k was 6 and the gate sat at
+                    # 0.55" beats guessing about it later.
+                    "rag_config": cfg.model_dump(),
+                    "rag_overrides": sorted(describe(cfg)),
                     "removed_labels": removed_labels,
                     "retrieval": retrieval_event["chunks"],
                     "latency_ms": int((time.monotonic() - started) * 1000),
-                    "socratic": ctx.request.socratic,
+                    "socratic": socratic,
                 },
             )
             yield {"type": "final", "message": final}
@@ -602,10 +654,18 @@ async def _persist_assistant(
         )
         citation_rows: list[dict[str, Any]] = []
         for c in citations:
+            # space_id / source_id / source_title / page are snapshotted at answer
+            # time (migration 0010). Without them the citation audit loses the row
+            # the moment the chunk is deleted: there's no join path left to find
+            # which space or document it belonged to.
             await conn.execute(
-                "insert into public.citations (user_id, message_id, chunk_id, label, quote_span, verified, score) "
-                "values ($1, $2, $3, $4, $5, $6, $7)",
-                ctx.user_id, message_id, c["chunk_id"], c["label"], c["quote"], c["verified"], c["score"],
+                "insert into public.citations "
+                "(user_id, message_id, chunk_id, space_id, source_id, source_title, page, "
+                " label, quote_span, verified, score) "
+                "values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)",
+                ctx.user_id, message_id, c["chunk_id"], ctx.space_id,
+                c["source_id"], c["source_title"], c.get("page"),
+                c["label"], c["quote"], c["verified"], c["score"],
             )
             citation_rows.append(c)
         for i, claim in enumerate(claims):

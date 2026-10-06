@@ -44,14 +44,13 @@ class ModelConfig(BaseModel):
 
 
 class ModelRouterConfig(BaseModel):
-    """Per-task model selection with fallbacks."""
-    # Primary model per task
+    """Per-task model selection with fallbacks, as actually deployed."""
     chat_model: str
     judge_model: str
     generate_model: str
     embed_model: str
     classify_model: str
-    # Fallback chains (ordered)
+    # task -> ordered fallback chain, cheapest first
     fallbacks: dict[str, list[str]] = {}
 
 
@@ -91,23 +90,28 @@ class PromptTemplate(BaseModel):
 
 class PromptTemplateCreate(BaseModel):
     name: str = Field(min_length=1, max_length=100)
-    description: Optional[str] = None
+    description: Optional[str] = Field(default=None, max_length=500)
     type: PromptTemplateType
-    template: str
-    variables: list[str] = []
+    template: str = Field(min_length=1)
+    variables: list[str] = Field(default_factory=list)
+    # Required — templates always belong to a space, so there's no shared global
+    # slot for two users to collide in. Accepted in the body for client
+    # convenience; the router prefers a `?space_id=` query param when both appear.
+    space_id: Optional[UUID] = None
 
 
 class PromptTemplateUpdate(BaseModel):
     name: Optional[str] = Field(default=None, min_length=1, max_length=100)
-    description: Optional[str] = None
-    template: Optional[str] = None
+    description: Optional[str] = Field(default=None, max_length=500)
+    template: Optional[str] = Field(default=None, min_length=1)
     variables: Optional[list[str]] = None
 
 
-class RenderedPrompt(BaseModel):
+class PromptTemplateRendered(BaseModel):
+    """A rendered template, shaped for whichever role the type expects."""
     system: Optional[str] = None
     user: Optional[str] = None
-    messages: list[dict[str, str]] = []
+    messages: list[dict[str, str]] = Field(default_factory=list)
 
 
 # ============================================================
@@ -115,7 +119,7 @@ class RenderedPrompt(BaseModel):
 # ============================================================
 
 class RagSettings(BaseModel):
-    """Per-space RAG configuration (overrides global settings)."""
+    """Effective retrieval config — what the pipeline actually runs with."""
     space_id: UUID
     # Retrieval
     top_k: int = 12
@@ -139,13 +143,20 @@ class RagSettings(BaseModel):
     chat_model: Optional[str] = None
     judge_model: Optional[str] = None
     generate_model: Optional[str] = None
+    created_at: Optional[datetime] = None
+    updated_at: Optional[datetime] = None
+
+    model_config = {"from_attributes": True}
 
 
 class RagSettingsUpdate(BaseModel):
+    """Patch payload. Every field is optional; unset fields are left alone."""
     top_k: Optional[int] = Field(default=None, ge=1, le=50)
     vector_weight: Optional[float] = Field(default=None, ge=0.0, le=1.0)
     fts_weight: Optional[float] = Field(default=None, ge=0.0, le=1.0)
+    rrf_k: Optional[int] = Field(default=None, ge=1, le=1000)
     rerank_enabled: Optional[bool] = None
+    rerank_model: Optional[str] = Field(default=None, max_length=200)
     rerank_top_n: Optional[int] = Field(default=None, ge=1, le=20)
     relevance_gate: Optional[bool] = None
     relevance_threshold: Optional[float] = Field(default=None, ge=0.0, le=1.0)
@@ -154,6 +165,38 @@ class RagSettingsUpdate(BaseModel):
     temperature: Optional[float] = Field(default=None, ge=0.0, le=2.0)
     max_tokens: Optional[int] = Field(default=None, ge=256, le=8192)
     socratic_mode: Optional[bool] = None
+    chat_model: Optional[str] = Field(default=None, max_length=200)
+    judge_model: Optional[str] = Field(default=None, max_length=200)
+    generate_model: Optional[str] = Field(default=None, max_length=200)
+
+
+class RagSettingsResolved(BaseModel):
+    """What the UI renders: the effective config plus provenance.
+
+    `overridden` lists only fields that genuinely differ from the global default,
+    so a no-op save doesn't make every control look customised.
+    """
+    resolved: RagSettings
+    overridden: list[str] = Field(default_factory=list)
+    is_default: bool = True
+
+
+class RagConfig(BaseModel):
+    """Pipeline-facing subset: the knobs retrieval and generation read directly."""
+    top_k: int
+    vector_weight: float
+    fts_weight: float
+    rrf_k: int
+    rerank_enabled: bool
+    rerank_top_n: int
+    relevance_gate: bool
+    relevance_threshold: float
+    citation_validation: bool
+    claim_verification: bool
+    temperature: float
+    max_tokens: int
+    socratic_mode: bool
+    # Per-task model overrides; None means "use the deployment default".
     chat_model: Optional[str] = None
     judge_model: Optional[str] = None
     generate_model: Optional[str] = None
@@ -164,22 +207,25 @@ class RagSettingsUpdate(BaseModel):
 # ============================================================
 
 class CitationAuditStatus(str, Enum):
-    verified = "verified"       # citation maps to valid chunk
-    missing_chunk = "missing_chunk"  # chunk_id not found
-    stale = "stale"             # source was updated after citation created
-    broken = "broken"           # source deleted / inaccessible
-    low_score = "low_score"     # retrieval score below threshold
+    verified = "verified"             # chunk exists and is unchanged since the answer
+    missing_chunk = "missing_chunk"   # the cited passage was deleted from the source
+    stale = "stale"                   # source was edited after the answer was written
+    broken = "broken"                 # the whole source is gone
+    low_score = "low_score"           # citation was weak evidence even at answer time
 
 
 class CitationAuditItem(BaseModel):
+    citation_id: UUID
     message_id: UUID
-    chunk_id: UUID
-    source_id: UUID
-    source_title: str
+    # Nullable: these are exactly the fields that go null when the evidence is
+    # deleted, which is the case the audit exists to report.
+    chunk_id: Optional[UUID] = None
+    source_id: Optional[UUID] = None
+    source_title: str = "(deleted source)"
     label: int
-    quote: str
-    score: float
-    verified: bool
+    quote: str = ""
+    score: Optional[float] = None
+    verified: bool = False
     status: CitationAuditStatus
     details: str
     created_at: datetime
@@ -191,11 +237,13 @@ class CitationAuditReport(BaseModel):
     total_citations: int
     verified: int
     issues: int
+    # True when the row cap truncated the result, so the UI can say "first N"
+    # instead of implying the whole space was covered.
+    truncated: bool = False
     items: list[CitationAuditItem]
     generated_at: datetime
 
 
 class CitationAuditRequest(BaseModel):
-    space_id: UUID
     source_ids: Optional[list[UUID]] = None
     since: Optional[datetime] = None  # only audit citations after this date
