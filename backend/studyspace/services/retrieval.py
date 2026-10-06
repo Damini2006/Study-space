@@ -301,7 +301,6 @@ async def hybrid_search(
     ``config`` carries a space's resolved tuning; omit it to use global defaults.
     When present, its weights, rrf_k, rerank depth and top_k all apply.
     """
-    settings = get_settings()
     cfg = config or global_rag_config()
     candidates = await fetch_candidates(
         conn,
@@ -320,13 +319,13 @@ async def hybrid_search(
         # what makes wide recall affordable — rerank cost scales with depth, not
         # with how many candidates were fetched.
         depth = max(cfg.rerank_top_n, 1)
-        head, tail = ordered[:depth], ordered[depth:]
+        head, tail = candidates[:depth], candidates[depth:]
         ordered = await rerank(query_text, head) + tail
     else:
         # Reranking off still needs a defined order, so rank by the fused score
         # rather than returning candidates in whatever order the SQL emitted.
         ordered = sorted(
-            ordered, key=lambda c: (-c.fused_score, c.vector_rank or 9999)
+            candidates, key=lambda c: (-c.fused_score, c.vector_rank or 9999)
         )
 
     return ordered[: top_k or cfg.top_k]
