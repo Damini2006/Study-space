@@ -68,15 +68,18 @@ jobs:
           npm ci
 
       - name: Audit frontend dependencies
-        # Production tree only, and only high/critical fail the build. The
-        # dev toolchain (vite, tailwind, vitest) carries advisories with no
-        # non-breaking fix, and a build tool that never ships must not be
-        # able to freeze every unrelated PR — which is exactly the position
-        # tiptap was in for months before 3.30.4 landed. audit-level only
-        # changes the exit code, so every finding is still printed here.
+        # The whole tree, dev included. The exemption this step used to
+        # carry ("the dev toolchain carries advisories with no
+        # non-breaking fix") expired when vite 8 and tailwind 4 landed —
+        # those were the majors the findings were waiting for, and npm
+        # audit now reads 0 at every severity. high/critical fails the
+        # build anywhere; moderate still only prints, because audit-level
+        # only changes the exit code: a transitive dev nit stays visible
+        # without being able to freeze every unrelated PR, which is the
+        # failure mode this step was originally written to avoid.
         run: |
           cd frontend
-          npm audit --omit=dev --audit-level=high
+          npm audit --audit-level=high
 
       - name: Run frontend lint
         run: |
