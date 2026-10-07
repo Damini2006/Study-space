@@ -5,7 +5,9 @@ from __future__ import annotations
 import json
 
 from fastapi import APIRouter
+from fastapi.responses import JSONResponse
 
+from studyspace.db import database_reachable
 from studyspace.deps import DbDep, UserDep
 from studyspace.models.notes import NoteOut  # noqa: F401  (keeps model import graph warm)
 
@@ -14,7 +16,27 @@ router = APIRouter(tags=["meta"])
 
 @router.get("/health")
 async def health() -> dict:
+    """Liveness: the process answers, and nothing else was asked.
+
+    Deliberately static — a database blip must not read as a dead
+    container, or one outage becomes two when the orchestrator restarts
+    everyone at once. Routing that wants the truth asks
+    /api/health/ready instead.
+    """
     return {"status": "ok", "service": "studyspace-api"}
+
+
+@router.get("/health/ready")
+async def health_ready() -> JSONResponse:
+    """Readiness: can this instance serve real traffic right now?"""
+    if await database_reachable():
+        return JSONResponse(
+            content={"status": "ready", "service": "studyspace-api", "db": "up"}
+        )
+    return JSONResponse(
+        status_code=503,
+        content={"status": "unavailable", "service": "studyspace-api", "db": "down"},
+    )
 
 
 @router.get("/me")

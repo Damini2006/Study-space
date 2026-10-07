@@ -15,6 +15,7 @@ Two clearly separated paths:
 
 from __future__ import annotations
 
+import asyncio
 import json
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
@@ -62,6 +63,28 @@ def set_pool(pool: asyncpg.Pool | None) -> None:
     """Test hook: install a pre-built pool (or None to reset)."""
     global _pool
     _pool = pool
+
+
+async def database_reachable(
+    pool: asyncpg.Pool | None = None, timeout: float = 2.0
+) -> bool:
+    """Can this process run a trivial query — on its own clock, not the database's.
+
+    Readiness has to answer when the database hangs, not hang with it: a
+    probe that outlives its own timeout tells the operator nothing about
+    why. ``pool`` defaults to the live one; passing it explicitly is how
+    tests inject a database that never answers.
+    """
+    target = _pool if pool is None else pool
+    if target is None:
+        return False
+    try:
+        await asyncio.wait_for(target.fetchval("select 1"), timeout=timeout)
+    except Exception:
+        # Refused, misconfigured, or still hanging when the timeout hit —
+        # to a readiness probe every one of them means the same thing.
+        return False
+    return True
 
 
 @asynccontextmanager

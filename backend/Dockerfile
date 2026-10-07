@@ -21,6 +21,14 @@ COPY studyspace ./studyspace
 
 EXPOSE 8000
 
+# Liveness only. The probe deliberately hits /api/health — static, no
+# database — because a container that restarts on a database blip turns
+# one outage into two. Whoever routes traffic and wants the truth asks
+# /api/health/ready. (python is the shell-less way to fetch inside
+# python:3.11-slim; a refused connection raises, which exits non-zero.)
+HEALTHCHECK --interval=30s --timeout=5s --start-period=15s --retries=3 \
+  CMD python -c "import sys, urllib.request as u; sys.exit(0 if u.urlopen('http://127.0.0.1:8000/api/health', timeout=3).status == 200 else 1)"
+
 # --no-access-log: the app writes its own request line — method, path,
 # status, duration, request id — via studyspace.request_log. Two logs per
 # request means twice the noise and half the clarity.

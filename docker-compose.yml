@@ -63,7 +63,9 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
-    command: uvicorn studyspace.main:app --host 0.0.0.0 --port 8000
+    # Same flag as the image's CMD: this app writes its own request lines,
+    # and compose overrides the CMD when it sets a command.
+    command: uvicorn studyspace.main:app --host 0.0.0.0 --port 8000 --no-access-log
 
   worker:
     build:
