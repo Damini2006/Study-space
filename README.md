@@ -83,6 +83,10 @@ Notes:
 
 ## Architecture
 
+The diagram and the two data flows live here; [ARCHITECTURE.md](ARCHITECTURE.md)
+is the rest — which process owns which job, how one request travels through
+the API, and the invariants that cut across the layers.
+
 ```
 ┌─────────────────┐     HTTPS      ┌──────────────────┐
 │   Frontend      │ ◄─────────────► │    Backend       │
