@@ -42,7 +42,7 @@
     "@testing-library/user-event": "^14.5.2",
     "@types/react": "^18.3.12",
     "@types/react-dom": "^18.3.1",
-    "@vitejs/plugin-react": "^4.3.4",
+    "@vitejs/plugin-react": "^6.1.2",
     "autoprefixer": "^10.4.20",
     "eslint": "^9.17.0",
     "eslint-plugin-react": "^7.37.5",
@@ -53,7 +53,7 @@
     "jsdom": "^25.0.1",
     "postcss": "^8.4.49",
     "tailwindcss": "^3.4.17",
-    "vite": "^5.4.11",
-    "vitest": "^2.1.8"
+    "vite": "^8.3.3",
+    "vitest": "^5.0.3"
   }
 }

@@ -48,14 +48,27 @@ export default defineConfig({
   build: {
     // Keep the vendor libraries in their own long-cached chunks so a UI change
     // doesn't force users to re-download React/the router/query stack.
+    //
+    // Vite 8 bundles with Rolldown, which rejects the object form of
+    // manualChunks that Rollup accepted (its schema wants a function) —
+    // advancedChunks is the declarative replacement, same five groups,
+    // matched against resolved paths rather than package names.
     rollupOptions: {
       output: {
-        manualChunks: {
-          react: ["react", "react-dom", "react-router-dom"],
-          query: ["@tanstack/react-query"],
-          motion: ["framer-motion"],
-          icons: ["lucide-react"],
-          supabase: ["@supabase/supabase-js"],
+        advancedChunks: {
+          groups: [
+            {
+              name: "react",
+              test: /node_modules[\\/](react|react-dom|react-router-dom)[\\/]/,
+            },
+            {
+              name: "query",
+              test: /node_modules[\\/]@tanstack[\\/](react-query|query-core)[\\/]/,
+            },
+            { name: "motion", test: /node_modules[\\/]framer-motion[\\/]/ },
+            { name: "icons", test: /node_modules[\\/]lucide-react[\\/]/ },
+            { name: "supabase", test: /node_modules[\\/]@supabase[\\/]supabase-js[\\/]/ },
+          ],
         },
       },
     },
