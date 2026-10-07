@@ -157,7 +157,7 @@ def build_messages(
 # Sentence / citation parsing
 # ---------------------------------------------------------------------------
 
-_CITE_RE = re.compile(r"\[(\d{1,3})\]")
+CITE_RE = re.compile(r"\[(\d{1,3})\]")
 _TINY = re.compile(r"^[\W\d]*$")
 
 
@@ -197,8 +197,8 @@ def split_sentences(text: str) -> list[str]:
 def annotate_sentences(text: str) -> list[Sentence]:
     out: list[Sentence] = []
     for i, raw in enumerate(split_sentences(text)):
-        labels = [int(m) for m in _CITE_RE.findall(raw)]
-        clean = _CITE_RE.sub("", raw).strip()
+        labels = [int(m) for m in CITE_RE.findall(raw)]
+        clean = CITE_RE.sub("", raw).strip()
         clean = re.sub(r"\s{2,}", " ", clean)
         if not clean:
             continue
@@ -217,7 +217,7 @@ def strip_invalid_citations(text: str, valid_labels: set[int]) -> tuple[str, lis
         removed.append(n)
         return ""
 
-    cleaned = _CITE_RE.sub(_sub, text)
+    cleaned = CITE_RE.sub(_sub, text)
     cleaned = re.sub(r"\s{2,}", " ", cleaned)
     return cleaned, removed
 
