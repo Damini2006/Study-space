@@ -18,6 +18,18 @@ class EvalConfig(BaseModel):
     claim_verification: bool = False
 
 
+# The suite's default ablation ladder: each config adds one layer on top
+# of the previous one, so a score that moves attributes to the layer that
+# just switched on. Shared by the run router (what a run plans) and the
+# runner (what a plan falls back to when config is empty).
+DEFAULT_CONFIGS: list[dict[str, Any]] = [
+    {"name": "baseline", "relevance_gate": False, "citation_validation": False, "claim_verification": False},
+    {"name": "+relevance-gate", "relevance_gate": True, "citation_validation": False, "claim_verification": False},
+    {"name": "+citation-validation", "relevance_gate": True, "citation_validation": True, "claim_verification": False},
+    {"name": "+claim-verification", "relevance_gate": True, "citation_validation": True, "claim_verification": True},
+]
+
+
 class EvalRunCreate(BaseModel):
     label: str = Field(default="manual", max_length=120)
     configs: list[EvalConfig] = Field(default_factory=list, max_length=8)
@@ -44,6 +56,7 @@ class EvalResultOut(BaseModel):
     id: uuid.UUID
     run_id: uuid.UUID
     question_id: str
+    config: str = Field(min_length=1, description="Which layer config produced this row")
     question: str
     kind: Literal["answerable", "unanswerable"]
     answer: str | None = None

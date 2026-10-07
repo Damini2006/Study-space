@@ -79,6 +79,11 @@ class Settings(BaseSettings):
     layer_citation_validation: bool = True
     layer_claim_verification: bool = True
 
+    # --- admin eval suite ------------------------------------------------------
+    # Results processed this many at a time; each in-flight result holds its
+    # own DB connection and makes judge LLM calls, so this multiplies both.
+    eval_concurrency: int = 4
+
     # --- limits & validation -------------------------------------------------
     max_upload_mb: int = 10
     max_pages: int = 300

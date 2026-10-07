@@ -58,12 +58,21 @@ class JudgeLLM(InstructorBaseRagasLLM):
     validate, and reask once with the validator's complaint — which is
     exactly what every other structured caller here gets from
     llm.chat_json plus pydantic.
+
+    Every call is charged (chars/4 heuristic) to ``cost_usd`` so the
+    runner can total what a scored result actually cost without
+    threading usage through ragas's return types.
     """
+
+    def __init__(self) -> None:
+        super().__init__()
+        self.cost_usd = 0.0
 
     async def agenerate(self, prompt: str, response_model: type[BaseModel]) -> Any:
         judge = get_settings().litellm_judge_model
         messages = [{"role": "user", "content": prompt}]
         data = await llm.chat_json(messages, model=judge)
+        self._charge(judge, prompt, data)
         try:
             return response_model.model_validate(data)
         except ValidationError as first:
@@ -76,7 +85,13 @@ class JudgeLLM(InstructorBaseRagasLLM):
                 },
             ]
             data = await llm.chat_json(messages, model=judge)
+            self._charge(judge, "\n".join(str(m["content"]) for m in messages), data)
             return response_model.model_validate(data)
+
+    def _charge(self, model: str, prompt: str, data: Any) -> None:
+        self.cost_usd += llm.estimate_cost_usd(
+            model, len(prompt), len(json.dumps(data, default=str))
+        )
 
     def generate(self, prompt: str, response_model: type[BaseModel]) -> Any:
         raise RuntimeError("the eval judge runs on the async path only (await agenerate)")
@@ -96,9 +111,13 @@ class HouseEmbeddings(BaseRagasEmbedding):
         raise RuntimeError("the eval embeddings run on the async path only")
 
 
-def build_metrics() -> dict[str, Any]:
-    """Fresh metric set per run — prompts are state, results are not."""
-    judge = JudgeLLM()
+def build_metrics(judge: InstructorBaseRagasLLM | None = None) -> dict[str, Any]:
+    """Fresh metric set per run — prompts are state, results are not.
+
+    Pass a judge to keep a handle on it (the runner reads
+    ``judge.cost_usd`` after scoring); omit it and one is created.
+    """
+    judge = judge or JudgeLLM()
     return {
         "faithfulness": Faithfulness(llm=judge),
         "answer_relevancy": AnswerRelevancy(llm=judge, embeddings=HouseEmbeddings()),
@@ -125,14 +144,16 @@ async def standard_scores(
     answer: str,
     contexts: list[str],
     reference: str,
+    judge: InstructorBaseRagasLLM | None = None,
 ) -> dict[str, float | None]:
     """The four standard metrics for one answerable question.
 
     With no retrieved contexts, grounding cannot be measured: the three
     context metrics come back null (not zero) and only relevancy runs —
-    ragas itself would raise on the empty context list.
+    ragas itself would raise on the empty context list. A passed-in judge
+    keeps accumulating cost for the caller to read afterwards.
     """
-    metrics = build_metrics()
+    metrics = build_metrics(judge)
     jobs: dict[str, Any] = {
         "answer_relevancy": metrics["answer_relevancy"].ascore(
             user_input=question, response=answer
@@ -201,15 +222,19 @@ def aggregate_summary(results: list[dict[str, Any]]) -> dict[str, Any]:
     """Flatten stored eval_results rows into the run summary the UI reads.
 
     Rows look like {status, kind, metrics, ...}; metrics is 0005's jsonb.
-    total counts every row and passed the ok ones, so a failed row shows
-    as 4/5 instead of disappearing; rates and means run over the rows
-    that actually carry metrics. Rates have explicit denominators:
-    hallucination over every measured result, correct-not-found over the
-    unanswerable ones (no results of a kind measures nothing, so the
-    rate is 0). Standard-score means skip nulls — a metric that could
-    not be measured does not drag the average toward zero.
+    total counts every row and passed the ones that completed — a row
+    that errored carries metrics.error and shows as 4/5 instead of
+    disappearing (the status column cannot mark it: its CHECK vocabulary
+    is the pipeline badge — verified/low_confidence/not_found — that a
+    live answer gets). Rates and means run over the completed rows only,
+    with explicit denominators: hallucination over every measured
+    result, correct-not-found over the unanswerable ones. Standard-score
+    means skip nulls — a metric that could not be measured does not drag
+    the average toward zero.
     """
-    measured = [r for r in results if r.get("metrics")]
+    measured = [
+        r for r in results if r.get("metrics") and "error" not in r["metrics"]
+    ]
 
     def numeric(key: str) -> list[float]:
         return [
@@ -228,7 +253,7 @@ def aggregate_summary(results: list[dict[str, Any]]) -> dict[str, Any]:
 
     return {
         "total": len(results),
-        "passed": sum(1 for r in results if r.get("status") == "ok"),
+        "passed": len(measured),
         "hallucination_rate": round(hallucinated / len(measured), 4) if measured else 0.0,
         "correct_not_found_rate": round(declined / len(unanswerable), 4) if unanswerable else 0.0,
         "avg_latency_ms": round(mean(latencies)) if latencies else None,

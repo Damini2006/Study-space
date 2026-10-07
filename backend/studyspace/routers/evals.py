@@ -9,17 +9,15 @@ import uuid
 from fastapi import APIRouter, HTTPException
 
 from studyspace.deps import AdminDep, DbDep
-from studyspace.models.evals import EvalResultOut, EvalRunCreate, EvalRunOut
+from studyspace.models.evals import (
+    DEFAULT_CONFIGS,
+    EvalResultOut,
+    EvalRunCreate,
+    EvalRunOut,
+)
 from studyspace.queue import get_queue
 
 router = APIRouter(prefix="/evals", tags=["evals"])
-
-DEFAULT_CONFIGS = [
-    {"name": "baseline", "relevance_gate": False, "citation_validation": False, "claim_verification": False},
-    {"name": "+relevance-gate", "relevance_gate": True, "citation_validation": False, "claim_verification": False},
-    {"name": "+citation-validation", "relevance_gate": True, "citation_validation": True, "claim_verification": False},
-    {"name": "+claim-verification", "relevance_gate": True, "citation_validation": True, "claim_verification": True},
-]
 
 
 @router.post("/run", response_model=EvalRunOut, status_code=201)
@@ -90,8 +88,8 @@ async def get_run(db: DbDep, admin: AdminDep, run_id: uuid.UUID) -> EvalRunOut:
 @router.get("/runs/{run_id}/results", response_model=list[EvalResultOut])
 async def get_results(db: DbDep, admin: AdminDep, run_id: uuid.UUID) -> list[EvalResultOut]:
     rows = await db.fetch(
-        "select id, run_id, question_id, question, kind, answer, reference, status, metrics, created_at "
-        "from public.eval_results where run_id = $1 and user_id = auth.uid() order by question_id",
+        "select id, run_id, question_id, config, question, kind, answer, reference, status, metrics, created_at "
+        "from public.eval_results where run_id = $1 and user_id = auth.uid() order by question_id, config",
         run_id,
     )
     out = []
@@ -100,7 +98,8 @@ async def get_results(db: DbDep, admin: AdminDep, run_id: uuid.UUID) -> list[Eva
         out.append(
             EvalResultOut(
                 id=r["id"], run_id=r["run_id"], question_id=r["question_id"],
-                question=r["question"], kind=r["kind"], answer=r["answer"],
+                config=r["config"], question=r["question"], kind=r["kind"],
+                answer=r["answer"],
                 reference=r["reference"], status=r["status"],
                 metrics=json.loads(metrics) if isinstance(metrics, str) else metrics,
                 created_at=r["created_at"],

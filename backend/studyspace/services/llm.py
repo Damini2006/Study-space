@@ -142,4 +142,30 @@ async def chat_json(
     return extract_json(raw)
 
 
-__all__ = ["LLMError", "chat", "chat_json", "extract_json", "stream"]
+def estimate_cost_usd(model: str, prompt_chars: int, completion_chars: int) -> float:
+    """Rough USD cost of one call — a chars/4 token heuristic.
+
+    For eval accounting, not billing: token boundaries are guessed and
+    cached input is priced fresh. Returns 0.0 when LiteLLM has no price
+    for the model — an unpriced model costs a knowable nothing, it does
+    not get to crash a 400-result run.
+    """
+    try:
+        prompt_cost, completion_cost = litellm.cost_per_token(
+            model=model,
+            prompt_tokens=max(prompt_chars // 4, 1),
+            completion_tokens=max(completion_chars // 4, 0),
+        )
+    except Exception:  # noqa: BLE001 — unknown model, missing pricing entry
+        return 0.0
+    return round(prompt_cost + completion_cost, 8)
+
+
+__all__ = [
+    "LLMError",
+    "chat",
+    "chat_json",
+    "estimate_cost_usd",
+    "extract_json",
+    "stream",
+]

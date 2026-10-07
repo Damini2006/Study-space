@@ -122,10 +122,16 @@ async def test_standard_scores_use_0005_names_and_map_nan_to_null(monkeypatch):
         "context_precision": _FakeMetric(0.5),
         "context_recall": _FakeMetric(1),
     }
-    monkeypatch.setattr(eval_metrics, "build_metrics", lambda: stubs)
+    seen_judge = object()
+
+    def fake_build(judge=None):
+        assert judge is seen_judge  # the caller's judge is the one used
+        return stubs
+
+    monkeypatch.setattr(eval_metrics, "build_metrics", fake_build)
 
     scores = await eval_metrics.standard_scores(
-        question="q", answer="a", contexts=["c1"], reference="r"
+        question="q", answer="a", contexts=["c1"], reference="r", judge=seen_judge
     )
     assert set(scores) == {
         "faithfulness",
@@ -143,7 +149,7 @@ async def test_standard_scores_without_contexts_measure_only_relevancy(monkeypat
     stubs = {name: _FakeMetric(1.0) for name in (
         "faithfulness", "answer_relevancy", "context_precision", "context_recall",
     )}
-    monkeypatch.setattr(eval_metrics, "build_metrics", lambda: stubs)
+    monkeypatch.setattr(eval_metrics, "build_metrics", lambda *args, **kwargs: stubs)
 
     scores = await eval_metrics.standard_scores(
         question="q", answer="a", contexts=[], reference="r"
@@ -183,6 +189,29 @@ async def test_a_real_ragas_faithfulness_runs_through_our_judge(monkeypatch):
     )
     assert 0.0 <= result.value <= 1.0
     assert result.value == 1.0  # the single statement was supported
+
+
+# ---------------------------------------------------------------------------
+# Cost accounting
+# ---------------------------------------------------------------------------
+
+async def test_judge_charges_what_it_sends(monkeypatch):
+    async def fake_chat_json(messages, **kwargs):
+        return {"items": ["a"]}
+
+    monkeypatch.setattr(eval_metrics.llm, "chat_json", fake_chat_json)
+    judge = JudgeLLM()
+    assert judge.cost_usd == 0.0
+    await judge.agenerate("x" * 400, _Output)
+    # gpt-4o-mini is priced, so 100 prompt tokens is a non-zero cost
+    assert judge.cost_usd > 0
+
+
+def test_estimate_cost_is_zero_for_unpriced_models_not_a_crash():
+    from studyspace.services.llm import estimate_cost_usd
+
+    assert estimate_cost_usd("no-such-model-xyz", 4000, 1000) == 0.0
+    assert estimate_cost_usd("gpt-4o-mini", 4000, 1000) > 0
 
 
 # ---------------------------------------------------------------------------
@@ -266,6 +295,12 @@ def test_aggregate_summary_shape_and_arithmetic():
             },
         },
         {"status": "failed", "kind": "answerable", "metrics": {}},
+        # a question whose run blew up: metrics.error, no pipeline badge
+        {
+            "status": None,
+            "kind": "answerable",
+            "metrics": {"error": "LLM request failed", "latency_ms": 50},
+        },
     ]
 
     summary = aggregate_summary(rows)
@@ -273,11 +308,11 @@ def test_aggregate_summary_shape_and_arithmetic():
         "total", "passed", "hallucination_rate", "correct_not_found_rate",
         "avg_latency_ms", "cost_usd", "faithfulness", "relevancy", "precision", "recall",
     }
-    assert summary["total"] == 4  # the failed row is counted, not hidden
-    assert summary["passed"] == 3  # ...and only the ok ones are passed
+    assert summary["total"] == 5  # every row is counted, not hidden
+    assert summary["passed"] == 3  # ...but only completed ones are passed
     assert summary["hallucination_rate"] == 0.3333  # 1 in 3 measured, rounded
     assert summary["correct_not_found_rate"] == 1.0  # denominator = unanswerable only
-    assert summary["avg_latency_ms"] == 200  # 100+300+200
+    assert summary["avg_latency_ms"] == 200  # 100+300+200; the failed row's 50 excluded
     assert summary["cost_usd"] == 0.006
     assert summary["faithfulness"] == 0.75  # (0.5 + 1.0) / 2, None skipped
     assert summary["relevancy"] == 0.75
