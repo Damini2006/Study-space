@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import App from "@/App";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import PageViewTracker from "@/components/PageViewTracker";
+import { installGlobalErrorCapture } from "@/lib/clientErrors";
 import { AuthProvider } from "@/hooks/useAuth";
 import { ToastProvider } from "@/components/ui/toast";
 import "@/styles/fonts.css";
@@ -19,6 +20,11 @@ const queryClient = new QueryClient({
     },
   },
 });
+
+// As early in the entry point as imports allow: every crash after this
+// line is a report, and nothing before it can be caught (imports run
+// first — that window is the price of the ordering, not a hole in it).
+installGlobalErrorCapture();
 
 ReactDOM.createRoot(document.getElementById("root")).render(
   <React.StrictMode>

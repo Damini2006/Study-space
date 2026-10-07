@@ -1,7 +1,13 @@
 import { describe, expect, it, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import ErrorBoundary from "@/components/ErrorBoundary";
+import { reportClientError } from "@/lib/clientErrors";
 import { Button, buttonVariants } from "@/components/ui/button";
+
+// The boundary escalates through this reporter; the real one fetches, and
+// these tests are about the escalation, not the transport.
+vi.mock("@/lib/clientErrors", () => ({ reportClientError: vi.fn() }));
 import { ConfidenceMeter } from "@/components/ui/confidence-meter";
 import { StatusBadge, StatusDot } from "@/components/ui/status-badges";
 import { Card, CardSkeleton, CardTitle } from "@/components/ui/card";
@@ -125,5 +131,35 @@ describe("CardSkeleton", () => {
     expect(screen.getByText("Loading...")).toBeInTheDocument();
     // 1 header bar + N text lines
     expect(container.querySelectorAll(".animate-pulse")).toHaveLength(5);
+  });
+});
+
+describe("ErrorBoundary", () => {
+  it("escalates a render crash instead of swallowing it", () => {
+    const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    function Boom() {
+      throw new Error("render exploded");
+    }
+
+    render(
+      <ErrorBoundary>
+        <Boom />
+      </ErrorBoundary>
+    );
+
+    // The user still gets the themed fallback...
+    expect(screen.getByRole("alert")).toBeInTheDocument();
+    // ...the console still gets the stack for the dev overlay...
+    expect(consoleSpy).toHaveBeenCalled();
+    // ...and the backend gets a report: React caught this crash, so the
+    // window's error handler never fires and this is its only door.
+    expect(reportClientError).toHaveBeenCalledWith(
+      expect.objectContaining({
+        message: "render exploded",
+        source: "boundary",
+        stack: expect.stringContaining("render exploded"),
+      })
+    );
+    consoleSpy.mockRestore();
   });
 });

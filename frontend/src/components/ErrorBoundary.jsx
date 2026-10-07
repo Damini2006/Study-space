@@ -1,6 +1,7 @@
 import { Component } from "react";
 import { AlertTriangle, RotateCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { reportClientError } from "@/lib/clientErrors";
 
 /**
  * Catches render-time crashes anywhere below it so a single broken view can't
@@ -21,6 +22,15 @@ export default class ErrorBoundary extends Component {
     // Surface in the console so devtools/dev overlay still shows the stack.
     console.error("[StudySpace] render error:", error, info?.componentStack);
     this._lastInfo = info;
+    // And to the backend: a crash this boundary caught never reaches
+    // window.onerror — React stopped it — so this is the only door it
+    // has. The component stack travels with it, because which component
+    // broke is the part a JS stack trace rarely names.
+    reportClientError({
+      message: error?.message || String(error),
+      stack: [error?.stack, info?.componentStack].filter(Boolean).join("\n") || null,
+      source: "boundary",
+    });
   }
 
   handleReset = () => {
