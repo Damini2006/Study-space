@@ -2,8 +2,9 @@
 
 Two modes:
 - unit tests (no env needed) — chunking, RRF, security helpers, FSRS wiring
-- integration tests require TEST_DATABASE_URL (a pgvector Postgres) or the
-  docker container from `docker-compose -f docker-compose.test.yml up -d`.
+- integration tests require TEST_DATABASE_URL (a pgvector Postgres), which the
+  repo's own compose file provides: `docker compose up -d postgres` then
+  `docker exec studyspace-postgres psql -U postgres -c "CREATE DATABASE studyspace_test"`.
 
 When that database is absent the integration tests *skip* rather than fail. An
 unreachable database is a property of the machine, not of the code, and a suite
@@ -117,8 +118,8 @@ async def migrated_db(db_url):
     if not await _database_reachable(db_url):
         pytest.skip(
             f"no database at {db_url!r} — set TEST_DATABASE_URL, or run "
-            "`docker-compose -f docker-compose.test.yml up -d`, to run the "
-            "integration suite"
+            "`docker compose up -d postgres` and create the studyspace_test "
+            "database (see the module docstring), to run the integration suite"
         )
     await _apply_migrations(db_url)
     return db_url

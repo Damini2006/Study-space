@@ -37,17 +37,34 @@ comment on column public.citations.source_title is
     'Snapshot taken when the answer was written, so a deleted source stays nameable.';
 
 -- Backfill the denormalised columns for citations written before this migration.
+--
+-- Written as a subquery, not UPDATE ... FROM ... LEFT JOIN: PostgreSQL does
+-- not let the UPDATE target's alias be referenced from a join's ON clause
+-- ("invalid reference to FROM-clause entry for table \"c\""). The original
+-- form failed there — and because a migration runs in one transaction it
+-- took the whole file down with it: the FK change above, these columns,
+-- the indexes below and the rag_settings RLS never applied on any database
+-- that ran this file. The subquery puts the alias where it is in scope; the
+-- distinct-from guard keeps the update idempotent on partial states.
 update public.citations c
-set space_id     = m.space_id,
-    source_id    = ch.source_id,
-    source_title = s.title,
-    page         = ch.page
-from public.messages m
-left join public.chunks  ch on ch.id = c.chunk_id
-left join public.sources s  on s.id  = ch.source_id
-where c.message_id = m.id
-  and (c.space_id is distinct from m.space_id
-       or c.source_title is distinct from s.title);
+set space_id     = x.space_id,
+    source_id    = x.source_id,
+    source_title = x.source_title,
+    page         = x.page
+from (
+    select cit.id            as citation_id,
+           m.space_id,
+           ch.source_id,
+           s.title           as source_title,
+           ch.page
+      from public.citations cit
+      join public.messages  m  on m.id  = cit.message_id
+      left join public.chunks  ch on ch.id = cit.chunk_id
+      left join public.sources s  on s.id = ch.source_id
+) x
+where c.id = x.citation_id
+  and (c.space_id is distinct from x.space_id
+       or c.source_title is distinct from x.source_title);
 
 -- Citations are always written with the answer, so make it not-null going
 -- forwards via the writer rather than a constraint, to keep this migration
