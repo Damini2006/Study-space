@@ -22,6 +22,13 @@ dependencies = [
   "litellm>=1.60,<2.0",
   "langgraph>=1.0,<2.0",
   "langfuse>=3.2,<5.0",
+  # The four standard eval metrics (faithfulness, answer relevancy, context
+  # precision/recall) behind the admin suite; the custom ones are ours.
+  "ragas>=0.4,<1.0",
+  # ragas 0.4.3 imports langchain_community.chat_models.vertexai at module
+  # load; 0.4.2 deleted it, so the pair above cannot import. One-version
+  # window until ragas fixes its own upper bound.
+  "langchain-community>=0.4.1,<0.4.2",
   "fsrs>=6.0,<7.0",
   "email-validator>=2.1",
 ]

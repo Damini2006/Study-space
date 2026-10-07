@@ -57,7 +57,7 @@ Run these before you commit, not after you push:
 | Everything frontend | `npm run check:all` (in `frontend/`) | All three in one command |
 | Backend lint | `python -m ruff check .` (in `backend/`) | Style and bugbear rules (E, F, I, UP, B), line length 110 |
 | Backend tests | `python -m pytest -q` (in `backend/`) | API, services, the docs gate, the env registry |
-| Dependency audit | `pip-audit .` (in `backend/`), `npm audit --audit-level=high` (in `frontend/`) | Known CVEs — the frontend audit is the whole tree, dev included, because the build runs dev dependencies too |
+| Dependency audit | `pip-audit . --ignore-vuln PYSEC-2026-3046 --ignore-vuln PYSEC-2026-2447` (in `backend/`; the two are no-fix advisories ragas ships — rationale lives beside the flags in ci.yml), `npm audit --audit-level=high` (in `frontend/`) | Known CVEs — the frontend audit is the whole tree, dev included, because the build runs dev dependencies too. Every *other* advisory fails; only those two IDs are pre-forgiven |
 | Dockerfile lint | `docker build --check ./backend` and `docker build --check ./worker` (repo root) | Dockerfile mistakes before the image is built |
 
 ## What CI does with your push

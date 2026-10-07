@@ -43,7 +43,17 @@ jobs:
       - name: Audit backend dependencies
         run: |
           cd backend
-          pip-audit .
+          # Two advisories ragas 0.4.3 carries with no upstream fix, each
+          # named so every NEW advisory still fails this step:
+          #   PYSEC-2026-3046 (CVE-2026-6587, low) — SSRF in ragas'
+          #     multi-modal faithfulness URL fetcher. We never instantiate
+          #     that metric and our contexts are our own chunk text.
+          #   PYSEC-2026-2447 (CVE-2025-69872, moderate) — pickle RCE in
+          #     diskcache requiring write access to the cache directory:
+          #     local write access an attacker would already have.
+          # Both go stale the moment a fix ships — pip-audit stops reporting
+          # them and these flags do nothing.
+          pip-audit . --ignore-vuln PYSEC-2026-3046 --ignore-vuln PYSEC-2026-2447
 
       - name: Run backend lint
         run: |
