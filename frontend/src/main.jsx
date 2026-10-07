@@ -6,6 +6,7 @@ import App from "@/App";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import PageViewTracker from "@/components/PageViewTracker";
 import { installGlobalErrorCapture } from "@/lib/clientErrors";
+import { initVitalsReporting } from "@/lib/vitals";
 import { AuthProvider } from "@/hooks/useAuth";
 import { ToastProvider } from "@/components/ui/toast";
 import "@/styles/fonts.css";
@@ -25,6 +26,11 @@ const queryClient = new QueryClient({
 // line is a report, and nothing before it can be caught (imports run
 // first — that window is the price of the ordering, not a hole in it).
 installGlobalErrorCapture();
+
+// Field performance for the first load: the observers start now, and the
+// snapshot itself waits for load, idle, and — when the banner is still
+// undecided — the user's answer.
+initVitalsReporting();
 
 ReactDOM.createRoot(document.getElementById("root")).render(
   <React.StrictMode>

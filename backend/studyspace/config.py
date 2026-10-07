@@ -101,6 +101,7 @@ class Settings(BaseSettings):
     rate_limit_studio_per_10min: int = 15
     rate_limit_auth_per_min: int = 30  # per IP
     rate_limit_client_errors_per_min: int = 30  # per IP, anonymous
+    rate_limit_vitals_per_min: int = 60  # per IP, anonymous — one per page load
 
     # --- CORS ----------------------------------------------------------------
     # CSV strings are used for list settings to avoid JSON-decode issues when

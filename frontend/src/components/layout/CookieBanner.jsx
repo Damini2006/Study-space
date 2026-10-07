@@ -10,6 +10,10 @@ function remember(value) {
   } catch {
     // Storage unavailable: consent simply won't persist for this visit.
   }
+  // Tell the page as well as storage: the vitals snapshot is holding its
+  // first load for exactly this answer, and it cannot read storage in a
+  // browser that refused to write it.
+  window.dispatchEvent(new CustomEvent("studyspace:consent", { detail: value }));
 }
 
 export default function CookieBanner() {

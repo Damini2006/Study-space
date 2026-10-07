@@ -21,3 +21,20 @@ class ClientErrorIn(BaseModel):
     stack: str | None = Field(default=None, max_length=100_000)
     route: str | None = Field(default=None, max_length=2_000)
     source: Literal["uncaught", "rejection", "boundary"] = "uncaught"
+
+
+class VitalsIn(BaseModel):
+    """Field performance for one page load.
+
+    The ranges are sanity gates, not quality gates: FCP and LCP up to an
+    hour — a real number from a pathologically slow device is still a
+    real number — and CLS up to 10, because genuinely terrible pages
+    exceed 1 legitimately and rejecting them would delete the worst data
+    first. Every field is optional: a browser that observed nothing says
+    so, and `none` in the log is an answer too.
+    """
+
+    fcp_ms: float | None = Field(default=None, ge=0, le=3_600_000)
+    lcp_ms: float | None = Field(default=None, ge=0, le=3_600_000)
+    cls: float | None = Field(default=None, ge=0, le=10)
+    route: str | None = Field(default=None, max_length=2_000)
