@@ -12,20 +12,25 @@ import { expect, test } from "@playwright/test";
  * costs 370 kB today starts costing 430 kB, a dependency went eager and
  * the test says so before a user pays for it.
  *
- * The paint budget is a ceiling several times above what the page needs,
- * meant to catch a catastrophe — a render-blocking request to somewhere
- * slow, a regression that doubles parse work — not a few milliseconds of
- * drift. Every host on the critical path has been our own since the
- * fonts were self-hosted (the second test below is what keeps it that
- * way), so what moves this number is the machine's own load: the same
- * build measured 820 ms on its own and 1988 ms under the full suite.
+ * Paint is reported, not budgeted — a decision, not an omission. First
+ * Contentful Paint did get a ceiling once. The same build, no line of code
+ * changed in between, then measured 604 ms idle, 1988 ms under the full
+ * suite, and 2784 / 2732 / 5560 ms across three runs while the machine was
+ * busy — once crossing that ceiling for no reason a user would recognise.
+ * A ceiling a loaded machine clears by itself fails for the wrong reason
+ * often enough to be worse than no ceiling. So what is asserted about
+ * paint is binary: the page paints content at all. The value is still
+ * printed every run as a number to read. Everything else here is load-
+ * proof — bytes, file counts, hosts, faces — because those describe the
+ * build, and the build does not care how busy the machine is.
  *
- * First Contentful Paint rather than LCP: measured here, the LCP entry is
- * never emitted at all in this headless Chromium — neither on the
- * performance timeline nor to a buffered PerformanceObserver, three runs
- * out of three — while FP and FCP land within 50 ms of each other run to
- * run. FCP is also the metric a render-blocking stylesheet actually
- * delays, which is the regression this test exists to notice.
+ * First Contentful Paint rather than LCP, for the same reason: measured
+ * here, the LCP entry is never emitted at all in this headless Chromium —
+ * neither on the performance timeline nor to a buffered PerformanceObserver,
+ * three runs out of three — while FP and FCP land within 50 ms of each
+ * other run to run. FCP is also the metric a render-blocking stylesheet
+ * actually delays, so it stays the one worth printing; the regressions
+ * themselves are caught by counts and budgets, which cannot go flaky.
  *
  * What is counted: same-origin `.js` and `.css` fetched while loading `/`.
  * A cross-origin request would report a transfer size of 0 (no
@@ -43,10 +48,9 @@ const BUDGETS = {
   // Headroom is for incidental growth, not for going eager: a new import
   // of any weight still trips this.
   jsBytes: 220 * 1024,
-  // One stylesheet: the bundled index CSS, 15.9 kB as served.
+  // One stylesheet: the bundled index CSS, 16.3 kB as served since the
+  // @font-face rules moved into it.
   cssBytes: 20 * 1024,
-  // Ceiling, not a target — see above.
-  fcpMs: 4_000,
 };
 
 const kib = (bytes) => `${(bytes / 1024).toFixed(1)} kB`;
@@ -54,6 +58,32 @@ const kib = (bytes) => `${(bytes / 1024).toFixed(1)} kB`;
 async function measureFirstLoad(page) {
   await page.goto("/");
   await page.waitForLoadState("networkidle");
+
+  // networkidle is a claim about the future — quiet for 500 ms — while
+  // first paint belongs to the renderer, and the two land on whichever
+  // side of each other they please: one run ended load at 248 ms and
+  // painted at 764 ms, and on a busy machine the read caught the page
+  // before it had painted at all (fcp=0 with the entire DOM in place,
+  // cookie dialog included). Waiting for the entry to exist costs
+  // nothing when paint came first — the common case — and the entry's
+  // startTime is the moment paint happened regardless of when we look,
+  // so this changes when the number is read and never the number.
+  // Interval polling rather than the default rAF: a page that never
+  // paints must still be able to fail this, not hang the poll on the
+  // frame that never comes.
+  let painted = true;
+  try {
+    await page.waitForFunction(
+      () =>
+        performance
+          .getEntriesByType("paint")
+          .some((entry) => entry.name === "first-contentful-paint"),
+      undefined,
+      { timeout: 10_000, polling: 250 }
+    );
+  } catch {
+    painted = false;
+  }
 
   const { fcpMs, resources } = await page.evaluate(() => ({
     // Paint entries share one entryType, so FCP is found by name rather
@@ -79,6 +109,7 @@ async function measureFirstLoad(page) {
       .reduce((total, entry) => total + entry.bytes, 0);
 
   return {
+    painted,
     fcpMs,
     jsBytes: sum(".js"),
     cssBytes: sum(".css"),
@@ -89,7 +120,8 @@ async function measureFirstLoad(page) {
 test("the landing page's first load stays inside its budgets", async ({
   page,
 }) => {
-  const { fcpMs, jsBytes, cssBytes, jsRequests } = await measureFirstLoad(page);
+  const { painted, fcpMs, jsBytes, cssBytes, jsRequests } =
+    await measureFirstLoad(page);
 
   console.log(
     `[perf] / first load: js=${kib(jsBytes)} in ${jsRequests} files, ` +
@@ -108,12 +140,15 @@ test("the landing page's first load stays inside its budgets", async ({
     "render-blocking CSS grew past budget."
   ).toBeLessThanOrEqual(BUDGETS.cssBytes);
 
-  expect(fcpMs, "nothing painted at all").toBeGreaterThan(0);
+  // Binary, and only binary: the page paints. Whether it took 600 ms or
+  // 5000 ms is the machine's business — see the header — but "never" is
+  // a fact about the page, and the wait above is what makes it readable
+  // instead of a race against networkidle.
   expect(
-    fcpMs,
-    "FCP passed its ceiling — a render-blocking request or a regression in " +
-      "parse work, not a few milliseconds of drift."
-  ).toBeLessThanOrEqual(BUDGETS.fcpMs);
+    painted,
+    "no first contentful paint within 10 s — a page that never renders, " +
+      "not a page that renders slowly."
+  ).toBe(true);
 });
 
 /**
@@ -121,18 +156,20 @@ test("the landing page's first load stays inside its budgets", async ({
  * files downloaded either way — it was about who stands in front of
  * first paint. The Google Fonts stylesheet was render-blocking: no glyph
  * could be painted until a round trip to another company's servers had
- * finished. Three assertions together stop that quietly coming back:
+ * finished. Four assertions together stop that quietly coming back:
  *
- *   1. no cross-origin stylesheet in the document at all — that is the
- *      render-blocking claim, since an external sheet blocks paint by
- *      definition;
+ *   1. exactly one stylesheet in the document, and it is ours — an
+ *      external sheet blocks paint by construction, and a second sheet
+ *      of any origin is a second thing first paint now waits for;
  *   2. nothing reaching the two hosts the fonts used to come from;
  *   3. both families declared with the weight range they were fetched
  *      for and actually loaded. This one fails if fonts.css did not
  *      build, if a woff2 404'd, or if a range got written as a single
  *      weight — worth checking on its own, because document.fonts.check
  *      alone passes vacuously for a family that does not exist: text
- *      falls back, and there is nothing left to load.
+ *      falls back, and there is nothing left to load;
+ *   4. every loaded face still carries font-display: swap, the reason
+ *      text was never invisible while a font arrived.
  */
 test("first paint has no third party in front of it, and the fonts are ours", async ({
   page,
@@ -160,6 +197,7 @@ test("first paint has no third party in front of it, and the fonts are ours", as
       faces: Array.from(document.fonts, (face) => ({
         family: face.family.replace(/["']/g, ""),
         weight: face.weight,
+        display: face.display,
         status: face.status,
       })),
     };
@@ -169,6 +207,12 @@ test("first paint has no third party in front of it, and the fonts are ours", as
     report.stylesheets.filter((href) => !href.startsWith(report.origin)),
     "the render-blocking stylesheet must not come from a third party"
   ).toEqual([]);
+  expect(
+    report.stylesheets,
+    "first paint should wait on exactly one stylesheet — ours. A second " +
+      "one means something new went render-blocking; if that is a " +
+      "deliberate async-loading pattern, say so here."
+  ).toHaveLength(1);
 
   expect(
     report.fontHosts,
@@ -190,6 +234,17 @@ test("first paint has no third party in front of it, and the fonts are ours", as
   expect(
     loaded("JetBrains Mono", "400 500"),
     `JetBrains Mono must be declared by our own CSS and loaded — saw ${JSON.stringify(
+      report.faces
+    )}`
+  ).toBe(true);
+
+  // After the two above, so a face that failed to load cannot make this
+  // one pass over an empty list.
+  expect(
+    report.faces
+      .filter((face) => face.status === "loaded")
+      .every((face) => face.display === "swap"),
+    `font-display: swap lets text paint before a font arrives — saw ${JSON.stringify(
       report.faces
     )}`
   ).toBe(true);
