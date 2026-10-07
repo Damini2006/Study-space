@@ -100,6 +100,7 @@ class Settings(BaseSettings):
     rate_limit_upload_per_5min: int = 10
     rate_limit_studio_per_10min: int = 15
     rate_limit_auth_per_min: int = 30  # per IP
+    rate_limit_client_errors_per_min: int = 30  # per IP, anonymous
 
     # --- CORS ----------------------------------------------------------------
     # CSV strings are used for list settings to avoid JSON-decode issues when
