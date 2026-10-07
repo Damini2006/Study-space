@@ -335,6 +335,72 @@ def find_quote_span(claim_sentences: list[str], chunk_content: str) -> str | Non
     return chunk_content[:300] or None
 
 
+async def verify_claims(
+    question: str,
+    answer: str,
+    status: str,
+    candidates: list[Candidate],
+    layers: ResolvedLayers,
+    config: RagConfig | None = None,
+) -> tuple[str, str, list[dict[str, Any]]]:
+    """Apply layer 3 (claim verification) and its no-citations companion rule.
+
+    Returns ``(answer, status, claim_records)``: the answer may be trimmed to
+    its supported sentences or replaced by the house decline, exactly as the
+    chat pipeline delivers it. Extracted from ``run_chat`` so the eval runner
+    ablates the same code path chat runs instead of a copy that can drift.
+    """
+    sentences = annotate_sentences(answer)
+    if layers.claim_verification and status != "not_found" and sentences:
+        evidence = {i: c for i, c in enumerate(candidates, start=1)}
+        cited = [s for s in sentences if s.labels]
+        verdicts = await judge_claims(question, cited, evidence, config) if cited else {}
+        claim_records: list[dict[str, Any]] = []
+        unsupported_texts: list[str] = []
+        kept: list[str] = []
+        cited_idx = -1
+        for s in sentences:
+            if s.labels:
+                cited_idx += 1
+                verdict = verdicts.get(cited_idx)
+                supported = bool(verdict and verdict.supported and verdict.score >= 0.5)
+                score = verdict.score if verdict else 0.5
+                claim_records.append(
+                    {
+                        "text": s.text,
+                        "supported": supported,
+                        "judge_score": score,
+                        "chunk_id": evidence[s.labels[0]].chunk_id if s.labels[0] in evidence else None,
+                    }
+                )
+                if supported:
+                    kept.append(s.raw)
+                else:
+                    unsupported_texts.append(s.text)
+            elif looks_factual(s):
+                claim_records.append(
+                    {"text": s.text, "supported": False, "judge_score": 0.0, "chunk_id": None}
+                )
+                unsupported_texts.append(s.text)
+            else:
+                kept.append(s.raw)
+        if unsupported_texts and not kept:
+            return not_found_message(), "not_found", claim_records
+        if unsupported_texts:
+            return "\n\n".join(kept), "low_confidence", claim_records
+        if claim_records and not all(c["supported"] for c in claim_records):
+            return answer, "low_confidence", claim_records
+        return answer, "verified", claim_records
+    if status == "verified" and layers.citation_validation and not any(
+        s.labels for s in sentences
+    ):
+        # a "Verified" badge requires at least one real citation
+        return answer, "low_confidence", []
+    # baseline (all layers off): an answer that came back is marked
+    # verified — this is exactly what the eval suite measures.
+    return answer, status, []
+
+
 # ---------------------------------------------------------------------------
 # The main pipeline
 # ---------------------------------------------------------------------------
@@ -513,64 +579,21 @@ async def run_chat(ctx: ChatContext) -> AsyncIterator[dict[str, Any]]:
                 status = "not_found"
 
             # --- layer 3: claim verification -----------------------------
-            sentences = annotate_sentences(answer)
+            # verify_claims is shared with the eval runner: the ablation
+            # must measure the same code chat delivers, not a copy of it.
             evidence = {i: c for i, c in enumerate(candidates, start=1)}
-            claim_records: list[dict[str, Any]] = []
-            if layers.claim_verification and status != "not_found" and sentences:
-                with trace_span("chat.claim_verification", user_id=ctx.user_id) as csp:
-                    cited = [s for s in sentences if s.labels]
-                    verdicts = (
-                        await judge_claims(ctx.request.message, cited, evidence, cfg)
-                        if cited else {}
-                    )
-                    unsupported_texts: list[str] = []
-                    kept: list[str] = []
-                    cited_idx = -1
-                    for s in sentences:
-                        if s.labels:
-                            cited_idx += 1
-                            verdict = verdicts.get(cited_idx)
-                            supported = bool(verdict and verdict.supported and verdict.score >= 0.5)
-                            score = verdict.score if verdict else 0.5
-                            claim_records.append(
-                                {
-                                    "text": s.text,
-                                    "supported": supported,
-                                    "judge_score": score,
-                                    "chunk_id": evidence[s.labels[0]].chunk_id if s.labels[0] in evidence else None,
-                                }
-                            )
-                            if supported:
-                                kept.append(s.raw)
-                            else:
-                                unsupported_texts.append(s.text)
-                        elif looks_factual(s):
-                            claim_records.append(
-                                {"text": s.text, "supported": False, "judge_score": 0.0, "chunk_id": None}
-                            )
-                            unsupported_texts.append(s.text)
-                        else:
-                            kept.append(s.raw)
-                    csp.set_output(
-                        {"claims": len(claim_records), "unsupported": len(unsupported_texts)}
-                    )
-                    if unsupported_texts and not kept:
-                        answer = not_found_message()
-                        status = "not_found"
-                    elif unsupported_texts:
-                        answer = "\n\n".join(kept)
-                        status = "low_confidence"
-                    elif claim_records and not all(c["supported"] for c in claim_records):
-                        status = "low_confidence"
-                    else:
-                        status = "verified"
-                sentences = annotate_sentences(answer)
-            elif status == "verified" and layers.citation_validation:
-                # a "Verified" badge requires at least one real citation
-                if not any(s.labels for s in sentences):
-                    status = "low_confidence"
-            # baseline (all layers off): an answer that came back is marked
-            # verified — this is exactly what the eval suite measures.
+            with trace_span("chat.claim_verification", user_id=ctx.user_id) as csp:
+                answer, status, claim_records = await verify_claims(
+                    ctx.request.message, answer, status, candidates, layers, cfg,
+                )
+                csp.set_output(
+                    {
+                        "claims": len(claim_records),
+                        "unsupported": sum(
+                            1 for c in claim_records if not c["supported"]
+                        ),
+                    }
+                )
 
             # --- build citation rows -------------------------------------
             citations: list[dict[str, Any]] = []
