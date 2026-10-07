@@ -26,6 +26,10 @@ class Settings(BaseSettings):
     app_name: str = "StudySpace API"
     env: Literal["development", "test", "production"] = "development"
     debug: bool = False
+    # Threshold for application output on the root logger. The request log
+    # picks each record's level from the response status (2xx INFO, 4xx
+    # WARNING, 5xx ERROR); this decides which of them reach the handler.
+    log_level: Literal["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"] = "INFO"
 
     # --- Supabase -----------------------------------------------------------
     supabase_url: str = "http://localhost:54321"

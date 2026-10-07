@@ -9,6 +9,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from studyspace.config import get_settings
 from studyspace.db import close_pool, init_pool
+from studyspace.request_log import configure_logging, request_logging
 from studyspace.routers import (
     analytics,
     chat,
@@ -38,6 +39,7 @@ from studyspace.routers import (
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    configure_logging()
     await init_pool()
     from studyspace.tracing import flush
 
@@ -65,7 +67,7 @@ def create_app() -> FastAPI:
         allow_credentials=False,  # auth is via bearer tokens, not cookies
         allow_methods=["GET", "POST", "PATCH", "PUT", "DELETE", "OPTIONS"],
         allow_headers=["Authorization", "Content-Type", "Accept"],
-        expose_headers=["Retry-After"],
+        expose_headers=["Retry-After", "X-Request-Id"],
     )
 
     @app.middleware("http")
@@ -78,6 +80,13 @@ def create_app() -> FastAPI:
         resp.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
         resp.headers["Cache-Control"] = "no-store" if request.url.path.startswith("/api/") else resp.headers.get("Cache-Control", "no-cache")
         return resp
+
+    # Registered last, so it is the outermost middleware: the line it writes
+    # describes the response the client actually received, headers included,
+    # and the full time the request spent inside the app.
+    @app.middleware("http")
+    async def log_requests(request, call_next):
+        return await request_logging(request, call_next)
 
     app.include_router(meta.router, prefix="/api")
     app.include_router(me.router, prefix="/api")

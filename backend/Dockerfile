@@ -21,4 +21,7 @@ COPY studyspace ./studyspace
 
 EXPOSE 8000
 
-CMD ["uvicorn", "studyspace.main:app", "--host", "0.0.0.0", "--port", "8000"]
+# --no-access-log: the app writes its own request line — method, path,
+# status, duration, request id — via studyspace.request_log. Two logs per
+# request means twice the noise and half the clarity.
+CMD ["uvicorn", "studyspace.main:app", "--host", "0.0.0.0", "--port", "8000", "--no-access-log"]
