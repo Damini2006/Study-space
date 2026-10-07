@@ -72,8 +72,10 @@ services:
 
   worker:
     build:
-      context: ./worker
-      dockerfile: Dockerfile
+      # Root context: the jobs import studyspace.*, so the image installs
+      # ./backend alongside worker (see worker/Dockerfile).
+      context: .
+      dockerfile: worker/Dockerfile
     container_name: studyspace-worker
     environment:
       SUPABASE_URL: ${SUPABASE_URL}

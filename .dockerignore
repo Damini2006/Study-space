@@ -1,0 +1,15 @@
+# Build context for ROOT-context builds (worker/Dockerfile) — backend/ and
+# frontend/ keep their own contexts. Secrets, vcs and local artifacts never
+# reach the daemon; the image only gets what the Dockerfile COPYs.
+.git
+.github
+.venv
+.vite
+node_modules
+**/node_modules
+**/__pycache__
+**/*.egg-info
+**/.env
+**/dist
+**/dist-e2e
+**/test-results
