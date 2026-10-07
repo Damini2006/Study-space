@@ -117,10 +117,23 @@ describe("Content-Security-Policy", () => {
   });
 
   it("still permits the third parties index.html actually loads", () => {
+    // Analytics is the only one left. The fonts became self-hosted — see
+    // src/styles/fonts.css — and e2e/performance.e2e.js asserts that
+    // nothing reaches their old hosts, which is what makes the second
+    // test below a fact about the app rather than an opinion.
     for (const policy of [...vercelPolicies, ...nginxPolicies]) {
-      expect(policy).toContain("https://fonts.googleapis.com");
-      expect(policy).toContain("https://fonts.gstatic.com");
       expect(policy).toContain("https://www.googletagmanager.com");
+    }
+  });
+
+  it("does not allow hosts the app never talks to", () => {
+    // An allowance nothing exercises is attack surface, and a dead one
+    // is also a lie about what index.html loads — the premise of the
+    // test above. Anyone pointing the app back at Google meets this
+    // failing and makes it a decision instead of an accident.
+    for (const policy of [...vercelPolicies, ...nginxPolicies]) {
+      expect(policy).not.toContain("https://fonts.googleapis.com");
+      expect(policy).not.toContain("https://fonts.gstatic.com");
     }
   });
 });
