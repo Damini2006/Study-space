@@ -7,7 +7,7 @@ import logging
 import pytest
 
 from studyspace.rate_limit import RateLimitResult
-from studyspace.routers import client_errors as client_errors_module
+from studyspace.routers import telemetry as telemetry_module
 
 LOGGER = "studyspace.client"
 
@@ -94,7 +94,7 @@ async def test_flooded_reports_are_rejected_with_retry_after(api_client, caplog,
     async def deny(*args, **kwargs):
         return RateLimitResult(allowed=False, remaining=0, retry_after=42)
 
-    monkeypatch.setattr(client_errors_module, "rate_limit", deny)
+    monkeypatch.setattr(telemetry_module, "rate_limit", deny)
     with caplog.at_level(logging.ERROR, logger=LOGGER):
         response = await api_client.post("/api/client-errors", json={"message": "x"})
 

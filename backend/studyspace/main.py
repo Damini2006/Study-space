@@ -14,7 +14,6 @@ from studyspace.routers import (
     analytics,
     chat,
     citation_audit,
-    client_errors,
     demo,
     evals,
     export,
@@ -34,6 +33,7 @@ from studyspace.routers import (
     spaces,
     studio,
     study,
+    telemetry,
     vision,
 )
 
@@ -99,7 +99,7 @@ def create_app() -> FastAPI:
     app.include_router(rag_settings.router, prefix="/api")
     app.include_router(citation_audit.router, prefix="/api")
     app.include_router(chat.router, prefix="/api")
-    app.include_router(client_errors.router, prefix="/api")
+    app.include_router(telemetry.router, prefix="/api")
     app.include_router(studio.router, prefix="/api")
     app.include_router(study.router, prefix="/api")
     app.include_router(planner.router, prefix="/api")
