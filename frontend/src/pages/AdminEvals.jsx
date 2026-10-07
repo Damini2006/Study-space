@@ -3,19 +3,17 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { motion } from "framer-motion";
 import {
   BarChart3,
-  CheckCircle2,
   Download,
   Loader2,
-  Play,
   ShieldCheck,
   Table,
-  XCircle,
 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge, Input, Label } from "@/components/ui/input";
 import { Dialog } from "@/components/ui/dialog";
 import { evalsApi } from "@/services/api-services";
+import { pollInterval, progressPercent, resultsToCsv, selectConfigs } from "@/lib/evals";
 import { useToast } from "@/components/ui/toast";
 import { cn, formatDate } from "@/lib/utils";
 import { ConfidenceMeter } from "@/components/ui/confidence-meter";
@@ -41,6 +39,34 @@ function ConfigBadge({ config }) {
   );
 }
 
+/**
+ * What a RUN contains, as opposed to what one config switches on: run
+ * config is the whole plan ({configs, limit}), not a layer tuple —
+ * rendering it through ConfigBadge would say "Baseline" for every run.
+ */
+function PlanBadge({ config }) {
+  const names = config?.configs;
+  if (!Array.isArray(names)) return <Badge variant="default" className="text-[10px]">—</Badge>;
+  return (
+    <Badge variant="default" className="text-[10px]">
+      {names.length}{names.length === 1 ? " config" : " configs"}
+    </Badge>
+  );
+}
+
+function AverageMeter({ label, value }) {
+  return (
+    <div className="p-3 rounded-lg bg-surface-2 border border-border">
+      <p className="text-xs text-muted-foreground uppercase tracking-wide">{label}</p>
+      {value !== null ? (
+        <ConfidenceMeter value={value} size="sm" showLabel={false} className="w-20" />
+      ) : (
+        <span className="text-sm text-muted-foreground">—</span>
+      )}
+    </div>
+  );
+}
+
 function MetricCell({ value, higherIsBetter = true }) {
   if (value === null || value === undefined) return <span className="text-muted-foreground">—</span>;
   const color = higherIsBetter
@@ -51,8 +77,11 @@ function MetricCell({ value, higherIsBetter = true }) {
 
 function RunCard({ run, onRun, showDetails }) {
   const summary = run.summary || {};
-  const total = summary.total || 0;
-  const passed = summary.passed || 0;
+  const total = summary.total ?? 0;
+  const passed = summary.passed ?? 0;
+  const done = summary.done ?? 0;
+  const inFlight = run.status === "pending" || run.status === "running";
+  const percent = run.status === "running" ? progressPercent(summary) : null;
   const hallucination = summary.hallucination_rate ?? null;
   const notFound = summary.correct_not_found_rate ?? null;
   const avgLatency = summary.avg_latency_ms ?? null;
@@ -66,7 +95,7 @@ function RunCard({ run, onRun, showDetails }) {
             {run.status}
           </Badge>
           <span className="text-sm font-medium">{run.label}</span>
-          <ConfigBadge config={run.config} />
+          <PlanBadge config={run.config} />
         </div>
         <div className="text-right text-xs text-muted-foreground">
           <div>{formatDate(run.created_at)}</div>
@@ -81,7 +110,7 @@ function RunCard({ run, onRun, showDetails }) {
         </div>
         <div className="flex items-center justify-between">
           <span className="text-muted-foreground">Completed</span>
-          <span className="font-mono text-success">{passed}</span>
+          <span className="font-mono text-success">{inFlight ? done : passed}</span>
         </div>
         <div className="flex items-center justify-between">
           <span className="text-muted-foreground">Hallucination rate</span>
@@ -108,30 +137,39 @@ function RunCard({ run, onRun, showDetails }) {
       )}
 
       {run.status === "running" && (
-        <div className="h-1.5 bg-surface-2 rounded-full overflow-hidden">
-          <motion.div className="h-full bg-primary" initial={{ width: 0 }} animate={{ width: "45%" }} transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }} />
+        <div className="space-y-1">
+          <div className="h-1.5 bg-surface-2 rounded-full overflow-hidden">
+            {percent !== null ? (
+              <motion.div
+                className="h-full bg-primary"
+                initial={{ width: 0 }}
+                animate={{ width: `${percent}%` }}
+                transition={{ duration: 0.4 }}
+              />
+            ) : (
+              <motion.div
+                className="h-full bg-primary"
+                initial={{ width: 0 }}
+                animate={{ width: "45%" }}
+                transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
+              />
+            )}
+          </div>
+          <p className="text-xs text-muted-foreground">
+            {percent !== null ? `${done} / ${total} questions` : "Starting…"}
+          </p>
         </div>
       )}
 
-      {run.status === "awaiting_approval" && (
-        <div className="flex gap-2">
-          <Button variant="outline" size="sm" onClick={() => onRun(run.id, "approve")}><CheckCircle2 className="size-3.5 mr-1" /> Approve</Button>
-          <Button variant="destructive" size="sm" onClick={() => onRun(run.id, "reject")}><XCircle className="size-3.5 mr-1" /> Reject</Button>
-        </div>
-      )}
-
-      <div className="flex items-center justify-between pt-2 border-t border-border">
-        <div className="flex items-center gap-1">
-          <Button variant="ghost" size="sm" onClick={() => showDetails(run.id)}>
-            <Table className="size-3.5 mr-1" /> Details
+      <div className="flex items-center gap-1 pt-2 border-t border-border">
+        <Button variant="ghost" size="sm" onClick={() => showDetails(run.id)}>
+          <Table className="size-3.5 mr-1" /> Details
+        </Button>
+        {run.status === "completed" && (
+          <Button variant="ghost" size="sm" onClick={() => onRun(run.id, "export")}>
+            <Download className="size-3.5 mr-1" /> Export
           </Button>
-          {run.status === "completed" && (
-            <Button variant="ghost" size="sm" onClick={() => onRun(run.id, "export")}>
-              <Download className="size-3.5 mr-1" /> Export
-            </Button>
-          )}
-        </div>
-        {run.status === "pending" && <Button size="sm" onClick={() => onRun(run.id, "run")}><Play className="size-3.5 mr-1" /> Run</Button>}
+        )}
       </div>
     </Card>
   );
@@ -150,7 +188,13 @@ export default function AdminEvals() {
   const [showExport, setShowExport] = useState(false);
   const [exportFormat, setExportFormat] = useState("csv");
 
-  const { data: runs = [], isLoading } = useQuery({ queryKey: ["evals", "runs"], queryFn: evalsApi.listRuns });
+  // Poll while any run is pending or running — the worker moves runs
+  // forward server-side, so a settled list stops refetching.
+  const { data: runs = [], isLoading } = useQuery({
+    queryKey: ["evals", "runs"],
+    queryFn: evalsApi.listRuns,
+    refetchInterval: (query) => pollInterval(query.state.data),
+  });
 
   const startRun = useMutation({
     mutationFn: (body) => evalsApi.startRun(body),
@@ -162,8 +206,15 @@ export default function AdminEvals() {
   });
 
   const start = () => {
-    startRun.mutate({ label, dataset_version: dataset, configs, limit: limit || undefined });
-    setRunning(false);
+    const selected = selectConfigs(configs);
+    if (selected.length === 0) {
+      error("Pick at least one configuration.");
+      return;
+    }
+    startRun.mutate(
+      { label, dataset_version: dataset, configs: selected, limit: limit || undefined },
+      { onSuccess: () => setRunning(false) },
+    );
   };
 
   const handleExport = (format) => {
@@ -173,26 +224,20 @@ export default function AdminEvals() {
 
   const confirmExport = async () => {
     try {
-      const res = await fetch(evalsApi.results(detailRun?.id || ""), {
-        // Export endpoint
-      });
-      if (!res.ok) throw new Error("Export failed");
-      
-      const blob = await res.blob();
-      let filename;
-      
-      if (exportFormat === "csv") {
-        filename = `evals-report-${new Date().toISOString().slice(0,10)}.csv`;
-      } else if (exportFormat === "json") {
-        filename = `evals-report-${new Date().toISOString().slice(0,10)}.json`;
-      } else {
-        filename = `evals-report-${new Date().toISOString().slice(0,10)}.pdf`;
+      const results = await evalsApi.results(detailRun?.id);
+      if (!Array.isArray(results) || results.length === 0) {
+        throw new Error("This run has no results to export.");
       }
-      
+      const body = exportFormat === "csv"
+        ? resultsToCsv(results)
+        : JSON.stringify(results, null, 2);
+      const blob = new Blob([body], {
+        type: exportFormat === "csv" ? "text/csv;charset=utf-8" : "application/json",
+      });
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = filename;
+      a.download = `evals-report-${new Date().toISOString().slice(0, 10)}.${exportFormat}`;
       a.click();
       URL.revokeObjectURL(url);
       success(`${exportFormat.toUpperCase()} exported.`);
@@ -212,25 +257,23 @@ export default function AdminEvals() {
       // The export dialog downloads `detailRun`'s results, so target it first.
       setDetailRun(run);
       handleExport("csv");
-    } else if (action === "run") {
-      queryClient.invalidateQueries({ queryKey: ["evals", "runs"] });
     }
   };
 
-  // Compute summary stats
+  // Means across completed runs, skipping runs where the metric could not
+  // be measured (null) rather than counting them as zero.
   const completedRuns = runs.filter(r => r.status === "completed");
-  const avgFaithfulness = completedRuns.length > 0 
-    ? Math.round((completedRuns.reduce((sum, r) => sum + (r.summary?.faithfulness ?? 0), 0) / completedRuns.length) * 100) / 100
-    : null;
-  const avgRelevancy = completedRuns.length > 0
-    ? Math.round((completedRuns.reduce((sum, r) => sum + (r.summary?.relevancy ?? 0), 0) / completedRuns.length) * 100) / 100
-    : null;
-  const avgPrecision = completedRuns.length > 0
-    ? Math.round((completedRuns.reduce((sum, r) => sum + (r.summary?.precision ?? 0), 0) / completedRuns.length) * 100) / 100
-    : null;
-  const avgRecall = completedRuns.length > 0
-    ? Math.round((completedRuns.reduce((sum, r) => sum + (r.summary?.recall ?? 0), 0) / completedRuns.length) * 100) / 100
-    : null;
+  const meanOf = (key) => {
+    const values = completedRuns
+      .map((r) => r.summary?.[key])
+      .filter((v) => typeof v === "number" && Number.isFinite(v));
+    if (values.length === 0) return null;
+    return Math.round((values.reduce((sum, v) => sum + v, 0) / values.length) * 100) / 100;
+  };
+  const avgFaithfulness = meanOf("faithfulness");
+  const avgRelevancy = meanOf("relevancy");
+  const avgPrecision = meanOf("precision");
+  const avgRecall = meanOf("recall");
 
   return (
     <div className="mx-auto max-w-4xl space-y-6">
@@ -298,22 +341,10 @@ export default function AdminEvals() {
           {/* Summary stats row */}
           {completedRuns.length > 0 && (
             <div className="grid grid-cols-4 gap-4 mb-6">
-              <div className="p-3 rounded-lg bg-surface-2 border border-border">
-                <p className="text-xs text-muted-foreground uppercase tracking-wide">Faithfulness</p>
-                <ConfidenceMeter value={avgFaithfulness} size="sm" showLabel={false} className="w-20" />
-              </div>
-              <div className="p-3 rounded-lg bg-surface-2 border border-border">
-                <p className="text-xs text-muted-foreground uppercase tracking-wide">Relevancy</p>
-                <ConfidenceMeter value={avgRelevancy} size="sm" showLabel={false} className="w-20" />
-              </div>
-              <div className="p-3 rounded-lg bg-surface-2 border border-border">
-                <p className="text-xs text-muted-foreground uppercase tracking-wide">Precision</p>
-                <ConfidenceMeter value={avgPrecision} size="sm" showLabel={false} className="w-20" />
-              </div>
-              <div className="p-3 rounded-lg bg-surface-2 border border-border">
-                <p className="text-xs text-muted-foreground uppercase tracking-wide">Recall</p>
-                <ConfidenceMeter value={avgRecall} size="sm" showLabel={false} className="w-20" />
-              </div>
+              <AverageMeter label="Faithfulness" value={avgFaithfulness} />
+              <AverageMeter label="Relevancy" value={avgRelevancy} />
+              <AverageMeter label="Precision" value={avgPrecision} />
+              <AverageMeter label="Recall" value={avgRecall} />
             </div>
           )}
 
@@ -349,8 +380,11 @@ export default function AdminEvals() {
               >
                 {detailRun.status}
               </Badge>
-              <ConfigBadge config={detailRun.config} />
+              <PlanBadge config={detailRun.config} />
             </div>
+            {detailRun.status === "failed" && detailRun.error && (
+              <p className="text-xs text-destructive">{detailRun.error}</p>
+            )}
             <dl className="grid grid-cols-2 gap-x-4 gap-y-2">
               {[
                 ["Created", formatDate(detailRun.created_at)],
@@ -385,13 +419,13 @@ export default function AdminEvals() {
         open={showExport}
         onClose={() => setShowExport(false)}
         title="Export results"
-        description={detailRun ? `Download ${detailRun.label} as CSV, JSON or PDF.` : undefined}
+        description={detailRun ? `Download ${detailRun.label} as CSV or JSON.` : undefined}
         className="max-w-md"
       >
         <fieldset className="mt-1">
           <legend className="text-[13px] font-medium">Format</legend>
           <div className="mt-3 flex gap-2">
-            {["csv", "json", "pdf"].map((fmt) => (
+            {["csv", "json"].map((fmt) => (
               <button
                 key={fmt}
                 type="button"
