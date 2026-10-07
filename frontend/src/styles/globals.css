@@ -4,9 +4,107 @@
    Components use tokens only — never raw hex.
    ========================================================================== */
 
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+/* Tailwind v4, wired through @tailwindcss/vite — postcss.config.js and
+   tailwind.config.js went away with it, and the theme moved down here.
+
+   source(none) plus the two @source lines reproduce v3's content globs
+   exactly: automatic detection would also scan e2e/, whose fixtures are
+   full of class-shaped strings that would compile into the stylesheet
+   for nothing. */
+@import "tailwindcss" source(none);
+@source "../../index.html";
+@source "../**/*.{js,jsx}";
+
+@theme {
+  /* Colour tokens point at the vars in :root below rather than holding
+     values: themes redefine the vars there, so every theme flows through
+     one declaration. The v3 config needed a color-mix() helper and a
+     hand-built 0-100 opacity table just to make bg-primary/60 compile —
+     v4 applies the alpha itself with color-mix, so both are gone; the
+     helper's warning (a bare var() makes Tailwind skip opacity modifiers
+     entirely) is now a property of the engine instead of a comment we
+     have to remember. */
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary-soft: var(--primary-soft);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-success: var(--success);
+  --color-success-foreground: var(--success-foreground);
+  --color-success-bg: var(--success-bg);
+  --color-warning: var(--warning);
+  --color-warning-foreground: var(--warning-foreground);
+  --color-warning-bg: var(--warning-bg);
+  --color-info: var(--info);
+  --color-info-foreground: var(--info-foreground);
+  --color-info-bg: var(--info-bg);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-on-primary: var(--on-primary);
+  --color-citation: var(--citation-bg);
+  --color-citation-foreground: var(--citation-text);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --color-chart-6: var(--chart-6);
+  --color-heatmap-1: var(--heat-1);
+  --color-heatmap-2: var(--heat-2);
+  --color-heatmap-3: var(--heat-3);
+  --color-heatmap-4: var(--heat-4);
+  --color-heatmap-5: var(--heat-5);
+  --color-rating-again: var(--rating-again);
+  --color-rating-hard: var(--rating-hard);
+  --color-rating-good: var(--rating-good);
+  --color-rating-easy: var(--rating-easy);
+
+  /* The same overrides the JS config carried, keyed the way v4 names
+     them: radius still hangs off --radius, fonts still start at Inter. */
+  --radius-lg: var(--radius);
+  --radius-md: calc(var(--radius) - 4px);
+  --radius-sm: calc(var(--radius) - 8px);
+  --font-sans: Inter, ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+
+  --animate-fade-in: fade-in 180ms ease-out;
+  --animate-slide-up: slide-up 220ms ease-out;
+  --animate-shimmer: shimmer 1.6s infinite;
+  --animate-blink: blink 1s step-end infinite;
+}
+
+/* The four config keyframes as plain rules: .skeleton below calls
+   `shimmer` by name directly, and a keyframe living inside @theme only
+   emits when its animate-* variable is referenced. */
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes slide-up {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes shimmer {
+  100% { transform: translateX(100%); }
+}
+@keyframes blink {
+  50% { opacity: 0; }
+}
 
 :root {
   /* --- base palette (Light, default) ------------------------------------ */
@@ -572,8 +670,12 @@
   to   { opacity: 1; transform: translateY(0); }
 }
 
-/* Focus visibility, consistent across themes */
-:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+/* Focus visibility, consistent across themes, lives in @layer base above
+   (:focus-visible → var(--ring), the same value this rule used to repeat).
+   It used to be restated here, unlayered — under v3's flat output the
+   focus-visible:* utilities still won on specificity, but v4's cascade
+   layers put unlayered rules above every utility, and this duplicate
+   would have out-rank every component's outline-none + ring pair. */
 
 /* A radio card wraps a screen-reader-only input, so focus lands on the input
    and the card around it never matches :focus-visible. Carry the same

@@ -218,7 +218,7 @@ export default function CommandPalette({ open, onClose }) {
           aria-activedescendant={
             results[active] ? `${listboxId}-opt-${active}` : undefined
           }
-          className="h-12 flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground"
+          className="h-12 flex-1 bg-transparent text-sm outline-hidden placeholder:text-muted-foreground"
         />
         <kbd className="rounded border border-border bg-surface-2 px-1.5 py-0.5 text-[10px] text-muted-foreground">Esc</kbd>
       </div>

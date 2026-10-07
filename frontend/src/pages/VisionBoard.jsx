@@ -233,7 +233,7 @@ function BoardItem({ item, onDragEnd, onEditText, onDelete }) {
             onBlur={commit}
             placeholder="Your goal…"
             aria-label="Sticky text"
-            className="h-full w-full resize-none bg-transparent text-sm font-medium leading-snug text-[#3b2f2a] outline-none placeholder:text-[#3b2f2a]/50"
+            className="h-full w-full resize-none bg-transparent text-sm font-medium leading-snug text-[#3b2f2a] outline-hidden placeholder:text-[#3b2f2a]/50"
             style={{ pointerEvents: hovered ? "auto" : "none" }}
             onPointerDown={(e) => e.stopPropagation()}
           />
@@ -246,7 +246,7 @@ function BoardItem({ item, onDragEnd, onEditText, onDelete }) {
         aria-label="Delete item"
         title="Delete"
         className={cn(
-          "absolute -right-2 -top-2 flex size-6 items-center justify-center rounded-full border border-border bg-card text-muted-foreground opacity-0 shadow-sm transition-opacity hover:text-destructive focus-visible:opacity-100",
+          "absolute -right-2 -top-2 flex size-6 items-center justify-center rounded-full border border-border bg-card text-muted-foreground opacity-0 shadow-xs transition-opacity hover:text-destructive focus-visible:opacity-100",
           hovered && "opacity-100"
         )}
         onPointerDown={(e) => e.stopPropagation()}

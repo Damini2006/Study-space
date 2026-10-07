@@ -9,8 +9,8 @@ export const Input = forwardRef(function Input({ className, type = "text", ...pr
       ref={ref}
       type={type}
       className={cn(
-        "flex h-9 w-full rounded-lg border border-input bg-surface px-3 py-1 text-sm shadow-sm transition-colors",
-        "placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+        "flex h-9 w-full rounded-lg border border-input bg-surface px-3 py-1 text-sm shadow-xs transition-colors",
+        "placeholder:text-muted-foreground focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring",
         "disabled:cursor-not-allowed disabled:opacity-50",
         className
       )}
@@ -27,8 +27,8 @@ export const PasswordInput = forwardRef(function PasswordInput({ className, ...p
         ref={ref}
         type={visible ? "text" : "password"}
         className={cn(
-          "flex h-9 w-full rounded-lg border border-input bg-surface px-3 py-1 pr-10 text-sm shadow-sm transition-colors",
-          "placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+          "flex h-9 w-full rounded-lg border border-input bg-surface px-3 py-1 pr-10 text-sm shadow-xs transition-colors",
+          "placeholder:text-muted-foreground focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring",
           "disabled:cursor-not-allowed disabled:opacity-50",
           className
         )}
@@ -38,7 +38,7 @@ export const PasswordInput = forwardRef(function PasswordInput({ className, ...p
         type="button"
         onClick={() => setVisible((v) => !v)}
         aria-label={visible ? "Hide password" : "Show password"}
-        className="absolute right-2 top-1/2 -translate-y-1/2 rounded p-1 text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
+        className="absolute right-2 top-1/2 -translate-y-1/2 rounded p-1 text-muted-foreground hover:text-foreground focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-primary/50"
         tabIndex={-1}
       >
         {visible ? (
@@ -56,8 +56,8 @@ export const Textarea = forwardRef(function Textarea({ className, ...props }, re
     <textarea
       ref={ref}
       className={cn(
-        "flex min-h-[70px] w-full rounded-lg border border-input bg-surface px-3 py-2 text-sm shadow-sm transition-colors",
-        "placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+        "flex min-h-[70px] w-full rounded-lg border border-input bg-surface px-3 py-2 text-sm shadow-xs transition-colors",
+        "placeholder:text-muted-foreground focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring",
         "disabled:cursor-not-allowed disabled:opacity-50",
         className
       )}

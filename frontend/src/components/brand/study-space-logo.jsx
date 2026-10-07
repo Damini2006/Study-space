@@ -62,12 +62,12 @@ export function StudySpaceLogo({ size = 28, className, label = "StudySpace home"
       aria-label={label}
       title="Back to the StudySpace home page"
       className={cn(
-        "group inline-flex items-center gap-2.5 rounded-lg outline-none transition-transform duration-200",
+        "group inline-flex items-center gap-2.5 rounded-lg outline-hidden transition-transform duration-200",
         "hover:-translate-y-0.5 focus-visible:outline-2 focus-visible:outline-offset-4",
         className
       )}
     >
-      <span className="drop-shadow-sm transition-transform duration-200 group-hover:-rotate-3">
+      <span className="drop-shadow-xs transition-transform duration-200 group-hover:-rotate-3">
         <BunnyMark size={size} />
       </span>
       <span className="text-[15px] font-semibold leading-none tracking-tight">

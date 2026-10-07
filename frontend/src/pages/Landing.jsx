@@ -234,7 +234,7 @@ function BunnyMark({ className }) {
 function Brand({ className }) {
   return (
     <Link to="/" className={cn("group flex items-center gap-2.5", className)} aria-label="StudySpace home">
-      <span className="drop-shadow-sm transition-transform duration-300 group-hover:-rotate-6">
+      <span className="drop-shadow-xs transition-transform duration-300 group-hover:-rotate-6">
         <BunnyMark />
       </span>
       <span className="text-[15px] font-semibold tracking-tight">StudySpace</span>
@@ -250,7 +250,7 @@ function FooterLogo({ className }) {
         viewBox="0 0 1200 700"
         width={1200}
         height={700}
-        className="h-20 w-auto drop-shadow-sm sm:h-24"
+        className="h-20 w-auto drop-shadow-xs sm:h-24"
         role="img"
         aria-label="StudySpace — where studying finally clicks"
       >

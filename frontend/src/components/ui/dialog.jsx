@@ -132,7 +132,7 @@ export function Dialog({ open, onClose, title, description, children, className,
             className={cn(
               "relative max-h-[88vh] w-full overflow-auto rounded-xl border border-border bg-card p-5 shadow-[var(--shadow-lg)]",
               "max-w-lg scrollbar-thin",
-              "focus:outline-none",
+              "focus:outline-hidden",
               className
             )}
           >
@@ -299,7 +299,7 @@ export function TabsContent({ value, children, className }) {
       // Focusable so that a panel holding nothing focusable is still
       // reachable — there is only ever one of these in the tab order.
       tabIndex={0}
-      className={cn("focus:outline-none", className)}
+      className={cn("focus:outline-hidden", className)}
     >
       {children}
     </div>
@@ -369,7 +369,7 @@ export function Select({
       disabled={disabled}
       className={cn(
         "flex h-9 w-full items-center gap-2 rounded-lg border border-border bg-background px-3 py-2 text-sm transition-colors",
-        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+        "focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
         "disabled:cursor-not-allowed disabled:opacity-50",
         className
       )}

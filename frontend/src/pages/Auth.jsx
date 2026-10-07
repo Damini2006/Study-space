@@ -360,7 +360,7 @@ export default function AuthPage() {
         <div className="flex items-center gap-2">
           <Link
             to="/"
-            className="group inline-flex items-center gap-1.5 rounded-full border border-border bg-card/70 px-3 py-1.5 text-[12.5px] font-medium text-foreground/80 shadow-sm backdrop-blur transition-colors hover:border-primary/45 hover:text-foreground"
+            className="group inline-flex items-center gap-1.5 rounded-full border border-border bg-card/70 px-3 py-1.5 text-[12.5px] font-medium text-foreground/80 shadow-xs backdrop-blur transition-colors hover:border-primary/45 hover:text-foreground"
           >
             <ArrowLeft className="size-3 transition-transform duration-200 group-hover:-translate-x-0.5" />
             Home

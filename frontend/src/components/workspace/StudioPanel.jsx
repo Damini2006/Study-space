@@ -287,7 +287,7 @@ function SummaryView({ output, spaceId }) {
           value={content}
           onChange={(e) => setContent(e.target.value)}
           rows={8}
-          className="w-full rounded-lg border border-border px-3 py-2 resize-none text-sm text-foreground outline-none bg-surface-2"
+          className="w-full rounded-lg border border-border px-3 py-2 resize-none text-sm text-foreground outline-hidden bg-surface-2"
         />
         <div className="flex justify-end gap-2 mt-2">
           <Button variant="outline" onClick={() => setIsEditing(false)}>Cancel</Button>

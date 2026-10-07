@@ -281,7 +281,7 @@ export default function ChatPanel({ spaceId, onSelectPassage }) {
             rows={1}
             placeholder="Ask a question… (Enter to send)"
             aria-label="Message"
-            className="max-h-32 min-h-[2.25rem] flex-1 resize-none bg-transparent text-sm text-foreground outline-none placeholder:text-muted-foreground"
+            className="max-h-32 min-h-[2.25rem] flex-1 resize-none bg-transparent text-sm text-foreground outline-hidden placeholder:text-muted-foreground"
           />
           <div className="flex items-center gap-1">
             <Button

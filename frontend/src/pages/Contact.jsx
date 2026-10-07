@@ -219,7 +219,7 @@ export default function Contact() {
                       placeholder="Steps to reproduce, what you expected, what happened."
                       aria-invalid={!!errors.message}
                       aria-describedby={errors.message ? "c-msg-err" : "c-msg-hint"}
-                      className="flex w-full rounded-lg border border-input bg-background px-3 py-2 text-sm outline-none ring-offset-background transition-colors placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                      className="flex w-full rounded-lg border border-input bg-background px-3 py-2 text-sm outline-hidden ring-offset-background transition-colors placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                     />
                     <div className="flex items-start justify-between gap-4">
                       {errors.message ? (

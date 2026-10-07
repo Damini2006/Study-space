@@ -38,9 +38,9 @@ export default function ThemeToggle({ className, size = "md", showSystem = false
             className={cn(
               "inline-flex items-center justify-center gap-1.5 rounded-full font-medium",
               "transition-all duration-200 ease-out",
-              "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 focus-visible:ring-offset-background",
+              "focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 focus-visible:ring-offset-background",
               isActive
-                ? "bg-primary text-on-primary shadow-sm"
+                ? "bg-primary text-on-primary shadow-xs"
                 : "text-muted-foreground hover:text-foreground",
               size === "sm" ? "h-7 w-7" : "h-7 px-2.5"
             )}

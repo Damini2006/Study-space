@@ -185,7 +185,7 @@ export default function AppShell() {
       {/* Desktop sidebar */}
       <aside className="hidden border-r border-border bg-surface lg:flex lg:flex-col">
         <div className="flex items-center gap-3 border-b border-border px-5 py-5">
-          <div className="brand-gradient flex size-10 items-center justify-center rounded-xl text-sm font-bold text-white shadow-sm">
+          <div className="brand-gradient flex size-10 items-center justify-center rounded-xl text-sm font-bold text-white shadow-xs">
             SS
           </div>
           <div className="min-w-0">

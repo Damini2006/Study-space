@@ -147,7 +147,7 @@ function ReviewCard({ card, onReview, onReveal, flipSignal, loadingRating, busy,
           type="button"
           onClick={guardClick(flip)}
           aria-expanded={showBack}
-          className="w-full rounded-sm text-left text-sm font-medium leading-snug focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+          className="w-full rounded-sm text-left text-sm font-medium leading-snug focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-primary"
         >
           {showBack ? card.back : card.front}
           <span className="sr-only">
