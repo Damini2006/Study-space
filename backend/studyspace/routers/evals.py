@@ -111,17 +111,19 @@ async def get_results(db: DbDep, admin: AdminDep, run_id: uuid.UUID) -> list[Eva
 
 @router.get("/dataset")
 async def dataset_info(db: DbDep, admin: AdminDep) -> dict:
-    from pathlib import Path
+    from studyspace.services.eval_dataset import dataset_path, load_dataset
 
-    path = Path(__file__).resolve().parents[3] / "evals" / "dataset" / "golden_dataset.json"
-    if not path.exists():
-        return {"exists": False, "path": str(path), "count": 0}
-    data = json.loads(path.read_text(encoding="utf-8"))
-    questions = data.get("questions", data if isinstance(data, list) else [])
+    try:
+        data = load_dataset()
+    except (OSError, ValueError):
+        # Honest about a missing file (the route used to probe one path
+        # and claim nothing about why it was absent).
+        return {"exists": False, "path": str(dataset_path()), "count": 0}
+    questions = data["questions"]
     answerable = sum(1 for q in questions if q.get("kind", "answerable") == "answerable")
     return {
         "exists": True,
-        "version": data.get("version", "v1") if isinstance(data, dict) else "v1",
+        "version": data.get("version", "v1"),
         "count": len(questions),
         "answerable": answerable,
         "unanswerable": len(questions) - answerable,

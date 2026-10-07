@@ -235,6 +235,7 @@ study-space/
 │   │   │   ├── planner.py  # LangGraph + interrupt
 │   │   │   ├── checkpoints.py # Postgres checkpointer
 │   │   │   └── demo_seed.py
+│   │   ├── data/           # golden eval dataset (100 questions, 50+50)
 │   │   └── routers/        # All API endpoints
 │   ├── tests/              # RLS, security, retrieval, API integration
 │   └── pyproject.toml
@@ -262,9 +263,6 @@ study-space/
 │   ├── seed.sql            # Global quotes
 │   └── tests/shim.sql      # Test harness for RLS
 ├── mcp/                    # MCP server (FastMCP)
-├── evals/
-│   ├── dataset/golden_dataset.json
-│   └── runner.py           # Ragas + custom metrics
 ├── docker-compose.yml
 ├── .github/workflows/ci.yml
 ├── .env.example

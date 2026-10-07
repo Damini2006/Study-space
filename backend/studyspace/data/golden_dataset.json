@@ -105,12 +105,6 @@
       "reference": "Contain digestive enzymes that break down worn-out organelles and macromolecules at acidic pH (~4.5)."
     },
     {
-      "id": "q017",
-      "kind": "answerable",
-      "question": "What happens during the light-dependent reactions of photosynthesis?",
-      "reference": "Water is split to supply electrons, releasing oxygen. Energy is stored as ATP and NADPH via an electron transport chain and chemiosmosis."
-    },
-    {
       "id": "q018",
       "kind": "answerable",
       "question": "What is the correct equation for cellular respiration?",
