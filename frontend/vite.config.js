@@ -59,7 +59,14 @@ export default defineConfig({
         },
       },
     },
-    chunkSizeWarningLimit: 600,
+    // No chunkSizeWarningLimit on purpose. It used to sit at 600 — just
+    // under the 631 kB entry chunk of the day — so the warning printed on
+    // every build until everyone learned to read past it, which is worse
+    // than no warning. That chunk is 94 kB now (the editor and the rest of
+    // /app moved behind lazy routes), nothing ships above 395 kB, and the
+    // number that actually matters — what a first visit downloads — is
+    // enforced by e2e/performance.e2e.js, which fails instead of printing
+    // a line. Vite's default limit stands.
   },
   test: {
     environment: "jsdom",
