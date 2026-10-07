@@ -53,13 +53,20 @@ async def lifespan(app: FastAPI):
 
 def create_app() -> FastAPI:
     settings = get_settings()
+    production = settings.env == "production"
     app = FastAPI(
         title=settings.app_name,
         version="1.0.0",
         description="StudySpace — source-grounded AI study workspace",
         lifespan=lifespan,
-        docs_url="/docs" if settings.env != "production" else None,
+        # The generated reference is a development affordance, and both
+        # halves of it go together: the UI without the spec is nothing,
+        # and the spec without the UI is a free map of every route —
+        # admin and internal ones included. Neither ships. (ReDoc stays
+        # off everywhere; /docs is the one people actually ask for.)
+        docs_url=None if production else "/docs",
         redoc_url=None,
+        openapi_url=None if production else "/openapi.json",
     )
 
     app.add_middleware(

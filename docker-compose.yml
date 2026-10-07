@@ -39,6 +39,9 @@ services:
       dockerfile: Dockerfile
     container_name: studyspace-backend
     environment:
+      # The shipped image defaults to ENV=production (docs off); compose
+      # is the local dev stack, so the generated /docs UI stays on.
+      ENV: development
       SUPABASE_URL: ${SUPABASE_URL}
       SUPABASE_ANON_KEY: ${SUPABASE_ANON_KEY}
       SUPABASE_JWT_SECRET: ${SUPABASE_JWT_SECRET}

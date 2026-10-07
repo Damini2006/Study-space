@@ -7,6 +7,14 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     PIP_NO_CACHE_DIR=1 \
     PIP_DISABLE_PIP_VERSION_CHECK=1
 
+# The image's own default is the word that gates behavior: Settings.env
+# turns the generated API reference (/docs, /openapi.json) off, and a
+# shipped container still saying "development" would serve it. This is
+# the only setting env drives today, but it is the one a deployment
+# must not get wrong. Override with -e ENV=development to inspect a
+# running container — docker-compose already does.
+ENV ENV=production
+
 WORKDIR /app
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
