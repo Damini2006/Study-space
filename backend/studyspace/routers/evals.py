@@ -37,11 +37,10 @@ async def start_run(body: EvalRunCreate, db: DbDep, admin: AdminDep) -> EvalRunO
             _job_id=f"evals:{row['id']}",
         )
     except Exception as exc:
-        await db.execute(
-            "update public.eval_runs set status = 'failed', error = $2 where id = $1",
-            row["id"],
-            "Job queue unavailable — start Redis and retry.",
-        )
+        # The request runs in one transaction (deps.user_conn), so the
+        # 503 below rolls back the run insert along with everything
+        # else: nothing was enqueued, so nothing persists either —
+        # marking the row 'failed' here could never be observed.
         raise HTTPException(status_code=503, detail="Job queue unavailable.") from exc
     return _run_out(row)
 

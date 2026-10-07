@@ -24,6 +24,7 @@ from studyspace.security import SOURCE_UNTRUSTED_MARKER, wrap_untrusted
 from studyspace.services.chunking import PageText, chunk_pages
 from studyspace.services.embeddings import embed_texts
 from studyspace.tracing import span as trace_span
+from studyspace_worker.eval_jobs import run_evals
 
 settings = get_settings()
 
@@ -205,11 +206,15 @@ async def cleanup_failed_ingestions(ctx: dict) -> None:
 
 class WorkerSettings:
     redis_settings = RedisSettings.from_dsn(settings.redis_url)
-    functions = [ingest_source]
+    functions = [ingest_source, run_evals]
     cron_jobs = [
         # daily at 3 AM
         cron(cleanup_failed_ingestions, hour=3, minute=0, max_tries=1),
     ]
     max_tries = 3
-    job_timeout = 600
+    # A full suite is 200 questions x 8 configs = 1600 results; at
+    # eval_concurrency=4 and ~10-15s per result that is 67-100 minutes,
+    # so the old 600 seconds killed every real run mid-flight — arq would
+    # abandon it with the run row stuck on "running".
+    job_timeout = 7200
     keep_result = 86400
