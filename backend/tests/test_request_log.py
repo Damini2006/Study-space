@@ -79,9 +79,10 @@ async def test_client_faults_are_logged_as_warnings(api_client, caplog, path, ex
     assert f"status={expect_status}" in record.getMessage()
 
 
-async def test_unhandled_failure_still_gets_its_error_line(caplog):
-    """The line is written even when the response never is — with enough in it
-    to find whatever printed the traceback (status=500, exception=<type>).
+async def test_unhandled_failure_returns_a_correlated_500(caplog):
+    """A crash becomes a 500 the frontend can parse, carrying an id that
+    matches a traceback record and an access line in the log — and nothing
+    else. The exception message stays out of the body.
 
     The route lives only in this test's app: raising is its whole job, so
     what happens here does not depend on the database being present.
@@ -99,15 +100,27 @@ async def test_unhandled_failure_still_gets_its_error_line(caplog):
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as client:
         with caplog.at_level(logging.INFO, logger=LOGGER):
-            with pytest.raises(ValueError):
-                await client.get("/boom")
+            response = await client.get("/boom")
 
-    [record] = _records(caplog)
-    assert record.levelno == logging.ERROR
-    message = record.getMessage()
-    assert "status=500" in message
-    assert "path=/boom" in message
-    assert "exception=ValueError" in message
+    assert response.status_code == 500
+    payload = response.json()
+    assert payload["detail"] == "Internal server error"
+    assert "kaboom" not in response.text
+
+    # Header and body agree, and both appear in the two records the request
+    # produced: the traceback first, then the access line.
+    header_id = response.headers["X-Request-Id"]
+    assert payload["request_id"] == header_id
+
+    traceback_record, access_record = _records(caplog)
+    assert traceback_record.exc_info is not None
+    assert traceback_record.exc_info[0] is ValueError
+    assert f"request_id={header_id}" in traceback_record.getMessage()
+    assert access_record.levelno == logging.ERROR
+    assert "status=500" in access_record.getMessage()
+    assert "path=/boom" in access_record.getMessage()
+    assert "exception=ValueError" in access_record.getMessage()
+    assert f"request_id={header_id}" in access_record.getMessage()
 
 
 def test_logfmt_quotes_values_that_could_break_the_line():

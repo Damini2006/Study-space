@@ -26,7 +26,7 @@ from collections.abc import Awaitable, Callable
 from typing import Any
 
 from starlette.requests import Request
-from starlette.responses import Response
+from starlette.responses import JSONResponse, Response
 
 from studyspace.config import get_settings
 
@@ -111,11 +111,27 @@ async def request_logging(
     try:
         response = await call_next(request)
     except Exception as exc:
-        # Starlette's error middleware sits outside this one and will turn
-        # the exception into a response, but the request still deserves its
-        # line — with enough in it to find the traceback printed next to it.
+        # The traceback belongs in the log; the body belongs to the caller.
+        # Starlette's error middleware sits outside this one and would
+        # otherwise answer plain text while printing a second copy of the
+        # traceback: catching here keeps exactly one traceback — correlated
+        # by id — and gives the frontend the same {"detail": ...} shape
+        # every other error already has. Debug mode changes none of this;
+        # a response body is not where a stack trace belongs.
+        logger.exception(
+            logfmt(
+                method=request.method,
+                path=request.url.path,
+                request_id=request_id,
+                exception=type(exc).__name__,
+            )
+        )
         _emit(request, request_id, 500, started, exception=type(exc).__name__)
-        raise
+        return JSONResponse(
+            status_code=500,
+            content={"detail": "Internal server error", "request_id": request_id},
+            headers={"X-Request-Id": request_id},
+        )
     response.headers["X-Request-Id"] = request_id
     _emit(request, request_id, response.status_code, started)
     return response
