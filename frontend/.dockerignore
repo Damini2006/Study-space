@@ -1,0 +1,16 @@
+# Build context for ./frontend builds (compose + CI: context ./frontend).
+# This file is load-bearing: the Dockerfile does `COPY . .` AFTER
+# `npm ci`, so without it the host's node_modules (wrong platform
+# binaries) would overwrite the image's fresh install, a stale dist/
+# would ride along, and .env* would land in the build context — the
+# image's VITE_* values come from the ARGs compose and CI pass, not
+# from a copied file. The root .dockerignore does not apply: Docker
+# only reads .dockerignore from the root of the build context.
+.env
+.env.*
+node_modules
+dist
+dist-e2e
+test-results
+.git
+.github

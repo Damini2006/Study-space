@@ -1,0 +1,12 @@
+# Build context for ./backend builds (compose + CI: context ./backend).
+# Mirrors the root .dockerignore for this context — the root file only
+# covers root-context builds (worker/Dockerfile), so secrets, caches and
+# local artifacts need their own door here. The image only gets what the
+# Dockerfile COPYs: pyproject.toml and studyspace/.
+.env
+**/__pycache__
+**/*.egg-info
+.pytest_cache
+.ruff_cache
+.git
+.github
