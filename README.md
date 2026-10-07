@@ -295,6 +295,15 @@ All components consume tokens only — no raw hex in component code. Verified co
 
 ---
 
+## Contributing
+
+Setup, the gates CI runs, the house conventions, and the
+mutation-proofing discipline every test change is held to: see
+[CONTRIBUTING.md](CONTRIBUTING.md). The system map — processes, request
+paths, invariants — is [ARCHITECTURE.md](ARCHITECTURE.md).
+
+---
+
 ## License
 
 MIT — see [LICENSE](LICENSE).
