@@ -8,11 +8,17 @@ rows; this builds the payload. Each builder answers to its own contract:
   Anki reads). Both Anki and our own import parser
   (``services/import_formats.py``) can read it back - the round trip
   through that parser is the test that pins it.
+- :func:`build_print_html` produces the "PDF" export as what it really
+  is: a print-ready HTML page. The browser renders it and its own
+  "Save as PDF" makes the file, so fonts and scripts survive; we serve
+  ``text/html`` with an ``.html`` name instead of HTML wearing a
+  ``.pdf``. Every piece of user content goes through ``html.escape``.
 """
 
 from __future__ import annotations
 
 import hashlib
+import html
 import io
 import json
 import os
@@ -21,7 +27,8 @@ import sqlite3
 import tempfile
 import time
 import zipfile
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
+from typing import Any
 
 # Anki's own collection layout (2.1 era), reproduced so the file we emit is
 # a collection rather than something that merely resembles one. Anki's
@@ -312,3 +319,98 @@ def build_apkg(deck_name: str, cards: Sequence[tuple[str, str, Sequence[str]]]) 
         zf.writestr("collection.anki2", db_bytes)
         zf.writestr("media", "{}")  # no sound/video files travel with the deck
     return buf.getvalue()
+
+
+_PRINT_CSS = """\
+@page { margin: 18mm 16mm; }
+* { box-sizing: border-box; }
+body { font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+       line-height: 1.5; color: #14161a; max-width: 46rem;
+       margin: 2rem auto; padding: 0 1rem; }
+h1 { margin: 0 0 .25rem; font-size: 1.6rem; }
+h2 { margin: 1.75rem 0 .5rem; font-size: 1.1rem; text-transform: uppercase;
+     letter-spacing: .06em; color: #4a5058; }
+.meta { margin: 0; color: #4a5058; font-size: .9rem; }
+ul { margin: 0; padding-left: 1.2rem; }
+li { margin-bottom: .35rem; }
+.kind { color: #4a5058; font-size: .85rem; margin-left: .4rem; }
+.card { border: 1px solid #d8dce2; border-radius: 8px;
+        padding: .6rem .85rem; margin-bottom: .6rem;
+        page-break-inside: avoid; }
+.card p { margin: 0; }
+.card .a { margin-top: .35rem; color: #33383f; }
+.tags { color: #4a5058; font-size: .85rem; margin: .3rem 0 0; }
+.empty { color: #6b7280; font-style: italic; }
+@media print { body { margin: 0; } }
+"""
+
+
+def build_print_html(
+    space_title: str,
+    sources: Sequence[Mapping[str, Any]],
+    cards: Sequence[Mapping[str, Any]],
+    notes: Sequence[Mapping[str, Any]],
+    *,
+    auto_print: bool = False,
+) -> str:
+    """The "PDF" export as what it really is: a print-ready HTML page.
+
+    The browser does the PDF work (print -> Save as PDF), which is why
+    this can be honest instead of HTML wearing a ``.pdf`` name. With
+    ``auto_print`` the page opens the print dialog itself, for the
+    dialog's download flow.
+
+    Rows are the dicts/Records the router selected; note bodies come
+    from ``content_text`` (the jsonb ``content`` is a document, not
+    text).
+    """
+    esc = html.escape
+    stamp = time.strftime("%Y-%m-%d %H:%M UTC", time.gmtime())
+
+    def _section(title: str, items: list[str], empty: str) -> str:
+        body = f"<ul>{''.join(items)}</ul>" if items else f'<p class="empty">{empty}</p>'
+        return f"<section><h2>{title}</h2>{body}</section>"
+
+    source_items = [
+        f'<li><b>{esc(str(s.get("title") or "Untitled"))}</b>'
+        f'<span class="kind">{esc(str(s.get("type") or ""))}</span></li>'
+        for s in sources
+    ]
+    card_items = [
+        f'<li class="card"><p><b>Q:</b> {esc(c["front"])}</p>'
+        f'<p class="a"><b>A:</b> {esc(c["back"])}</p>'
+        + (
+            f'<p class="tags">{esc(", ".join(c.get("tags") or []))}</p>'
+            if c.get("tags")
+            else ""
+        )
+        + "</li>"
+        for c in cards
+    ]
+    note_items = [
+        f'<li><b>{esc(str(n.get("title") or "Untitled"))}</b>'
+        + (f'<p>{esc(str(n.get("content_text") or ""))}</p>' if n.get("content_text") else "")
+        + "</li>"
+        for n in notes
+    ]
+
+    parts = [
+        "<!doctype html>\n",
+        '<html lang="en">\n<head>\n',
+        '<meta charset="utf-8">\n',
+        '<meta name="viewport" content="width=device-width, initial-scale=1">\n',
+        f"<title>{esc(space_title)} - StudySpace export</title>\n",
+        f"<style>{_PRINT_CSS}</style>\n",
+        "</head>\n<body>\n",
+        f"<h1>{esc(space_title)}</h1>\n",
+        '<p class="meta">'
+        f"Sources: {len(sources)} &middot; Cards: {len(cards)} &middot; "
+        f"Notes: {len(notes)} &middot; Exported {stamp}</p>\n",
+        _section("Sources", source_items, "(no ready sources in this space)"),
+        _section("Cards", card_items, "(no cards in this space)"),
+        _section("Notes", note_items, "(no notes in this space)"),
+    ]
+    if auto_print:
+        parts.append("<script>window.print()</script>\n")
+    parts.append("</body>\n</html>\n")
+    return "".join(parts)

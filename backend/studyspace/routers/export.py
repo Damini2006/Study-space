@@ -19,7 +19,7 @@ from studyspace.models.export import ImportSummary
 from studyspace.queue import enqueue_ingest
 from studyspace.rate_limit import rate_limit
 from studyspace.security import sanitize_filename
-from studyspace.services.export_formats import build_apkg
+from studyspace.services.export_formats import build_apkg, build_print_html
 from studyspace.services.import_formats import (
     MAX_IMPORT_FILES,
     BundleError,
@@ -47,7 +47,8 @@ class ExportFormat(str, Enum):
 def _make_filename(space_title: str, fmt: ExportFormat) -> str:
     safe = "".join(c if c.isalnum() or c in "-_" else "_" for c in space_title)
     ts = datetime.utcnow().strftime("%Y%m%d")
-    ext = {"anki": "apkg", "pdf": "pdf", "markdown": "zip", "notion": "csv"}[fmt.value]
+    # pdf downloads as .html: the print page is HTML and says so.
+    ext = {"anki": "apkg", "pdf": "html", "markdown": "zip", "notion": "csv"}[fmt.value]
     return f"{safe}-{ts}.{ext}"
 
 
@@ -56,8 +57,12 @@ async def export_space(
     db: DbDep,
     space_id: uuid.UUID,
     fmt: Annotated[ExportFormat, Query()] = ExportFormat.markdown,
+    auto_print: Annotated[bool, Query(alias="print")] = False,
 ) -> StreamingResponse:
-    """Export a space as Anki deck, PDF, Markdown zip, or Notion CSV."""
+    """Export a space as an Anki deck, print page, Markdown zip, or Notion CSV.
+
+    ``print`` (fmt=pdf only) makes the page open its print dialog on load.
+    """
 
     # Verify access (owner or valid share)
     space = await db.fetchrow(
@@ -84,7 +89,7 @@ async def export_space(
     if fmt == ExportFormat.anki:
         return _export_anki(space, cards)
     elif fmt == ExportFormat.pdf:
-        return _export_pdf(space, sources, cards, notes)
+        return _export_pdf(space, sources, cards, notes, auto_print=auto_print)
     elif fmt == ExportFormat.markdown:
         return _export_markdown_zip(space, sources, cards, notes)
     elif fmt == ExportFormat.notion:
@@ -111,28 +116,20 @@ def _export_anki(space, cards) -> StreamingResponse:
     )
 
 
-def _export_pdf(space, sources, cards, notes) -> StreamingResponse:
+def _export_pdf(space, sources, cards, notes, *, auto_print: bool) -> StreamingResponse:
+    """The "PDF" export is an honest print page.
+
+    The browser makes the actual file (print -> Save as PDF), so we
+    serve text/html with an .html name instead of HTML wearing a .pdf.
+    ``auto_print`` opens the print dialog on load for the dialog flow.
     """
-    Generate a simple PDF. Real impl would use reportlab/weasyprint.
-    Returns a placeholder for now.
-    """
-    html = f"""
-    <html><body>
-    <h1>{space['title']}</h1>
-    <p>Sources: {len(sources)} | Cards: {len(cards)} | Notes: {len(notes)}</p>
-    <hr>
-    <h2>Cards</h2>
-    <ul>{''.join(f'<li><b>{c["front"]}</b>: {c["back"]}</li>' for c in cards)}</ul>
-    <h2>Notes</h2>
-    <ul>{''.join(f'<li><b>{n["title"]}</b>: {n.get("content","")[:200]}</li>' for n in notes)}</ul>
-    </body></html>
-    """
-    # In production, convert HTML to PDF with weasyprint
-    pdf_bytes = html.encode()  # placeholder
-    buf = io.BytesIO(pdf_bytes)
+    page = build_print_html(
+        space["title"], sources, cards, notes, auto_print=auto_print
+    )
+    buf = io.BytesIO(page.encode("utf-8"))
     return StreamingResponse(
         buf,
-        media_type="application/pdf",
+        media_type="text/html; charset=utf-8",
         headers={"Content-Disposition": f'attachment; filename="{_make_filename(space["title"], ExportFormat.pdf)}"'},
     )
 
