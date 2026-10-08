@@ -18,12 +18,13 @@ import { Badge } from "@/components/ui/input";
 import { notesApi } from "@/services/api-services";
 import { useToast } from "@/components/ui/toast";
 import { cn, tiptapToText } from "@/lib/utils";
+import { downloadBlob } from "@/lib/export-file";
 import { EditorContent } from "@tiptap/react";
 import { createNoteEditor } from "@/lib/editor";
 
 const COLORS = ["#FFF9B3", "#FFD6A5", "#A0E7E5", "#BDB2FF", "#FFB3D9", "#C6F6D5"];
 
-function NoteCard({ note, onPin, onDelete, onExport }) {
+function NoteCard({ note, onOpen, onPin, onDelete, onExport }) {
   const preview = tiptapToText(note.content).slice(0, 220);
   return (
     <motion.div
@@ -34,7 +35,12 @@ function NoteCard({ note, onPin, onDelete, onExport }) {
       style={{ background: note.color }}
     >
       <div className="flex items-start justify-between gap-2">
-        <div className="flex-1 min-w-0">
+        <button
+          type="button"
+          onClick={() => onOpen(note)}
+          aria-label={`Edit ${note.title || "Untitled"}`}
+          className="min-w-0 flex-1 rounded text-left focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring"
+        >
           <h4 className={cn("font-semibold truncate", note.pinned && "text-primary")}>{note.title || "Untitled"}</h4>
           <p className="mt-1 text-sm text-muted-foreground line-clamp-3">{preview || "Empty note"}</p>
           <div className="mt-2 flex flex-wrap gap-1">
@@ -45,7 +51,7 @@ function NoteCard({ note, onPin, onDelete, onExport }) {
               <Badge variant="default" className="text-[10px]">+{note.tags.length - 4}</Badge>
             )}
           </div>
-        </div>
+        </button>
         <div className="flex items-center gap-1">
           <button onClick={() => onPin(note.id, !note.pinned)} className={cn("rounded p-1.5 text-muted-foreground hover:bg-surface-2", note.pinned && "text-primary")} aria-label={note.pinned ? "Unpin" : "Pin"}>
             <Pin className="size-4" />
@@ -260,12 +266,14 @@ export default function Notes() {
               <NoteCard
                 key={note.id}
                 note={note}
+                onOpen={(note) => { setEditingNote(note); setEditorOpen(true); }}
                 onPin={(id, pinned) => updateMutation.mutate({ id, body: { pinned } })}
                 onDelete={(id) => { if (confirm("Delete this note?")) deleteMutation.mutate(id); }}
                 onExport={(note) => {
-                  const blob = new Blob([`${note.title}\n\n${tiptapToText(note.content)}`], { type: "text/plain" });
-                  const url = URL.createObjectURL(blob);
-                  const a = document.createElement("a"); a.href = url; a.download = `${note.title || "note"}.txt`; a.click(); URL.revokeObjectURL(url);
+                  downloadBlob(
+                    new Blob([`${note.title}\n\n${tiptapToText(note.content)}`], { type: "text/plain" }),
+                    `${note.title || "note"}.txt`
+                  );
                 }}
               />
             ))}

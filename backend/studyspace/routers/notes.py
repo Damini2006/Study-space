@@ -55,9 +55,15 @@ async def list_notes(
 
 @router.post("", response_model=NoteOut, status_code=201)
 async def create_note(db: DbDep, body: NoteCreate) -> NoteOut:
+    # content_text is derived from the jsonb document in SQL, so search and
+    # exports see the text that was actually written. The client's own
+    # content_text only stands in when the document yields no text at all
+    # (content-less writers such as the MCP server).
     row = await db.fetchrow(
         "insert into public.notes (title, content, content_text, tags, color, space_id, pinned) "
-        "values ($1, $2::jsonb, $3, $4, $5, $6, $7) returning *",
+        "values ($1, $2::jsonb, "
+        "coalesce(nullif(public.jsonb_tiptap_text($2::jsonb), ''), $3, ''), "
+        "$4, $5, $6, $7) returning *",
         body.title, json.dumps(body.content), body.content_text, body.tags, body.color, body.space_id, body.pinned,
     )
     return _to_out(row)
@@ -78,13 +84,42 @@ async def update_note(db: DbDep, note_id: uuid.UUID, body: NoteUpdate) -> NoteOu
     fields = body.model_dump(exclude_unset=True)
     if not fields:
         raise HTTPException(status_code=400, detail="No fields to update.")
-    if "content" in fields and fields["content"] is not None:
-        fields["content"] = json.dumps(fields["content"])
-    sets = ", ".join(f"{k} = ${i + 2}" for i, k in enumerate(fields))
+
+    params: list = [note_id]
+    sets: list[str] = []
+
+    def add(column: str, value, cast: str | None = None) -> int:
+        params.append(value)
+        idx = len(params)
+        sets.append(f"{column} = ${idx}{cast or ''}")
+        return idx
+
+    if "content" in fields:
+        content = fields.pop("content")
+        if content is None:
+            add("content", None)
+        else:
+            # A changed document re-derives its plain text — search and
+            # exports read content_text, so a stale copy would hide the new
+            # body. The client's content_text is only a fallback for
+            # content-less writers; it never overwrites real document text.
+            client_text = fields.pop("content_text", None)
+            content_idx = add("content", json.dumps(content), "::jsonb")
+            params.append(client_text)
+            text_idx = len(params)
+            sets.append(
+                "content_text = coalesce(nullif(public.jsonb_tiptap_text("
+                f"${content_idx}::jsonb), ''), ${text_idx}, '')"
+            )
+
+    for key, value in fields.items():
+        add(key, value)
+
+    if not sets:
+        raise HTTPException(status_code=400, detail="No fields to update.")
     row = await db.fetchrow(
-        f"update public.notes set {sets} where id = $1 and user_id = auth.uid() returning *",
-        note_id,
-        *fields.values(),
+        f"update public.notes set {', '.join(sets)} where id = $1 and user_id = auth.uid() returning *",
+        *params,
     )
     if row is None:
         raise HTTPException(status_code=404, detail="Note not found.")
