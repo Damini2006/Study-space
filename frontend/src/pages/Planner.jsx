@@ -24,7 +24,87 @@ import { cn, formatDate } from "@/lib/utils";
 
 const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
-function GhostTaskCard({ task, index, onRemove, onEdit }) {
+function GhostTaskCard({ task, index, editing, onEdit, onCancel, onSave, onRemove }) {
+  // Inline editor state lives on the card: it mounts fresh for the edit
+  // (the parent keys editing cards separately), so the draft always starts
+  // from the proposal row being edited.
+  const [draft, setDraft] = useState({
+    title: task.title,
+    topic: task.topic || "",
+    due: task.due || "",
+    duration_min: task.duration_min,
+  });
+
+  if (editing) {
+    return (
+      <motion.div
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        exit={{ opacity: 0, y: -10 }}
+        className="ghost-card rounded-xl p-4 space-y-3"
+      >
+        <div className="space-y-2">
+          <Label htmlFor={`ghost-title-${index}`}>Task title</Label>
+          <Input
+            id={`ghost-title-${index}`}
+            value={draft.title}
+            onChange={(e) => setDraft({ ...draft, title: e.target.value })}
+            autoFocus
+          />
+          <div className="grid gap-2 sm:grid-cols-3">
+            <div className="space-y-1.5">
+              <Label htmlFor={`ghost-topic-${index}`}>Topic</Label>
+              <Input
+                id={`ghost-topic-${index}`}
+                value={draft.topic}
+                onChange={(e) => setDraft({ ...draft, topic: e.target.value })}
+                placeholder="Optional"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor={`ghost-due-${index}`}>Due</Label>
+              <Input
+                id={`ghost-due-${index}`}
+                type="date"
+                value={draft.due}
+                onChange={(e) => setDraft({ ...draft, due: e.target.value })}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor={`ghost-duration-${index}`}>Minutes</Label>
+              <Input
+                id={`ghost-duration-${index}`}
+                type="number"
+                min={5}
+                max={600}
+                value={draft.duration_min}
+                onChange={(e) => setDraft({ ...draft, duration_min: e.target.value })}
+              />
+            </div>
+          </div>
+          <div className="flex justify-end gap-2 pt-1">
+            <Button variant="outline" size="sm" type="button" onClick={onCancel}>Cancel</Button>
+            <Button
+              size="sm"
+              type="button"
+              disabled={!draft.title.trim()}
+              onClick={() =>
+                onSave(index, {
+                  title: draft.title.trim(),
+                  topic: draft.topic.trim() || null,
+                  due: draft.due || null,
+                  duration_min: Math.min(Math.max(parseInt(draft.duration_min, 10) || 45, 5), 600),
+                })
+              }
+            >
+              Save task
+            </Button>
+          </div>
+        </div>
+      </motion.div>
+    );
+  }
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 10 }}
@@ -208,6 +288,34 @@ export default function Planner() {
     onError: error,
   });
 
+  const toggleTask = useMutation({
+    mutationFn: ({ id, status }) => plannerApi.updateTask(id, { status }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["planner", "tasks"] }),
+    onError: error,
+  });
+
+  const removeTask = useMutation({
+    mutationFn: (id) => plannerApi.deleteTask(id),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["planner", "tasks"] }),
+    onError: error,
+  });
+
+  // Local edits to the pending proposal. Remove/Edit act on this copy and
+  // Approve posts exactly what is on screen; keyed by run id so the next
+  // run starts from the server's proposal again.
+  const [editedProposal, setEditedProposal] = useState(null);
+  const proposalTasks = pendingRun
+    ? editedProposal?.runId === pendingRun.id
+      ? editedProposal.tasks
+      : pendingRun.proposal?.tasks || []
+    : [];
+  // Which proposal row is being edited, also keyed by run id for the same reason.
+  const [editingTask, setEditingTask] = useState(null);
+  const editingIndex =
+    editingTask && pendingRun && editingTask.runId === pendingRun.id ? editingTask.index : null;
+
+  const editProposal = (tasks) => setEditedProposal({ runId: pendingRun.id, tasks });
+
   const handleSubmit = (data) => {
     const spec = {
       title: data.title,
@@ -257,27 +365,32 @@ export default function Planner() {
 
   return (
     <div className="mx-auto max-w-4xl space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between mb-4">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">Planner</h1>
-          <p className="mt-0.5 text-sm text-muted-foreground">
-            AI drafts your study week around exams and weak topics — you approve.
-          </p>
-        </div>
+          {/* The Tabs wrapper owns both the header row and the panels — the
+              panels used to render inside the header's flex row as siblings
+              of the New plan button. border-b-0 drops the line variant's
+              bottom rule, which would otherwise span the whole block. */}
+          <Tabs value={view} onValueChange={setView} ariaLabel="Planner views" className="border-b-0">
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <h1 className="text-2xl font-bold tracking-tight">Planner</h1>
+                <p className="mt-0.5 text-sm text-muted-foreground">
+                  AI drafts your study week around exams and weak topics — you approve.
+                </p>
+              </div>
 
-        <div className="flex items-center gap-2">
-          <Button onClick={() => setShowForm(true)}>
-            <Plus className="size-4 mr-1" /> New plan
-          </Button>
+              <div className="flex items-center gap-2">
+                <Button onClick={() => setShowForm(true)}>
+                  <Plus className="size-4 mr-1" /> New plan
+                </Button>
 
-          {/* View switch */}
-          <Tabs value={view} onValueChange={setView} ariaLabel="Planner views">
-            <TabsList>
-              <TabsTrigger value="calendar">Calendar</TabsTrigger>
-              <TabsTrigger value="list">List</TabsTrigger>
-              <TabsTrigger value="history">History</TabsTrigger>
-            </TabsList>
+                {/* View switch */}
+                <TabsList>
+                  <TabsTrigger value="calendar">Calendar</TabsTrigger>
+                  <TabsTrigger value="list">List</TabsTrigger>
+                  <TabsTrigger value="history">History</TabsTrigger>
+                </TabsList>
+              </div>
+            </div>
 
             <TabsContent value="calendar">
               <div className="space-y-4">
@@ -358,14 +471,8 @@ export default function Planner() {
                     <ApprovedTaskCard
                       key={task.id}
                       task={task}
-                      onToggle={(id, status) => {
-                        plannerApi.updateTask(id, { status });
-                        queryClient.invalidateQueries({ queryKey: ["planner", "tasks"] });
-                      }}
-                      onDelete={(id) => {
-                        plannerApi.deleteTask(id);
-                        queryClient.invalidateQueries({ queryKey: ["planner", "tasks"] });
-                      }}
+                      onToggle={(id, status) => toggleTask.mutate({ id, status })}
+                      onDelete={(id) => removeTask.mutate(id)}
                     />
                   ))}
                 </div>
@@ -403,8 +510,6 @@ export default function Planner() {
               )}
             </TabsContent>
           </Tabs>
-        </div>
-      </div>
 
       {/* Pending run section */}
       {pendingRun && pendingRun.status === "awaiting_approval" ? (
@@ -421,18 +526,31 @@ export default function Planner() {
           <Card className="p-4 space-y-3">
             {pendingRun.proposal?.rationale && <p className="text-sm text-muted-foreground">{pendingRun.proposal.rationale}</p>}
             <AnimatePresence>
-              {pendingRun.proposal.tasks?.length ? (
-                pendingRun.proposal.tasks.map((t, i) => (
+              {proposalTasks.length ? (
+                proposalTasks.map((t, i) => (
                   <GhostTaskCard
-                    key={t.title + i}
+                    key={`${t.title}-${i}${editingIndex === i ? ":edit" : ""}`}
                     task={t}
                     index={i}
-                    onRemove={() => {}}
-                    onEdit={() => {}}
+                    editing={editingIndex === i}
+                    onEdit={(idx) => setEditingTask({ runId: pendingRun.id, index: idx })}
+                    onCancel={() => setEditingTask(null)}
+                    onSave={(idx, next) => {
+                      editProposal(proposalTasks.map((task, j) => (j === idx ? { ...task, ...next } : task)));
+                      setEditingTask(null);
+                    }}
+                    onRemove={(idx) => {
+                      editProposal(proposalTasks.filter((_, j) => j !== idx));
+                      setEditingTask(null);
+                    }}
                   />
                 ))
               ) : (
-                <p className="text-center text-muted-foreground py-4">No tasks proposed.</p>
+                <p className="text-center text-muted-foreground py-4">
+                  {(pendingRun.proposal?.tasks?.length || 0) === 0
+                    ? "No tasks proposed."
+                    : "Every proposed task was removed — reject the plan instead."}
+                </p>
               )}
             </AnimatePresence>
           </Card>
@@ -442,8 +560,8 @@ export default function Planner() {
               <X className="size-4 mr-1" /> Reject
             </Button>
             <Button
-              onClick={() => approveRun.mutate({ runId: pendingRun.id, body: { tasks: pendingRun.proposal?.tasks || [] } })}
-              disabled={approveRun.isPending}
+              onClick={() => approveRun.mutate({ runId: pendingRun.id, body: { tasks: proposalTasks } })}
+              disabled={approveRun.isPending || proposalTasks.length === 0}
             >
               <ShieldCheck className="size-4 mr-1" /> Approve plan
             </Button>
