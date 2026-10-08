@@ -270,7 +270,7 @@ def _read_cards(db_bytes: bytes, bundle: ParsedBundle) -> None:
         try:
             cursor = conn.execute(
                 "select n.flds, n.tags, d.name as deck from notes n "
-                "left join (select nid, min(did) as did from cards group by nid) c on c.nid = n.nid "
+                "left join (select nid, min(did) as did from cards group by nid) c on c.nid = n.id "
                 "left join decks d on d.id = c.did"
             )
             while True:

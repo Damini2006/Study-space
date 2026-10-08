@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import csv
 import io
-import json
 import uuid
 import zipfile
 from datetime import datetime
@@ -20,6 +19,7 @@ from studyspace.models.export import ImportSummary
 from studyspace.queue import enqueue_ingest
 from studyspace.rate_limit import rate_limit
 from studyspace.security import sanitize_filename
+from studyspace.services.export_formats import build_apkg
 from studyspace.services.import_formats import (
     MAX_IMPORT_FILES,
     BundleError,
@@ -94,32 +94,19 @@ async def export_space(
 
 
 def _export_anki(space, cards) -> StreamingResponse:
+    """A real .apkg: zip wrapping a standard Anki collection.
+
+    Built by services/export_formats.py; round-tripped through our own
+    import parser in tests/test_export_anki.py.
     """
-    Generate a minimal .apkg (Anki package).
-    Real implementation would use genanki; here we emit a JSON manifest
-    that the frontend can use with a client-side library.
-    """
-    # For now, return a JSON that the frontend can feed to a client-side apkg generator
-    notes_data = []
-    for c in cards:
-        notes_data.append({
-            "model": "Basic",
-            "fields": [c["front"], c["back"]],
-            "tags": c.get("tags", []),
-        })
+    triples = [(c["front"], c["back"], c.get("tags") or []) for c in cards]
+    data = build_apkg(space["title"], triples)
 
-    manifest = {
-        "deckName": space["title"],
-        "notes": notes_data,
-    }
-
-    buf = io.BytesIO()
-    buf.write(json.dumps(manifest, ensure_ascii=False, indent=2).encode())
-    buf.seek(0)
-
+    buf = io.BytesIO(data)
     return StreamingResponse(
         buf,
-        media_type="application/json",
+        # It is literally a zip; .apkg is Anki's extension for one.
+        media_type="application/zip",
         headers={"Content-Disposition": f'attachment; filename="{_make_filename(space["title"], ExportFormat.anki)}"'},
     )
 

@@ -45,7 +45,10 @@ def make_apkg(
     try:
         conn = sqlite3.connect(path)
         conn.executescript(
-            "create table notes (nid integer primary key, flds text, tags text);"
+            # Column names follow the real Anki schema: notes are keyed by
+            # `id`, cards reference them via `nid` (caught by the export
+            # round-trip test in test_export_anki.py).
+            "create table notes (id integer primary key, flds text, tags text);"
             "create table cards (nid integer, did integer);"
             "create table decks (id integer primary key, name text);"
         )
