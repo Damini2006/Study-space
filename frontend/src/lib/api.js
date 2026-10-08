@@ -85,18 +85,42 @@ async function request(path, { method = "GET", body, headers = {}, signal } = {}
   } catch (err) {
     throw toTransportError(err);
   }
-  if (!res.ok) {
-    let detail = null;
-    try {
-      const payload = await res.json();
-      detail = typeof payload.detail === "string" ? payload.detail : JSON.stringify(payload.detail);
-    } catch {
-      detail = await res.text().catch(() => null);
-    }
-    throw new ApiError(res.status, detail || res.statusText);
-  }
+  await ensureOk(res);
   if (res.status === 204) return null;
   return res.json();
+}
+
+/** Map a failed response to an ApiError with the server's detail (shared by request/download). */
+async function ensureOk(res) {
+  if (res.ok) return;
+  let detail = null;
+  try {
+    const payload = await res.json();
+    detail = typeof payload.detail === "string" ? payload.detail : JSON.stringify(payload.detail);
+  } catch {
+    detail = await res.text().catch(() => null);
+  }
+  throw new ApiError(res.status, detail || res.statusText);
+}
+
+/** GET that returns the body as a Blob (file downloads); same auth/retries/errors as request(). */
+async function download(path) {
+  const token = await getToken();
+  let res;
+  try {
+    res = await fetchWithRetry(
+      `${API_BASE}${path}`,
+      {
+        method: "GET",
+        headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+      },
+      { method: "GET" }
+    );
+  } catch (err) {
+    throw toTransportError(err);
+  }
+  await ensureOk(res);
+  return res.blob();
 }
 
 export const api = {
@@ -106,6 +130,7 @@ export const api = {
   patch: (path, body, opts) => request(path, { ...opts, method: "PATCH", body }),
   delete: (path, opts) => request(path, { ...opts, method: "DELETE" }),
   upload: (path, formData, opts) => request(path, { ...opts, method: "POST", body: formData }),
+  download: (path) => download(path),
 };
 
 /**

@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/dialog";
 import { useToast } from "@/components/ui/toast";
 import { cn } from "@/lib/utils";
+import { exportFilename } from "@/lib/export-file";
 import { spacesApi } from "@/services/api-services";
 
 const FORMATS = [
@@ -28,11 +29,22 @@ const FORMATS = [
   },
   {
     id: "pdf",
-    label: "PDF (.pdf)",
-    desc: "Printable summary of cards and notes",
+    label: "Print / Save as PDF",
+    desc: 'Opens a print-ready page — choose "Save as PDF" in the print dialog',
     icon: FileText,
   },
 ];
+
+function downloadBlob(blob, filename) {
+  const url = window.URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  window.URL.revokeObjectURL(url);
+}
 
 export default function ExportDialog({ spaceId, spaceTitle, open, onClose }) {
   const { success, error } = useToast();
@@ -43,21 +55,30 @@ export default function ExportDialog({ spaceId, spaceTitle, open, onClose }) {
     e.preventDefault();
     if (exporting) return;
     setExporting(true);
+    const fmt = FORMATS.find((f) => f.id === format);
+    // Popup blockers reject window.open() after an await, so the print
+    // window opens while the click is still the active user gesture.
+    const printWindow = format === "pdf" ? window.open("about:blank", "_blank") : null;
     try {
-      const blob = await spacesApi.export(spaceId, format);
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      const fmt = FORMATS.find((f) => f.id === format);
-      const ext = { markdown: "zip", anki: "apkg", notion: "csv", pdf: "pdf" }[format];
-      a.download = `${spaceTitle.replace(/[^a-z0-9]/gi, "_")}-${new Date().toISOString().slice(0, 10)}.${ext}`;
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      window.URL.revokeObjectURL(url);
-      success(`${fmt?.label || format} downloaded`);
-    } catch (e) {
-      error(e.message || "Export failed");
+      const blob = await spacesApi.export(spaceId, format, { print: format === "pdf" });
+      if (format === "pdf") {
+        if (printWindow) {
+          const url = window.URL.createObjectURL(blob);
+          printWindow.location = url;
+          // Revoke after the page has certainly loaded and printed.
+          window.setTimeout(() => window.URL.revokeObjectURL(url), 60000);
+          success('Print page opened — choose "Save as PDF"');
+        } else {
+          // Popup blocked: hand the page over as a file instead of failing.
+          downloadBlob(blob, exportFilename(spaceTitle, "pdf"));
+          success("Popup was blocked — downloaded the print page instead");
+        }
+      } else {
+        downloadBlob(blob, exportFilename(spaceTitle, format));
+        success(`${fmt?.label || format} downloaded`);
+      }
+    } catch (err) {
+      error(err.message || "Export failed");
     } finally {
       setExporting(false);
     }
@@ -108,6 +129,10 @@ export default function ExportDialog({ spaceId, spaceTitle, open, onClose }) {
             {exporting ? (
               <>
                 <Loader2 className="size-4 animate-spin" /> Preparing…
+              </>
+            ) : format === "pdf" ? (
+              <>
+                <Download className="size-4" /> Open print page
               </>
             ) : (
               <>

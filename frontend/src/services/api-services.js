@@ -31,9 +31,12 @@ export const spacesApi = {
   // Citation Audit
   auditCitations: (spaceId, body) => api.post(`/spaces/${spaceId}/citation-audit`, body),
 
-  // Export / Import — `exportUrl` is a plain link the browser downloads directly,
-  // `importBundle` posts a file as multipart form-data.
-  exportUrl: (spaceId, fmt) => `${api.base}/spaces/${spaceId}/export?fmt=${encodeURIComponent(fmt)}`,
+  // Export / Import — `export` fetches with auth and hands back a Blob (a
+  // plain link would 401), `importBundle` posts a file as multipart form-data.
+  export: (spaceId, fmt, { print } = {}) =>
+    api.download(
+      `/spaces/${spaceId}/export?fmt=${encodeURIComponent(fmt)}${print ? "&print=1" : ""}`
+    ),
   importBundle: (spaceId, fmt, formData) => api.upload(`/spaces/${spaceId}/import?fmt=${encodeURIComponent(fmt)}`, formData),
 };
 
