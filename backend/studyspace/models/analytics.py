@@ -25,6 +25,12 @@ class WeakTopic(BaseModel):
     lapse_rate: float
 
 
+class SpaceRefusal(BaseModel):
+    space: str
+    asked: int
+    refused: int
+
+
 class AnalyticsSummary(BaseModel):
     heatmap: list[HeatmapDay] = Field(default_factory=list)
     streak_days: int = 0
@@ -36,4 +42,5 @@ class AnalyticsSummary(BaseModel):
     cards_total: int = 0
     per_subject: list[SubjectTime] = Field(default_factory=list)
     weak_topics: list[WeakTopic] = Field(default_factory=list)
+    per_space_refusals: list[SpaceRefusal] = Field(default_factory=list)
     daily_quote: str | None = None

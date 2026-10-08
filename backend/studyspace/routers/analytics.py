@@ -5,7 +5,13 @@ from __future__ import annotations
 from fastapi import APIRouter
 
 from studyspace.deps import DbDep
-from studyspace.models.analytics import AnalyticsSummary, HeatmapDay, SubjectTime, WeakTopic
+from studyspace.models.analytics import (
+    AnalyticsSummary,
+    HeatmapDay,
+    SpaceRefusal,
+    SubjectTime,
+    WeakTopic,
+)
 
 router = APIRouter(prefix="/analytics", tags=["analytics"])
 
@@ -126,6 +132,21 @@ async def summary(db: DbDep, days: int = 120) -> AnalyticsSummary:
         for r in weak_rows
     ]
 
+    # Refusals per space: only assistant replies ever carry a status, so a
+    # status-bearing message is a question that got an answer or a "no answer
+    # here", and `not_found` is the layers declining to write without source
+    # support. The denominator is exactly those verdict-carrying messages.
+    refusal_rows = await db.fetch(
+        "select coalesce(sp.title, 'General') as space, "
+        "count(*)::int as asked, "
+        "count(*) filter (where m.status = 'not_found')::int as refused "
+        "from public.messages m "
+        "left join public.spaces sp on sp.id = m.space_id "
+        "where m.user_id = auth.uid() and m.status is not null "
+        "group by m.space_id, sp.title "
+        "order by asked desc limit 10",
+    )
+
     import hashlib
 
     seed = int(hashlib.sha256(date.today().isoformat().encode()).hexdigest(), 16)
@@ -142,5 +163,9 @@ async def summary(db: DbDep, days: int = 120) -> AnalyticsSummary:
         cards_total=counts["cards_total"],
         per_subject=[SubjectTime(subject=r["subject"], minutes=r["minutes"]) for r in subject_rows],
         weak_topics=weak,
+        per_space_refusals=[
+            SpaceRefusal(space=r["space"], asked=r["asked"], refused=r["refused"])
+            for r in refusal_rows
+        ],
         daily_quote=quote,
     )

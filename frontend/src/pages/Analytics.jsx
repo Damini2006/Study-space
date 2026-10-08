@@ -92,7 +92,8 @@ export default function Analytics() {
       if (!weekMap.has(key)) weekMap.set(key, []);
       weekMap.get(key).push(h);
     }
-    for (const [weekStart, days] of weekMap.entries().slice(-8).reverse()) {
+    // `entries()` is an iterator, not an array — spread it before slicing.
+    for (const [weekStart, days] of [...weekMap.entries()].slice(-8).reverse()) {
       weeks.push({ start: weekStart, days });
     }
   }
@@ -132,6 +133,7 @@ export default function Analytics() {
           <TabsTrigger value="heatmap">Heatmap</TabsTrigger>
           <TabsTrigger value="subjects">By subject</TabsTrigger>
           <TabsTrigger value="weak">Weak topics</TabsTrigger>
+          <TabsTrigger value="refusals">Refusals</TabsTrigger>
         </TabsList>
 
         <TabsContent value="overview" className="space-y-6">
@@ -269,6 +271,30 @@ export default function Analytics() {
               </div>
             ) : (
               <p className="text-center text-muted-foreground py-8">Review more flashcards to identify weak topics.</p>
+            )}
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="refusals" className="space-y-4">
+          <Card className="p-5">
+            <h3 className="font-semibold mb-1">Refusals per Space</h3>
+            <p className="mb-3 text-sm text-muted-foreground">
+              Answers the assistant declined to give because no source supported them — it stops instead of guessing.
+            </p>
+            {analytics?.per_space_refusals?.length ? (
+              <div className="space-y-2">
+                {analytics.per_space_refusals.map((r, i) => (
+                  <div key={`${r.space}-${i}`} className="flex items-center justify-between p-3 rounded-lg border border-border">
+                    <div>
+                      <p className="font-medium">{r.space}</p>
+                      <p className="text-xs text-muted-foreground">{r.refused} refused of {r.asked} answers</p>
+                    </div>
+                    <Badge variant="info" className="font-mono">{Math.round((r.refused / Math.max(r.asked, 1)) * 100)}%</Badge>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-center text-muted-foreground py-8">No assistant answers yet — ask something inside a Space.</p>
             )}
           </Card>
         </TabsContent>
