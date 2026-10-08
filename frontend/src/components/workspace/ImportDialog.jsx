@@ -68,12 +68,31 @@ function FileDropZone({ onFiles, accept, disabled, children }) {
   );
 }
 
+/**
+ * Summarise what the server reports an import actually created. The counts
+ * come from the request that just ran (parsing is synchronous), so this is
+ * a report, not an estimate: zero imports is a failure even when files were
+ * chosen, and the first server warning (why things were skipped) rides along.
+ */
+export function describeImport(summary) {
+  const { sources = 0, cards = 0, skipped = 0, warnings = [] } = summary ?? {};
+  const parts = [];
+  if (sources > 0) parts.push(`${sources} source${sources === 1 ? "" : "s"}`);
+  if (cards > 0) parts.push(`${cards} card${cards === 1 ? "" : "s"}`);
+  const warning = warnings.length > 0 ? warnings[0] : null;
+  if (parts.length === 0) {
+    const skippedNote = skipped > 0 ? ` (${skipped} skipped)` : "";
+    return { ok: false, message: `Nothing was imported${skippedNote}.`, warning };
+  }
+  const skippedNote = skipped > 0 ? ` (${skipped} skipped)` : "";
+  return { ok: true, message: `Imported ${parts.join(" and ")}${skippedNote}`, warning };
+}
+
 export default function ImportDialog({ spaceId, open, onClose }) {
   const { success, error } = useToast();
   const [format, setFormat] = useState("obsidian");
   const [files, setFiles] = useState([]);
   const [importing, setImporting] = useState(false);
-  const [progress, setProgress] = useState(0);
 
   const handleFiles = (fileList) => {
     const newFiles = Array.from(fileList).filter((f) => {
@@ -89,27 +108,25 @@ export default function ImportDialog({ spaceId, open, onClose }) {
     e.preventDefault();
     if (files.length === 0 || importing) return;
     setImporting(true);
-    setProgress(0);
 
     try {
-      // Simulate progress for UX
-      const interval = setInterval(() => {
-        setProgress((p) => Math.min(90, p + 10));
-      }, 300);
-
       const formData = new FormData();
       files.forEach((f) => formData.append("files", f));
-      formData.append("format", format);
 
-      await spacesApi.import(spaceId, format, formData);
-
-      clearInterval(interval);
-      setProgress(100);
-      success(`Imported ${files.length} file(s) as ${format}`);
+      // One synchronous request: the response says what was created, and
+      // the dialog repeats exactly that - no counting chosen files.
+      const summary = await spacesApi.importBundle(spaceId, format, formData);
+      const outcome = describeImport(summary);
+      if (outcome.ok) {
+        success(outcome.message);
+      } else {
+        error(outcome.message);
+      }
+      if (outcome.warning) error(outcome.warning);
       setFiles([]);
-      setTimeout(() => onClose(), 1000);
-    } catch (e) {
-      error(e.message || "Import failed");
+      onClose();
+    } catch (err) {
+      error(err.message || "Import failed");
     } finally {
       setImporting(false);
     }
@@ -121,7 +138,7 @@ export default function ImportDialog({ spaceId, open, onClose }) {
     <Dialog open={open} onClose={onClose} title="Import into space" className="max-w-xl p-0">
       <form onSubmit={handleImport} className="p-4 space-y-4">
         <p className="text-sm text-muted-foreground">
-          Choose a format and drop files. Large imports run in the background.
+          Choose a format and drop files. Importing happens now, so large files can take a moment.
         </p>
 
         <div className="grid grid-cols-2 gap-2">
@@ -171,20 +188,6 @@ export default function ImportDialog({ spaceId, open, onClose }) {
                 </Button>
               </div>
             ))}
-          </div>
-        )}
-
-        {importing && (
-          <div className="space-y-2">
-            <div className="h-2 bg-surface-2 rounded-full overflow-hidden">
-              <div
-                className="h-full bg-primary transition-all duration-300"
-                style={{ width: `${progress}%` }}
-              />
-            </div>
-            <p className="text-xs text-muted-foreground text-center">
-              {progress < 100 ? `Processing… ${progress}%` : "Finalizing…"}
-            </p>
           </div>
         )}
 
