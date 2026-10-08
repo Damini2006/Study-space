@@ -95,23 +95,41 @@ function ApprovedTaskCard({ task, onToggle, onDelete }) {
   );
 }
 
-function PlannerForm({ onSubmit, pending, defaultValues = {} }) {
+function PlannerForm({ open, onClose, onSubmit, pending, defaultValues = {} }) {
+  // The form posts name-addressed fields, not the submit event: a React
+  // onSubmit handler receives the event, and reading `.title` off it yields
+  // `undefined` — which is how every spec used to reach the planner empty.
+  const submit = (e) => {
+    e.preventDefault();
+    const fd = new FormData(e.currentTarget);
+    const value = (name) => String(fd.get(name) ?? "");
+    onSubmit({
+      title: value("title"),
+      exam_dates: value("exam_dates"),
+      availability: value("availability"),
+      weak_topics: value("weak_topics"),
+      space_ids: value("space_ids"),
+    });
+  };
+
   return (
     <Dialog
-      open onClose={() => onSubmit?.()}
+      open={open}
+      onClose={onClose}
       title="Create study plan"
       description="Tell the planner about your exams, availability and weak topics."
       className="max-w-xl"
     >
-      <form onSubmit={onSubmit} className="space-y-4">
+      <form onSubmit={submit} className="space-y-4">
         <div className="space-y-1.5">
           <Label>Plan title</Label>
-          <Input defaultValue={defaultValues.title || ""} placeholder="Midterm study plan" />
+          <Input name="title" defaultValue={defaultValues.title || ""} placeholder="Midterm study plan" />
         </div>
 
         <div className="space-y-1.5">
           <Label>Exam dates (one per line: Subject, YYYY-MM-DD)</Label>
           <textarea
+            name="exam_dates"
             className="min-h-[80px] w-full rounded-lg border border-input bg-surface px-3 py-2 text-sm"
             defaultValue={defaultValues.exam_dates?.map(e => `${e.subject}, ${e.exam_date}`).join("\n") || ""}
             placeholder="Biology, 2026-10-15&#10;Math, 2026-10-20"
@@ -121,6 +139,7 @@ function PlannerForm({ onSubmit, pending, defaultValues = {} }) {
         <div className="space-y-1.5">
           <Label>Weekly availability (weekday: minutes)</Label>
           <textarea
+            name="availability"
             className="min-h-[60px] w-full rounded-lg border border-input bg-surface px-3 py-2 text-sm"
             defaultValue={defaultValues.availability?.map(a => `${a.weekday}: ${a.minutes}`).join("\n") || ""}
             placeholder="0: 90 (Mon)&#10;2: 60 (Wed)&#10;4: 120 (Fri)"
@@ -129,16 +148,16 @@ function PlannerForm({ onSubmit, pending, defaultValues = {} }) {
 
         <div className="space-y-1.5">
           <Label>Weak topics (comma-separated)</Label>
-          <Input defaultValue={defaultValues.weak_topics?.join(", ") || ""} placeholder="osmosis, Calvin cycle, HTML semantics" />
+          <Input name="weak_topics" defaultValue={defaultValues.weak_topics?.join(", ") || ""} placeholder="osmosis, Calvin cycle, HTML semantics" />
         </div>
 
         <div className="space-y-1.5">
           <Label>Spaces to draw from (optional)</Label>
-          <Input defaultValue={defaultValues.space_ids?.join(", ") || ""} placeholder="space-id-1, space-id-2" />
+          <Input name="space_ids" defaultValue={defaultValues.space_ids?.join(", ") || ""} placeholder="space-id-1, space-id-2" />
         </div>
 
         <div className="flex justify-end gap-2 pt-2">
-          <Button variant="outline" type="button" onClick={() => onSubmit?.()}>Cancel</Button>
+          <Button variant="outline" type="button" onClick={onClose}>Cancel</Button>
           <Button type="submit" disabled={pending}>
             {pending && <Loader2 className="size-4 animate-spin mr-1" />}
             Generate plan
@@ -166,6 +185,9 @@ export default function Planner() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["planner", "runs"] });
       success("Plan drafted — review the ghost tasks and approve when ready.");
+      // Close only on success: an error keeps the dialog (and what the user
+      // typed in it) on screen instead of discarding the spec.
+      setShowForm(false);
     },
     onError: error,
   });
@@ -201,7 +223,6 @@ export default function Planner() {
       space_ids: data.space_ids?.split(",").map(s => s.trim()).filter(Boolean) || [],
     };
     createRun.mutate(spec);
-    setShowForm(false);
   };
 
   // Calendar view state
