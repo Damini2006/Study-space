@@ -9,6 +9,30 @@ export function exportFilename(spaceTitle, fmt, date = new Date().toISOString().
 }
 
 /**
+ * Save export bytes to disk. One place so every export button downloads
+ * the same way, and the object URL is always revoked.
+ */
+export function downloadBlob(blob, filename) {
+  const url = window.URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  window.URL.revokeObjectURL(url);
+}
+
+/**
+ * The file the account export downloads as. GET /me/export returns JSON,
+ * so the extension says .json — no format choice is offered that the
+ * bytes don't back.
+ */
+export function accountExportFilename(date = new Date().toISOString().slice(0, 10)) {
+  return `studyspace-export-${date}.json`;
+}
+
+/**
  * The markdown a studio output downloads as: its own markdown for
  * summaries and guides, a readable rendering for flashcards and quizzes,
  * and "" when there is nothing to say (the caller reports that honestly

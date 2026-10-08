@@ -11,6 +11,7 @@ import CitationAuditPanel from "@/components/settings/CitationAuditPanel";
 import PwaSettings from "@/components/pwa/PwaSettings";
 import { clearQueue, enqueueReview, flushQueue, queueSize } from "@/lib/offline-queue";
 import { studyApi } from "@/services/api-services";
+import { accountExportFilename, downloadBlob } from "@/lib/export-file";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge, Input, Label } from "@/components/ui/input";
@@ -31,7 +32,7 @@ function DemoNotice({ feature }) {
 }
 
 export default function MCPManagement() {
-  const { isDemo } = useAuth();
+  const { isDemo, signOut } = useAuth();
   const { theme, setTheme } = useTheme();
   const { success, error, toast } = useToast();
   const queryClient = useQueryClient();
@@ -42,6 +43,7 @@ export default function MCPManagement() {
   const [editingToken, setEditingToken] = useState(null);
   const [showRevoke, setShowRevoke] = useState(false);
   const [tokenToRevoke, setTokenToRevoke] = useState(null);
+  const [deleteConfirmText, setDeleteConfirmText] = useState("");
 
   const { data: mcpTokens = [] } = useQuery({ queryKey: ["me", "mcp-tokens"], queryFn: () => meApi.mcpTokens() });
 
@@ -93,6 +95,27 @@ export default function MCPManagement() {
     onError: error,
   });
 
+  // Your data: the export is a real authenticated download of GET /me/export,
+  // and deletion shows the server's own count sentence — not one we invent.
+  const exportData = useMutation({
+    mutationFn: () => meApi.export(),
+    onSuccess: (blob) => {
+      downloadBlob(blob, accountExportFilename());
+      success("Export downloaded.");
+    },
+    onError: error,
+  });
+
+  const deleteData = useMutation({
+    mutationFn: () => meApi.delete(),
+    onSuccess: (data) => {
+      success(data?.detail || "All study data deleted.");
+      setDeleteConfirmText("");
+      signOut();
+    },
+    onError: error,
+  });
+
   const handleCopyToken = (token) => {
     navigator.clipboard.writeText(token);
     toast("Token copied to clipboard!");
@@ -129,6 +152,7 @@ export default function MCPManagement() {
           <TabsTrigger value="retrieval">Retrieval</TabsTrigger>
           <TabsTrigger value="audit">Audit</TabsTrigger>
           <TabsTrigger value="app">App</TabsTrigger>
+          <TabsTrigger value="data">Data</TabsTrigger>
           <TabsTrigger value="settings">Settings</TabsTrigger>
         </TabsList>
 
@@ -369,6 +393,55 @@ export default function MCPManagement() {
             <p className="text-xs text-muted-foreground">
               {queuePending} waiting to sync.
             </p>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="data" className="space-y-4">
+          <Card className="p-5 space-y-4">
+            <h3 className="font-semibold">Export your data</h3>
+            <p className="text-sm text-muted-foreground">
+              Download every row this account owns — spaces, sources, notes, cards, review
+              history, plans, focus sessions and more — as one JSON file, through the same
+              authenticated path as the rest of the app.
+            </p>
+            <Button size="sm" variant="outline" onClick={() => exportData.mutate()} disabled={exportData.isPending}>
+              {exportData.isPending && <Loader2 className="size-4 animate-spin" aria-hidden />}
+              Download JSON
+            </Button>
+          </Card>
+
+          <Card className="space-y-4 border-destructive/25 p-5">
+            <h3 className="font-semibold text-destructive">Delete your data</h3>
+            <p className="text-sm text-muted-foreground">
+              Removes every study row — spaces, sources, notes, cards, embeddings, review
+              history — and every stored document, then reports the exact counts of what was
+              removed. Your sign-in email remains: the app never holds the admin keys needed
+              to erase it. This cannot be undone.
+            </p>
+            {isDemo ? (
+              <p className="text-sm text-muted-foreground">Not available in the demo workspace.</p>
+            ) : (
+              <div className="space-y-3">
+                <div className="space-y-1">
+                  <Label htmlFor="delete-confirm">Type DELETE to confirm</Label>
+                  <Input
+                    id="delete-confirm"
+                    value={deleteConfirmText}
+                    onChange={(e) => setDeleteConfirmText(e.target.value)}
+                    autoComplete="off"
+                  />
+                </div>
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  onClick={() => deleteData.mutate()}
+                  disabled={deleteConfirmText !== "DELETE" || deleteData.isPending}
+                >
+                  {deleteData.isPending && <Loader2 className="size-4 animate-spin" aria-hidden />}
+                  Delete all my data
+                </Button>
+              </div>
+            )}
           </Card>
         </TabsContent>
 

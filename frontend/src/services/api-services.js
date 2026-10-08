@@ -145,7 +145,9 @@ export const demoApi = {
 export const meApi = {
   get: () => api.get("/me"),
   update: (body) => api.patch("/me", body),
-  exportUrl: `${(import.meta.env.VITE_API_URL || "http://localhost:8000/api").replace(/\/$/, "")}/me/export`,
+  // A blob through the same authenticated path as every other request —
+  // a bare <a href> to this endpoint would 401 (it did, as dead code).
+  export: () => api.download("/me/export"),
   delete: () => api.delete("/me"),
   mcpTokens: () => api.get("/me/mcp-tokens"),
   createMcpToken: (body) => api.post("/me/mcp-tokens", body),
