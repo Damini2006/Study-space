@@ -31,7 +31,7 @@ function DemoNotice({ feature }) {
   );
 }
 
-export default function MCPManagement() {
+export default function SettingsPage() {
   const { isDemo, signOut } = useAuth();
   const { theme, setTheme } = useTheme();
   const { success, error, toast } = useToast();
@@ -40,7 +40,6 @@ export default function MCPManagement() {
   const [showCreate, setShowCreate] = useState(false);
   const [newTokenName, setNewTokenName] = useState("");
   const [newTokenScopes, setNewTokenScopes] = useState(["read"]);
-  const [editingToken, setEditingToken] = useState(null);
   const [showRevoke, setShowRevoke] = useState(false);
   const [tokenToRevoke, setTokenToRevoke] = useState(null);
   const [deleteConfirmText, setDeleteConfirmText] = useState("");
@@ -138,8 +137,8 @@ export default function MCPManagement() {
     <div className="mx-auto max-w-3xl space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">MCP Tokens</h1>
-          <p className="mt-0.5 text-sm text-muted-foreground">Create revocable tokens for MCP clients (e.g. Claude Desktop) to access your study data.</p>
+          <h1 className="text-2xl font-bold tracking-tight">Settings</h1>
+          <p className="mt-0.5 text-sm text-muted-foreground">Tokens, model routing, prompts, retrieval, your data, and the app itself.</p>
         </div>
         {isDemo && <Badge variant="info">Demo workspace</Badge>}
       </div>
@@ -232,11 +231,7 @@ export default function MCPManagement() {
               ) : (
                 <div className="space-y-2">
                   {mcpTokens.map((t) => (
-                    <Card
-                      key={t.id}
-                      className="p-4 flex items-center justify-between"
-                      onClick={() => setEditingToken(t.id)}
-                    >
+                    <Card key={t.id} className="p-4 flex items-center justify-between">
                       <div className="flex items-center gap-3">
                         <div className="size-8 rounded-full bg-primary/10 flex items-center justify-center text-primary font-mono text-xs">
                           {t.token_prefix ? t.token_prefix.slice(0, 4) + "..." : "---"}
@@ -277,17 +272,6 @@ export default function MCPManagement() {
                             <Copy className="size-3.5" />
                           </Button>
                         )}
-                        {editingToken?.id === t.id && (
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => {
-                              setEditingToken(null);
-                            }}
-                          >
-                            <X className="size-3.5" />
-                          </Button>
-                        )}
                       </div>
                     </Card>
                   ))}
@@ -318,7 +302,7 @@ export default function MCPManagement() {
                   value={activeSpaceId}
                   onValueChange={setActiveSpaceId}
                   placeholder="Choose a space"
-                  options={spaces.map((s) => ({ value: s.id, label: s.name }))}
+                  options={spaces.map((s) => ({ value: s.id, label: s.title }))}
                 />
                 <p className="mt-2 text-xs text-muted-foreground">
                   Retrieval settings are stored per space, so each subject can have its own tuning.
@@ -342,7 +326,7 @@ export default function MCPManagement() {
                   value={activeSpaceId}
                   onValueChange={setActiveSpaceId}
                   placeholder="Choose a space"
-                  options={spaces.map((s) => ({ value: s.id, label: s.name }))}
+                  options={spaces.map((s) => ({ value: s.id, label: s.title }))}
                 />
               </Card>
               <CitationAuditPanel spaceId={activeSpaceId} />
