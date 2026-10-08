@@ -147,7 +147,7 @@ Question → Embed →
 |---------|-------------|
 | **F1 Chat** | Source-grounded answers with inline `[n]` citations that scroll to and highlight the exact passage |
 | **F2 Safety Layers** | 4 independently switchable layers: relevance gate, citation validation, claim verification, graceful "not found" |
-| **F3 Evals** | Langfuse tracing + Ragas metrics (faithfulness, relevancy, precision, recall) + custom (citation precision, hallucination rate, correct-not-found rate) |
+| **F3 Evals** | Admin ablation suite: the 100-question golden dataset × 4 layer configs, scored by Ragas (faithfulness, answer relevancy, context precision/recall) plus custom (citation precision, hallucination rate, correct-not-found rate) — live progress, CSV/JSON export |
 | **F4 Studio** | Generate summaries, study guides, flashcards, MCQ quizzes — all editable, source-cited, flashcards → FSRS |
 | **F5 FSRS** | Real spaced repetition with card flip, Again/Hard/Good/Easy, per-card state + full review log |
 | **F6 Planner** | LangGraph agent: exam dates + availability + weak topics → ghost tasks → **human approval** → committed plan |
@@ -162,7 +162,7 @@ Question → Embed →
 
 ## Evaluation Results
 
-The evaluation suite runs 4 configurations against a 100-question golden dataset (50 answerable + 50 unanswerable) over seeded demo sources.
+The evaluation suite runs 4 configurations against a 100-question golden dataset (50 answerable + 50 unanswerable, packaged in `backend/studyspace/data/golden_dataset.json`) over seeded demo sources.
 
 | Configuration | Faithfulness | Answer Relevancy | Context Precision | Context Recall | Citation Precision | Hallucination Rate | Correct "Not Found" |
 |---------------|--------------|------------------|-------------------|----------------|--------------------|--------------------|---------------------|
@@ -171,7 +171,7 @@ The evaluation suite runs 4 configurations against a 100-question golden dataset
 | + Citation Validation | 0.81 | 0.78 | 0.83 | 0.71 | **0.89** | **0.14** | 0.63 |
 | + Claim Verification | **0.89** | **0.82** | **0.88** | **0.75** | **0.92** | **0.07** | **0.74** |
 
-*Run `POST /api/evals/run` to reproduce. Results stored in `eval_runs` / `eval_results` and displayed on `/app/admin`.*
+*Reproduce with `POST /api/evals/run` (admin): the worker's `run_evals` answers every question through the chat pipeline cold, scores it with Ragas + the custom metrics, and stores per-question results in `eval_runs` / `eval_results`. `/app/admin` polls progress and exports CSV/JSON.*
 
 ---
 
@@ -230,6 +230,9 @@ study-space/
 │   │   │   ├── chunking.py
 │   │   │   ├── retrieval.py # Hybrid search + RRF + rerank
 │   │   │   ├── rag.py      # 4 safety layers + streaming
+│   │   │   ├── eval_dataset.py # packaged golden dataset (100 Q)
+│   │   │   ├── eval_metrics.py # ragas + house metrics, run summary
+│   │   │   ├── eval_runner.py  # the run_evals pipeline (worker calls it)
 │   │   │   ├── studio.py   # Summary/guide/flashcards/quiz
 │   │   │   ├── fsrs_scheduler.py
 │   │   │   ├── planner.py  # LangGraph + interrupt
@@ -241,8 +244,8 @@ study-space/
 │   └── pyproject.toml
 ├── worker/                 # ARQ background jobs
 │   ├── studyspace_worker/
-│   │   ├── main.py         # WorkerSettings + ingest job
-│   │   └── ingestion.py    # Extract → chunk → embed → store
+│   │   ├── main.py         # WorkerSettings, ingest job, cleanup cron
+│   │   └── eval_jobs.py    # run_evals → eval_runner.execute_run
 │   └── pyproject.toml
 ├── frontend/               # React + Vite
 │   ├── src/
@@ -254,12 +257,12 @@ study-space/
 │   │   │   └── study/      # ReviewCard
 │   │   ├── pages/          # Landing, Dashboard, Workspace, Study, Planner, Notes, Focus, Analytics, Settings, AdminEvals
 │   │   ├── hooks/          # useAuth, useTheme
-│   │   ├── lib/            # supabase, api (SSE), markdown, utils
+│   │   ├── lib/            # supabase, api (SSE), markdown, utils, evals
 │   │   ├── services/       # api-services.js (typed endpoints)
 │   │   └── styles/globals.css # 4-theme design tokens
 │   └── package.json
 ├── supabase/
-│   ├── migrations/         # 0001–0007 (schema + RLS + storage)
+│   ├── migrations/         # 0001–0011 (schema, RLS, evals, sharing, vision)
 │   ├── seed.sql            # Global quotes
 │   └── tests/shim.sql      # Test harness for RLS
 ├── mcp/                    # MCP server (FastMCP)

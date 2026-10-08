@@ -13,7 +13,7 @@ pieces add up. For the gates and workflow, see
 | Process | Package | Job | Runs |
 |---|---|---|---|
 | API | `backend/` | FastAPI over uvicorn: auth, REST + SSE, enqueue | Render (container; image defaults `ENV=production`) |
-| Worker | `worker/` | arq: ingestion jobs + a cron cleanup | Render (container; `arq studyspace_worker.main.WorkerSettings`) |
+| Worker | `worker/` | arq: ingestion + eval-run jobs + a cron cleanup | Render (container; `arq studyspace_worker.main.WorkerSettings`) |
 | Frontend | `frontend/` | React SPA, consent-gated telemetry | Vercel (static build) |
 | MCP server | `mcp/` | FastMCP over stdio, personal-access tokens | The user's own machine |
 | Supabase | hosted | Postgres + pgvector, Auth, Storage, RLS | Supabase; schema lives in `supabase/migrations` |
@@ -84,7 +84,7 @@ itself; the canaries catch the one that lost a single domain.
 
 One pydantic-settings `Settings` (`backend/studyspace/config.py`), every
 field with a default — app and test suite boot with no `.env` at all.
-`.env.example` is the human view of those 58 fields, and
+`.env.example` is the human view of those 59 fields, and
 `tests/test_env_example.py` keeps the two views identical in both
 directions: nothing declared without a line, nothing documented that no
 longer exists. `ENV` selects `development | test | production` and gates
@@ -97,14 +97,34 @@ The API enqueues; the worker executes. `queue.py` pushes ingest jobs with
 an idempotent `_job_id=ingest:{source_id}` (source uploads, demo seeding),
 and the worker's `ingest_source` downloads from Storage, extracts text
 (pypdf / pdfplumber / python-docx), then chunks, embeds and stores — with
-`max_tries=3` and a 600s timeout, plus a cron `cleanup_failed_ingestions`
-for whatever still died. The interactive planner is not a queued job: it
-runs in the API process under LangGraph with interrupts and a Postgres
-checkpointer (`services/planner.py`, `services/checkpoints.py`).
+`max_tries=3`, plus a cron `cleanup_failed_ingestions` for whatever still
+died. The interactive planner is not a queued job: it runs in the API
+process under LangGraph with interrupts and a Postgres checkpointer
+(`services/planner.py`, `services/checkpoints.py`).
 
-Known gap: the admin eval-run endpoint enqueues `run_evals`, which no
-worker function registers — those runs sit `pending` until the worker
-grows the function. It has been that way since the first commit.
+The admin eval suite is the other queued job. `POST /api/evals/run`
+stores the plan and enqueues `run_evals` with an idempotent
+`_job_id=evals:{run_id}`; the worker function lives in
+`worker/studyspace_worker/eval_jobs.py` — deliberately import-light
+(ingestion drags pypdf/pdfplumber along; this job needs only the backend
+package, which is also what lets the backend suite import it) — and
+delegates to `services/eval_runner.execute_run`. A run validates its
+stored plan against the packaged golden dataset
+(`studyspace/data/golden_dataset.json`, 100 questions), clears any rows
+a previous attempt wrote so a retry restarts instead of doubling, flips
+`pending → running` with a `{done, total}` progress summary the admin
+page polls, answers config × question with `EVAL_CONCURRENCY` results in
+flight through the same retrieval → gate → citation → claim path as
+chat (cold and non-socratic — the dataset expects answers), scores
+them — ragas for the four standard metrics behind our own LLM boundary,
+house metrics for citation precision, hallucination and
+correct-not-found — and finalizes with the flat `aggregate_summary`
+contract on `eval_runs.summary`. One broken question becomes failed rows
+carrying `metrics.error` while the rest carry on; a run-level problem
+fails the run with an operator-readable `eval_runs.error`.
+`job_timeout` is 7200s worker-wide because a full ladder (200 questions
+× 8 configs at concurrency 4) needs over an hour — the old 600s would
+have abandoned every real run mid-flight, row stuck on `running`.
 
 ## Observability
 

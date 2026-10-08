@@ -56,7 +56,7 @@ studyspace/
   security.py      JWT verification, token hashing, filename sanitising
   rate_limit.py    per-identity throttling
   routers/         route modules: chat, spaces, sources, studio, evals, ...
-  services/        retrieval, rag, llm, chunking, fsrs_scheduler, planner
+  services/        retrieval, rag, llm, chunking, eval suite, fsrs_scheduler, planner
   models/          Pydantic request and response schemas
   queue.py         arq job enqueueing (consumed by ../worker)
 tests/             unit, integration and RLS suites
