@@ -139,7 +139,7 @@ const FAQS = [
   },
   {
     q: "Which file types can I upload?",
-    a: "PDF, Markdown, DOCX and plain text, up to the size limit shown in Settings. Images are stored separately and are never sent to the model unless you attach them to a message.",
+    a: "PDF, Markdown, DOCX and plain text, up to the upload size limit enforced before anything is stored. Images are stored separately and are never sent to the model unless you attach them to a message.",
   },
   {
     q: "Is my work visible to anyone else?",
@@ -147,7 +147,7 @@ const FAQS = [
   },
   {
     q: "What happens to my data if I leave?",
-    a: "Export everything from Settings as JSON and Markdown, then delete the account. Deletion removes rows, embeddings and stored files within the retention window described in the privacy policy.",
+    a: "Export from Settings as JSON — the whole account — or export a single space as Markdown, CSV, an Anki deck or a print-ready page from the workspace. Deleting your data in Settings removes every study row — spaces, notes, cards, embeddings — and every stored document, then reports the exact counts of what was removed. Your sign-in email stays: the app never holds the admin keys needed to erase it.",
   },
 ];
 

@@ -184,7 +184,7 @@ The evaluation suite runs 4 configurations against a 100-question golden dataset
 - **Input Validation** — Pydantic v2 on every endpoint, filename sanitization, file type/size limits
 - **Rate Limiting** — Redis-backed per-user (chat, upload, studio, auth)
 - **CORS** — restricted to configured frontend origin
-- **Data Export / Delete** — `/api/me/export` and `DELETE /api/me` (RLS-scoped)
+- **Data Export / Delete** — `/api/me/export` and `DELETE /api/me` (RLS-scoped; deletion also removes the account's stored documents and reports exact counts)
 
 ---
 

@@ -33,6 +33,22 @@ const SECTIONS = [
     ),
   },
   {
+    id: "your-controls",
+    title: "Your controls",
+    body: (
+      <>
+        Settings → Data exports every row your account owns as a single JSON file. Deleting
+        your data there removes every study row — spaces, notes, cards, embeddings, review
+        history — and every stored document, immediately, with the exact counts reported back
+        to you; there is no retention window. If a stored document cannot be removed (for
+        example, the storage service is unreachable at that moment), the response says how
+        many failed instead of quietly keeping them. Your sign-in email is held by the
+        authentication service and is not erased by in-app deletion: the app never holds the
+        admin credentials that would be required.
+      </>
+    ),
+  },
+  {
     id: "contact",
     title: "Contact",
     body: (
