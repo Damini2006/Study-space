@@ -7,6 +7,7 @@ import uuid
 
 from fastapi import APIRouter, HTTPException
 
+from studyspace.config import get_settings
 from studyspace.deps import DbDep
 from studyspace.models.spaces import (
     SpaceCreate,
@@ -20,6 +21,19 @@ from studyspace.models.spaces import (
 )
 
 router = APIRouter(prefix="/spaces", tags=["spaces"])
+
+
+def _public_origin() -> str:
+    """Origin the app is served from - the first configured CORS origin.
+
+    A share link must open in the user's browser, so its origin is the
+    frontend's, not the API's. CORS_ORIGINS already lists the deployment's
+    accepted frontend origins; the first entry is the canonical one, so the
+    link cannot drift from where the app actually lives (this used to be a
+    hardcoded `http://localhost:5175` that matched nothing).
+    """
+    origins = get_settings().cors_origin_list
+    return origins[0] if origins else "http://localhost:5173"
 
 _SPACE_SELECT = """
 select sp.id, sp.title, sp.description, sp.subject, sp.color, sp.archived,
@@ -183,8 +197,7 @@ async def publish_space(
         "returning space_id, slug, published_at, unpublished_at",
         space_id, body.slug,
     )
-    base = "http://localhost:5175"  # TODO: from config
-    return SpacePublicOut(**pub, public_url=f"{base}/s/{pub['slug']}")
+    return SpacePublicOut(**pub, public_url=f"{_public_origin()}/s/{pub['slug']}")
 
 
 @router.get("/{space_id}/public", response_model=SpacePublicOut | None)
@@ -199,8 +212,7 @@ async def get_public_info(db: DbDep, space_id: uuid.UUID) -> SpacePublicOut | No
     )
     if pub is None:
         return None
-    base = "http://localhost:5175"
-    return SpacePublicOut(**pub, public_url=f"{base}/s/{pub['slug']}")
+    return SpacePublicOut(**pub, public_url=f"{_public_origin()}/s/{pub['slug']}")
 
 
 @router.delete("/{space_id}/public", status_code=204)
