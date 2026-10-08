@@ -18,8 +18,15 @@ from studyspace.config import get_settings
 from studyspace.deps import DbDep
 from studyspace.models.sources import PastedTextInput, SourceOut, UploadResponse
 from studyspace.queue import enqueue_ingest
-from studyspace.rate_limit import quota_used_bytes, rate_limit
+from studyspace.rate_limit import rate_limit
 from studyspace.security import sanitize_filename, validate_upload
+from studyspace.services.source_intake import (
+    QuotaReached,
+    StorageUploadError,
+    check_quota,
+    create_source,
+    upload_to_storage,
+)
 
 router = APIRouter(prefix="/spaces/{space_id}/sources", tags=["sources"])
 
@@ -62,57 +69,23 @@ async def _assert_space(db, space_id: uuid.UUID) -> None:
 
 
 async def _check_quota(user_id: str) -> None:
-    settings = get_settings()
-    used = await quota_used_bytes(user_id)
-    if used >= settings.storage_quota_mb * 1024 * 1024:
-        raise HTTPException(
-            status_code=413,
-            detail=f"Storage quota reached ({settings.storage_quota_mb} MB). Delete a source to free space.",
-        )
+    """413 when the intake service says the storage quota is full."""
+    try:
+        await check_quota(user_id)
+    except QuotaReached as exc:
+        raise HTTPException(status_code=413, detail=str(exc)) from exc
 
 
-async def _upload_to_storage(
+async def _upload(
     *, token: str, user_id: str, space_id: uuid.UUID, source_id: uuid.UUID, filename: str, data: bytes
 ) -> str:
-    """Upload bytes to the private `sources` bucket **as the user** (their JWT
-    authorises the write through storage RLS)."""
-    settings = get_settings()
-    path = f"{user_id}/{space_id}/{source_id}/{filename}"
-    url = f"{settings.storage_base}/object/sources/{path}"
-    async with httpx.AsyncClient(timeout=60) as client:
-        resp = await client.post(
-            url,
-            content=data,
-            headers={
-                "Authorization": f"Bearer {token}",
-                "apikey": settings.supabase_anon_key,
-                "x-upsert": "true",
-                "Content-Type": "application/octet-stream",
-            },
+    """502 when storage rejects the write or cannot be reached."""
+    try:
+        return await upload_to_storage(
+            token=token, user_id=user_id, space_id=space_id, source_id=source_id, filename=filename, data=data
         )
-    if resp.status_code >= 400:
-        raise HTTPException(
-            status_code=502,
-            detail=f"Storage upload failed ({resp.status_code}). Check SUPABASE_URL and that the `sources` bucket exists.",
-        )
-    return path
-
-
-async def _create_source(
-    db,
-    *,
-    user_id: str,
-    space_id: uuid.UUID,
-    file_type: str,
-    title: str,
-    storage_path: str | None,
-    size_bytes: int,
-) -> uuid.UUID:
-    return await db.fetchval(
-        "insert into public.sources (user_id, space_id, type, title, storage_path, size_bytes, status) "
-        "values ($1, $2, $3, $4, $5, $6, 'queued') returning id",
-        user_id, space_id, file_type, title[:200], storage_path, size_bytes,
-    )
+    except StorageUploadError as exc:
+        raise HTTPException(status_code=502, detail=str(exc)) from exc
 
 
 @router.get("", response_model=list[SourceOut])
@@ -156,14 +129,11 @@ async def upload_source(
     source_id = uuid.uuid4()
     token = request.headers.get("authorization", "").split(" ", 1)[-1]
 
-    try:
-        storage_path = await _upload_to_storage(
-            token=token, user_id=user.id, space_id=space_id, source_id=source_id, filename=safe_name, data=data
-        )
-    except httpx.HTTPError as exc:
-        raise HTTPException(status_code=502, detail="Storage upload failed. Please retry.") from exc
+    storage_path = await _upload(
+        token=token, user_id=user.id, space_id=space_id, source_id=source_id, filename=safe_name, data=data
+    )
 
-    row_id = await _create_source(
+    row_id = await create_source(
         db, user_id=user.id, space_id=space_id, file_type=file_type,
         title=safe_name, storage_path=storage_path, size_bytes=len(data),
     )
@@ -173,11 +143,8 @@ async def upload_source(
             storage_path=storage_path, file_type=file_type, title=safe_name,
         )
     except Exception as exc:
-        await db.execute(
-            "update public.sources set status = 'failed', error = $2 where id = $1",
-            row_id,
-            "Background queue unavailable — start Redis (docker compose up -d redis) and retry.",
-        )
+        # No point marking the row 'failed' here: the 503 rolls back the
+        # request's whole transaction (deps.user_conn), the insert included.
         raise HTTPException(status_code=503, detail="Job queue unavailable. Please retry shortly.") from exc
 
     row = await db.fetchrow(_SOURCE_SELECT + " where s.id = $1", row_id)
@@ -201,10 +168,10 @@ async def add_pasted_text(
     filename = sanitize_filename(body.title + (".md" if body.markdown else ".txt"))
     source_id = uuid.uuid4()
     token = request.headers.get("authorization", "").split(" ", 1)[-1]
-    storage_path = await _upload_to_storage(
+    storage_path = await _upload(
         token=token, user_id=user.id, space_id=space_id, source_id=source_id, filename=filename, data=data
     )
-    row_id = await _create_source(
+    row_id = await create_source(
         db, user_id=user.id, space_id=space_id,
         file_type="markdown" if body.markdown else "text",
         title=body.title, storage_path=storage_path, size_bytes=len(data),
@@ -218,11 +185,8 @@ async def add_pasted_text(
             pasted_text=body.content,
         )
     except Exception as exc:
-        await db.execute(
-            "update public.sources set status = 'failed', error = $2 where id = $1",
-            row_id,
-            "Background queue unavailable — start Redis (docker compose up -d redis) and retry.",
-        )
+        # As in upload_source: the 503 rolls the insert back, so there is no
+        # row left to mark 'failed'.
         raise HTTPException(status_code=503, detail="Job queue unavailable. Please retry shortly.") from exc
 
     row = await db.fetchrow(_SOURCE_SELECT + " where s.id = $1", row_id)
