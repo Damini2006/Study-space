@@ -84,14 +84,18 @@ async def export_space(
     notes = await db.fetch(
         "select * from public.notes where space_id = $1 order by updated_at desc", space_id
     )
-    # For chunks, we'd need to join via sources
 
     if fmt == ExportFormat.anki:
         return _export_anki(space, cards)
     elif fmt == ExportFormat.pdf:
         return _export_pdf(space, sources, cards, notes, auto_print=auto_print)
     elif fmt == ExportFormat.markdown:
-        return _export_markdown_zip(space, sources, cards, notes)
+        chunks = await db.fetch(
+            "select source_id, content from public.chunks "
+            "where space_id = $1 order by source_id, position",
+            space_id,
+        )
+        return _export_markdown_zip(space, sources, cards, notes, chunks)
     elif fmt == ExportFormat.notion:
         return _export_notion_csv(space, notes)
     else:
@@ -134,29 +138,56 @@ def _export_pdf(space, sources, cards, notes, *, auto_print: bool) -> StreamingR
     )
 
 
-def _export_markdown_zip(space, sources, cards, notes) -> StreamingResponse:
-    """Export as a zip of markdown files (one per source/note/card)."""
+def _unique_entry(prefix: str, title: str, taken: set[str]) -> str:
+    """A zip entry name that can't escape the archive and can't collide.
+
+    Titles are user input: they can contain path segments ("../"), and
+    two notes can share a title - without a counter the second would
+    overwrite the first on extraction.
+    """
+    base = sanitize_filename(title)
+    if base.lower().endswith(".md"):
+        base = base[: -len(".md")]
+    entry = f"{prefix}/{base}.md"
+    counter = 2
+    while entry in taken:
+        entry = f"{prefix}/{base} ({counter}).md"
+        counter += 1
+    taken.add(entry)
+    return entry
+
+
+def _export_markdown_zip(space, sources, cards, notes, chunks) -> StreamingResponse:
+    """Export as a zip of markdown files (one per source/note/card).
+
+    Source files carry the text the worker extracted (the chunk rows, in
+    order); note files carry content_text - the jsonb `content` column is
+    a document, not text.
+    """
+    by_source: dict = {}
+    for ch in chunks:
+        by_source.setdefault(ch["source_id"], []).append(ch["content"])
+
+    taken: set[str] = set()
     buf = io.BytesIO()
     with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as z:
-        # Sources
         for s in sources:
-            md = f"# {s['title']}\n\nType: {s['type']}\n\n---\n\nContent pending extraction."
-            z.writestr(f"sources/{s['title'][:100]}.md", md)
+            parts = by_source.get(s["id"], [])
+            body = "\n\n".join(parts) if parts else "(no extracted text)"
+            md = f"# {s['title']}\n\nType: {s['type']}\n\n---\n\n{body}"
+            z.writestr(_unique_entry("sources", s["title"], taken), md)
 
-        # Notes
         for n in notes:
-            content = n.get("content", "") if isinstance(n.get("content"), str) else ""
-            md = f"# {n['title']}\n\nTags: {', '.join(n.get('tags', []))}\n\n{content}"
-            z.writestr(f"notes/{n['title'][:100]}.md", md)
+            content = n.get("content_text") or ""
+            md = f"# {n['title']}\n\nTags: {', '.join(n.get('tags') or [])}\n\n{content}"
+            z.writestr(_unique_entry("notes", n["title"], taken), md)
 
-        # Cards
         cards_md = "\n\n---\n\n".join(
-            f"**Q:** {c['front']}\n\n**A:** {c['back']}\n\nTags: {', '.join(c.get('tags', []))}"
+            f"**Q:** {c['front']}\n\n**A:** {c['back']}\n\nTags: {', '.join(c.get('tags') or [])}"
             for c in cards
         )
         z.writestr("cards.md", f"# {space['title']} — Flashcards\n\n{cards_md}")
 
-        # README
         z.writestr("README.md", f"# {space['title']}\n\nExported from StudySpace on {datetime.utcnow().isoformat()}Z")
 
     buf.seek(0)
@@ -173,10 +204,11 @@ def _export_notion_csv(space, notes) -> StreamingResponse:
     writer = csv.writer(buf)
     writer.writerow(["Title", "Content", "Tags", "Created", "Updated"])
     for n in notes:
-        content = n.get("content", "") if isinstance(n.get("content"), str) else ""
+        # content_text is the plain text; the jsonb `content` never renders.
+        content = (n.get("content_text") or "")[:10000]
         writer.writerow([
             n["title"],
-            content[:10000],  # Notion cell limit
+            content,  # Notion cell limit
             ", ".join(n.get("tags", [])),
             n.get("created_at", ""),
             n.get("updated_at", ""),
