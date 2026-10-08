@@ -13,6 +13,7 @@ import {
   RotateCcw,
   Sparkles,
   Timer,
+  Trash2,
 } from "lucide-react";
 import { analyticsApi, habitsApi, plannerApi, spacesApi, studyApi } from "@/services/api-services";
 import { useAuth } from "@/hooks/useAuth";
@@ -63,6 +64,27 @@ export default function Dashboard() {
   const toggleHabit = useMutation({
     mutationFn: (id) => habitsApi.toggleLog(id),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["habits"] }),
+    onError: (err) => error(err.message),
+  });
+
+  const [creatingHabit, setCreatingHabit] = useState(false);
+
+  const createHabit = useMutation({
+    mutationFn: (body) => habitsApi.create(body),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["habits"] });
+      success("Habit created.");
+      setCreatingHabit(false);
+    },
+    onError: (err) => error(err.message),
+  });
+
+  const removeHabit = useMutation({
+    mutationFn: (id) => habitsApi.delete(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["habits"] });
+      success("Habit deleted.");
+    },
     onError: (err) => error(err.message),
   });
 
@@ -216,31 +238,49 @@ export default function Dashboard() {
           {/* Habits today */}
           <Card>
             <CardHeader className="pb-1">
-              <CardTitle className="text-sm">Habits today</CardTitle>
+              <CardTitle className="flex items-center justify-between text-sm">
+                Habits today
+                <Button variant="ghost" size="sm" onClick={() => setCreatingHabit(true)} aria-label="New habit">
+                  <Plus className="size-4" /> New habit
+                </Button>
+              </CardTitle>
               <CardDescription>Tap to toggle — streaks build on Analytics</CardDescription>
             </CardHeader>
             <CardContent className="space-y-1">
-              {habits.length === 0 && <p className="text-xs text-muted-foreground">No habits yet — add some on the Focus page area.</p>}
+              {habits.length === 0 && <p className="text-xs text-muted-foreground">No habits yet — add one with New habit.</p>}
               {habits.map((h) => (
-                <button
-                  key={h.id}
-                  type="button"
-                  onClick={() => toggleHabit.mutate(h.id)}
-                  aria-pressed={h.done_today}
-                  className="flex w-full items-center gap-2.5 rounded-lg px-2 py-1.5 text-left text-sm hover:bg-surface-2"
-                >
-                  <span
-                    className={cn(
-                      "flex size-4.5 items-center justify-center rounded-md border",
-                      h.done_today ? "border-transparent bg-success text-white" : "border-border"
-                    )}
-                    aria-hidden
+                <div key={h.id} className="flex items-center gap-1">
+                  <button
+                    type="button"
+                    onClick={() => toggleHabit.mutate(h.id)}
+                    aria-pressed={h.done_today}
+                    className="flex flex-1 items-center gap-2.5 rounded-lg px-2 py-1.5 text-left text-sm hover:bg-surface-2"
                   >
-                    {h.done_today && <Check className="size-3" />}
-                  </span>
-                  <span className={cn("flex-1", h.done_today && "text-muted-foreground line-through")}>{h.name}</span>
-                  <span className="text-[11px] text-muted-foreground">{h.streak}d streak</span>
-                </button>
+                    <span
+                      className={cn(
+                        "flex size-4.5 items-center justify-center rounded-md border",
+                        h.done_today ? "border-transparent bg-success text-white" : "border-border"
+                      )}
+                      aria-hidden
+                    >
+                      {h.done_today && <Check className="size-3" />}
+                    </span>
+                    <span className={cn("flex-1", h.done_today && "text-muted-foreground line-through")}>{h.name}</span>
+                    <span className="text-[11px] text-muted-foreground">{h.streak}d streak</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (window.confirm(`Delete “${h.name}”? Its logs and streak go with it.`)) {
+                        removeHabit.mutate(h.id);
+                      }
+                    }}
+                    aria-label={`Delete ${h.name}`}
+                    className="rounded p-1.5 text-muted-foreground hover:bg-surface-2 hover:text-destructive"
+                  >
+                    <Trash2 className="size-3.5" />
+                  </button>
+                </div>
               ))}
             </CardContent>
           </Card>
@@ -280,6 +320,14 @@ export default function Dashboard() {
         }}
         onSubmit={(payload) => createSpace.mutate(payload)}
         busy={createSpace.isPending}
+      />
+
+      {/* Create habit dialog */}
+      <NewHabitDialog
+        open={creatingHabit}
+        onClose={() => setCreatingHabit(false)}
+        onSubmit={(payload) => createHabit.mutate(payload)}
+        busy={createHabit.isPending}
       />
     </div>
   );
@@ -350,6 +398,52 @@ function NewSpaceDialog({ open, onClose, onSubmit, busy }) {
               />
             ))}
           </div>
+        </div>
+      </form>
+    </Dialog>
+  );
+}
+
+function NewHabitDialog({ open, onClose, onSubmit, busy }) {
+  const [name, setName] = useState("");
+  const [days, setDays] = useState(7);
+  const submit = (e) => {
+    e.preventDefault();
+    if (!name.trim()) return;
+    onSubmit({ name: name.trim(), target_days: days });
+    setName("");
+    setDays(7);
+  };
+  return (
+    <Dialog
+      open={open}
+      onClose={onClose}
+      title="New habit"
+      description="Habits live here on the Dashboard — tap a row to log today."
+      footer={
+        <>
+          <Button variant="outline" onClick={onClose}>Cancel</Button>
+          <Button onClick={submit} disabled={busy || !name.trim()}>
+            {busy && <Loader2 className="size-4 animate-spin" />} Add habit
+          </Button>
+        </>
+      }
+    >
+      <form onSubmit={submit} className="space-y-3">
+        <div className="space-y-1.5">
+          <Label htmlFor="habit-name">Name</Label>
+          <Input id="habit-name" value={name} onChange={(e) => setName(e.target.value)} placeholder="Drink water" autoFocus />
+        </div>
+        <div className="space-y-1.5">
+          <Label htmlFor="habit-days">Days per week (1–7)</Label>
+          <Input
+            id="habit-days"
+            type="number"
+            min={1}
+            max={7}
+            value={days}
+            onChange={(e) => setDays(Math.min(Math.max(parseInt(e.target.value, 10) || 1, 1), 7))}
+          />
         </div>
       </form>
     </Dialog>

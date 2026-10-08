@@ -61,7 +61,7 @@ const PAGE_META = {
   "/": { title: "StudySpace \u2014 source-grounded AI study workspace", desc: "Chat with your notes, generate study material, review with spaced repetition." },
   "/auth": { title: "Sign in \u2014 StudySpace", desc: "Sign in to your StudySpace workspace." },
   "/app/dashboard": { title: "Dashboard \u2014 StudySpace", desc: "Your today view: plan, streaks, spaces and habits." },
-  "/app/focus": { title: "Focus \u2014 StudySpace", desc: "Pomodoro, ambient sounds, habits and session history." },
+  "/app/focus": { title: "Focus \u2014 StudySpace", desc: "Pomodoro, ambient sounds and session history." },
   "/app/vision": { title: "Vision Board \u2014 StudySpace", desc: "Drag stickies and images on your vision board." },
   "/app/finance": { title: "Finance \u2014 StudySpace", desc: "Track spending and see your category breakdown." },
   "/privacy": { title: "Privacy Policy \u2014 StudySpace", desc: "How StudySpace handles your data." },

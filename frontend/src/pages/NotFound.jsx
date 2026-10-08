@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 const SUGGESTIONS = [
   { to: "/app/dashboard", label: "Dashboard", hint: "Today's plan, streaks and spaces", icon: LayoutDashboard },
   { to: "/app/study", label: "Study", hint: "Review due flashcards", icon: Layers },
-  { to: "/app/planner", label: "Planner", hint: "Calendar, tasks and habits", icon: Compass },
+  { to: "/app/planner", label: "Planner", hint: "Calendar and tasks", icon: Compass },
 ];
 
 export default function NotFound() {
