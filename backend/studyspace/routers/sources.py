@@ -11,7 +11,6 @@ from __future__ import annotations
 import uuid
 from typing import Annotated
 
-import httpx
 from fastapi import APIRouter, File, HTTPException, Request, UploadFile
 
 from studyspace.config import get_settings
@@ -22,9 +21,11 @@ from studyspace.rate_limit import rate_limit
 from studyspace.security import sanitize_filename, validate_upload
 from studyspace.services.source_intake import (
     QuotaReached,
+    StorageDeleteError,
     StorageUploadError,
     check_quota,
     create_source,
+    delete_from_storage,
     upload_to_storage,
 )
 
@@ -206,16 +207,8 @@ async def delete_source(
     await db.execute("delete from public.sources where id = $1", source_id)
 
     if row["storage_path"]:
-        settings = get_settings()
         token = request.headers.get("authorization", "").split(" ", 1)[-1]
         try:
-            async with httpx.AsyncClient(timeout=20) as client:
-                await client.delete(
-                    f"{settings.storage_base}/object/sources/{row['storage_path']}",
-                    headers={
-                        "Authorization": f"Bearer {token}",
-                        "apikey": settings.supabase_anon_key,
-                    },
-                )
-        except httpx.HTTPError:
-            pass  # row is gone; orphaned object is cleaned up by lifecycle rules
+            await delete_from_storage(token=token, path=row["storage_path"])
+        except StorageDeleteError:
+            pass  # the row is gone; this object now belongs to no row

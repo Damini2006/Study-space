@@ -5,7 +5,7 @@ from __future__ import annotations
 import secrets
 import uuid
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Request
 
 from studyspace.config import get_settings
 from studyspace.deps import DbDep
@@ -19,6 +19,7 @@ from studyspace.models.spaces import (
     SpaceShareOut,
     SpaceUpdate,
 )
+from studyspace.services.source_intake import StorageDeleteError, delete_from_storage
 
 router = APIRouter(prefix="/spaces", tags=["spaces"])
 
@@ -111,10 +112,33 @@ async def update_space(db: DbDep, space_id: uuid.UUID, body: SpaceUpdate) -> Spa
 
 
 @router.delete("/{space_id}", status_code=204)
-async def delete_space(db: DbDep, space_id: uuid.UUID) -> None:
+async def delete_space(request: Request, db: DbDep, space_id: uuid.UUID) -> None:
+    """Delete the space, its rows, **and its stored documents**.
+
+    The storage paths come from the sources table (they exist only while
+    the rows do), so they are read before the cascade. File removal is
+    best-effort: the row delete is what "deleted" means, and an object
+    left behind belongs to no row — no claim is made about it either way.
+    """
+    paths = [
+        r["storage_path"]
+        for r in await db.fetch(
+            "select storage_path from public.sources "
+            "where space_id = $1 and storage_path is not null and user_id = auth.uid()",
+            space_id,
+        )
+    ]
     result = await db.execute("delete from public.spaces where id = $1", space_id)
     if result == "DELETE 0":
         raise HTTPException(status_code=404, detail="Space not found.")
+
+    if paths:
+        token = request.headers.get("authorization", "").split(" ", 1)[-1]
+        for path in paths:
+            try:
+                await delete_from_storage(token=token, path=path)
+            except StorageDeleteError:
+                pass  # the rows are gone; this object now belongs to no row
 
 
 # ----- Sharing (invite links) -----

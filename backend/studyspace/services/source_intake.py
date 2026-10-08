@@ -32,6 +32,10 @@ class StorageUploadError(IntakeError):
     """Storage rejected the write or could not be reached."""
 
 
+class StorageDeleteError(IntakeError):
+    """Storage rejected the removal or could not be reached."""
+
+
 async def check_quota(user_id: str) -> None:
     """Raise :class:`QuotaReached` when the user has no space left."""
     settings = get_settings()
@@ -69,6 +73,30 @@ async def upload_to_storage(
             f"Storage upload failed ({resp.status_code}). Check SUPABASE_URL and that the `sources` bucket exists."
         )
     return path
+
+
+async def delete_from_storage(*, token: str, path: str) -> None:
+    """Remove an object from the private `sources` bucket **as the user** (their
+    JWT authorises the write through storage RLS, same as the upload).
+
+    A 404 is success: the object is already gone, which is the state the
+    caller wanted. Anything else raises :class:`StorageDeleteError`.
+    """
+    settings = get_settings()
+    url = f"{settings.storage_base}/object/sources/{path}"
+    try:
+        async with httpx.AsyncClient(timeout=20) as client:
+            resp = await client.delete(
+                url,
+                headers={
+                    "Authorization": f"Bearer {token}",
+                    "apikey": settings.supabase_anon_key,
+                },
+            )
+    except httpx.HTTPError as exc:
+        raise StorageDeleteError("Storage removal could not be reached.") from exc
+    if resp.status_code >= 400 and resp.status_code != 404:
+        raise StorageDeleteError(f"Storage removal failed ({resp.status_code}).")
 
 
 async def create_source(

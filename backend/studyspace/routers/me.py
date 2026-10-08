@@ -2,11 +2,12 @@
 
 from __future__ import annotations
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Request
 from fastapi.responses import JSONResponse
 
 from studyspace.deps import DbDep, UserDep
 from studyspace.services.demo_seed import reset_user_data
+from studyspace.services.source_intake import StorageDeleteError, delete_from_storage
 
 router = APIRouter(prefix="/me", tags=["privacy"])
 
@@ -56,16 +57,60 @@ async def export_data(db: DbDep, user: UserDep) -> JSONResponse:
 
 
 @router.delete("")
-async def delete_account(db: DbDep, user: UserDep) -> dict:
-    """Delete all database rows owned by this account, as the user (RLS).
+async def delete_account(request: Request, db: DbDep, user: UserDep) -> dict:
+    """Delete every study row this account owns, and report exactly what went.
 
-    The frontend then deletes the auth user with its own JWT (GoTrue
-    DELETE /auth/v1/user) — no service-role key is involved.
+    Rows first, then files: if anything raises before the rows are gone the
+    transaction rolls back and the account is untouched and deletable again.
+    File removal after that is *counted*, never assumed — the response says
+    how many stored documents were removed and how many were not, so the UI
+    can repeat a true sentence.
+
+    The Supabase Auth sign-in record (email/password) is deliberately not
+    touched: no router holds an admin key (SECURITY.md) and Supabase offers a
+    signed-in user no self-delete API. The Settings UI and the privacy policy
+    state that plainly instead of promising an account erase this code cannot
+    perform.
     """
+    paths = [
+        r["storage_path"]
+        for r in await db.fetch(
+            "select storage_path from public.sources "
+            "where user_id = auth.uid() and storage_path is not null"
+        )
+    ]
+
+    # No try/except around these: one failed statement poisons the whole
+    # transaction, and swallowing that made every earlier delete roll back
+    # while the response still claimed "All study data deleted."
     await reset_user_data(user.id, db)
-    for table in ("review_logs", "eval_results", "eval_runs", "mcp_tokens", "planner_checkpoints", "profiles"):
+    for table in ("review_logs", "eval_results", "eval_runs", "mcp_tokens", "planner_checkpoints"):
+        await db.execute(f"delete from public.{table} where user_id = $1", user.id)
+    await db.execute("delete from public.profiles where id = $1", user.id)
+
+    token = request.headers.get("authorization", "").split(" ", 1)[-1]
+    removed = 0
+    failed = 0
+    for path in paths:
         try:
-            await db.execute(f"delete from public.{table} where user_id = $1", user.id)
-        except Exception:
-            pass  # some tables may be empty / absent in older databases
-    return {"ok": True, "detail": "All study data deleted. Sign out to finish removing your account."}
+            await delete_from_storage(token=token, path=path)
+            removed += 1
+        except StorageDeleteError:
+            failed += 1
+
+    if not paths:
+        outcome = "All study data deleted."
+    elif failed == 0:
+        outcome = f"All study data deleted, including all {removed} stored documents."
+    else:
+        outcome = (
+            f"All study rows deleted, but {failed} of {len(paths)} "
+            "stored documents could not be removed."
+        )
+    return {
+        "ok": True,
+        "files_removed": removed,
+        "files_failed": failed,
+        "detail": outcome
+        + " Your sign-in email remains — this app never holds the admin keys needed to erase it.",
+    }
