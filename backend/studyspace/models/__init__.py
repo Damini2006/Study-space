@@ -10,6 +10,7 @@ from studyspace.models.chat import (
 )
 from studyspace.models.common import ErrorResponse, OkResponse
 from studyspace.models.evals import EvalResultOut, EvalRunCreate, EvalRunOut
+from studyspace.models.export import ImportSummary
 from studyspace.models.focus import FocusSessionCreate, FocusSessionOut
 from studyspace.models.habits import HabitCreate, HabitLogCreate, HabitLogOut, HabitOut
 from studyspace.models.mcp import McpTokenCreate, McpTokenOut
@@ -40,6 +41,7 @@ __all__ = [
     "HabitLogOut",
     "HabitOut",
     "HeatmapDay",
+    "ImportSummary",
     "LayerToggles",
     "McpTokenCreate",
     "McpTokenOut",

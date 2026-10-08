@@ -11,10 +11,28 @@ from datetime import datetime
 from enum import Enum
 from typing import Annotated
 
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, File, HTTPException, Query, Request, UploadFile
 from fastapi.responses import StreamingResponse
 
+from studyspace.config import get_settings
 from studyspace.deps import DbDep
+from studyspace.models.export import ImportSummary
+from studyspace.queue import enqueue_ingest
+from studyspace.rate_limit import rate_limit
+from studyspace.security import sanitize_filename
+from studyspace.services.import_formats import (
+    MAX_IMPORT_FILES,
+    BundleError,
+    PdfDoc,
+    parse_uploads,
+)
+from studyspace.services.source_intake import (
+    QuotaReached,
+    StorageUploadError,
+    check_quota,
+    create_source,
+    upload_to_storage,
+)
 
 router = APIRouter(prefix="/spaces", tags=["export"])
 
@@ -189,7 +207,7 @@ def _export_notion_csv(space, notes) -> StreamingResponse:
     )
 
 
-# ----- Import endpoints (stubs for now) -----
+# ----- Import -----
 
 class ImportFormat(str, Enum):
     anki = "anki"
@@ -198,20 +216,119 @@ class ImportFormat(str, Enum):
     pdf = "pdf"
 
 
-@router.post("/{space_id}/import")
+@router.post("/{space_id}/import", response_model=ImportSummary, status_code=201)
 async def import_space(
+    request: Request,
     db: DbDep,
     space_id: uuid.UUID,
-    fmt: ImportFormat,
-    # file: UploadFile = File(...),
-) -> dict:
+    fmt: Annotated[ImportFormat, Query()],
+    files: Annotated[list[UploadFile], File()],
+) -> ImportSummary:
+    """Import files into the space, synchronously, in this request.
+
+    Documents (pdf/md/csv) go to storage and the ingestion queue exactly like
+    a manual upload; Anki cards land in the study queue immediately. All rows
+    are written inside this request's transaction, so any failure rolls the
+    whole import back - a partial import never survives. Storage objects
+    written before a rollback are orphaned (as in the upload endpoint) and
+    cleaned up by bucket lifecycle rules.
     """
-    Import from various formats.
-    For MVP, return accepted; real impl would parse and create sources/cards/notes.
-    """
-    space = await db.fetchrow("select id from public.spaces where id = $1 and user_id = auth.uid()", space_id)
+    settings = get_settings()
+    user = request.state.verified_user
+    rl = await rate_limit(f"upload:{user.id}", settings.rate_limit_upload_per_5min, 300)
+    if not rl.allowed:
+        raise HTTPException(status_code=429, detail="Upload limit reached. Try again in a few minutes.")
+
+    space = await db.fetchrow(
+        "select id from public.spaces where id = $1 and user_id = auth.uid()", space_id
+    )
     if space is None:
         raise HTTPException(status_code=404, detail="Space not found.")
+    try:
+        await check_quota(user.id)
+    except QuotaReached as exc:
+        raise HTTPException(status_code=413, detail=str(exc)) from exc
 
-    # TODO: parse uploaded file based on fmt
-    return {"status": "accepted", "format": fmt.value, "message": "Import queued for processing."}
+    if len(files) > MAX_IMPORT_FILES:
+        raise HTTPException(
+            status_code=400, detail=f"One import accepts at most {MAX_IMPORT_FILES} files."
+        )
+    max_bytes = settings.max_upload_mb * 1024 * 1024
+    uploads: list[tuple[str, bytes]] = []
+    for file in files:
+        safe_name = sanitize_filename(file.filename or "upload")
+        data = await file.read(max_bytes + 1)
+        if len(data) > max_bytes:
+            raise HTTPException(
+                status_code=413,
+                detail=f"'{safe_name}' is larger than the {settings.max_upload_mb} MB limit.",
+            )
+        uploads.append((safe_name, data))
+
+    try:
+        bundle = parse_uploads(fmt.value, uploads)
+    except BundleError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    # Order matters: storage objects first (they need the source id), then
+    # rows, then cards, and only then jobs - the worker reads rows, so no
+    # job may exist for a row that does not (yet) exist.
+    token = request.headers.get("authorization", "").split(" ", 1)[-1]
+    pending_jobs: list[dict] = []
+    for doc in bundle.docs:
+        source_id = uuid.uuid4()
+        if isinstance(doc, PdfDoc):
+            payload, file_type, title, pasted = doc.data, "pdf", doc.filename, None
+        else:
+            payload = doc.text.encode("utf-8")
+            file_type, title, pasted = doc.file_type, doc.title, doc.text
+        try:
+            storage_path = await upload_to_storage(
+                token=token, user_id=user.id, space_id=space_id,
+                source_id=source_id, filename=doc.filename, data=payload,
+            )
+        except StorageUploadError as exc:
+            raise HTTPException(status_code=502, detail=str(exc)) from exc
+        row_id = await create_source(
+            db, user_id=user.id, space_id=space_id, file_type=file_type,
+            title=title, storage_path=storage_path, size_bytes=len(payload),
+        )
+        pending_jobs.append(
+            {
+                "row_id": row_id, "storage_path": storage_path,
+                "file_type": file_type, "title": title, "pasted_text": pasted,
+            }
+        )
+
+    for card in bundle.cards:
+        card_id = await db.fetchval(
+            "insert into public.cards (user_id, space_id, front, back, tags) "
+            "values ($1, $2, $3, $4, $5) returning id",
+            user.id, space_id, card.front, card.back, list(card.tags),
+        )
+        # Due immediately, mirroring what studio-generated cards do.
+        await db.execute(
+            "insert into public.card_state (user_id, card_id, due) values ($1, $2, now())",
+            user.id, card_id,
+        )
+
+    for job in pending_jobs:
+        try:
+            await enqueue_ingest(
+                source_id=job["row_id"], user_id=user.id, space_id=space_id,
+                storage_path=job["storage_path"], file_type=job["file_type"],
+                title=job["title"], pasted_text=job["pasted_text"],
+            )
+        except Exception as exc:
+            # The 503 rolls back every row above; there is no partial import.
+            raise HTTPException(
+                status_code=503, detail="Job queue unavailable. Please retry shortly."
+            ) from exc
+
+    return ImportSummary(
+        format=fmt.value,
+        sources=len(bundle.docs),
+        cards=len(bundle.cards),
+        skipped=bundle.skipped,
+        warnings=bundle.warnings,
+    )
