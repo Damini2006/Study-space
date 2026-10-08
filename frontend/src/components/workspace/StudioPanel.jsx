@@ -5,6 +5,7 @@ import { studioApi } from "@/services/api-services";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn, formatDate, mdToHtml } from "@/lib/utils";
+import { outputToMarkdown } from "@/lib/export-file";
 import { useToast } from "@/components/ui/toast";
 
 const TYPES = [
@@ -53,38 +54,27 @@ export default function StudioPanel({ spaceId }) {
     onError: (e) => toastError(e.message || "Could not delete output."),
   });
 
-  const open = openId ? outputs.find((o) => o.id === openId) : null;
+  const openOutput = openId ? outputs.find((o) => o.id === openId) : null;
 
-  const handleExport = async (format) => {
-    if (!open) return;
-    try {
-      // Export based on format
-      let exportData;
-      if (format === "pdf") {
-        // Generate and download PDF
-        exportData = await studioApi.exportPdf(spaceId, { output_id: open.id });
-      } else if (format === "anki") {
-        // Generate Anki-compatible format
-        exportData = await studioApi.exportAnki(spaceId, { output_id: open.id });
-      } else {
-        // Default to markdown
-        exportData = await studioApi.exportMarkdown(spaceId, { output_id: open.id });
-      }
-      
-      const blob = new Blob([exportData], { type: format === "pdf" ? "application/pdf" : "application/json" });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `${open.title.replace(/[^a-z0-9]/gi, "_").toLowerCase()}.${format}`;
-      a.click();
-      URL.revokeObjectURL(url);
-      success(`${format.toUppercase()} exported.`);
-    } catch (err) {
-      toastError(err.message || "Export failed.");
+  const handleDownload = () => {
+    if (!openOutput) return;
+    const text = outputToMarkdown(openOutput);
+    if (!text.trim()) {
+      toastError("This output has no text to download.");
+      return;
     }
+    const blob = new Blob([text], { type: "text/markdown" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `${openOutput.title.replace(/[^a-z0-9]/gi, "_").toLowerCase()}.md`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+    success("Downloaded .md");
   };
 
-  const openOutput = openId ? outputs.find((o) => o.id === openId) : null;
   const selectedType = TYPES.find((t) => t.id === type);
 
   return (
@@ -110,21 +100,9 @@ export default function StudioPanel({ spaceId }) {
                 <Button variant="ghost" size="sm" onClick={() => setOpenId(null)}>
                   <Move className="size-4" />
                 </Button>
-                {openOutput.type !== "flashcards" && openOutput.type !== "quiz" && (
-                  <Button variant="ghost" size="sm" onClick={() => handleExport("markdown")} aria-label="Export markdown" title="Export as markdown">
-                    <FileText className="size-4" />
-                  </Button>
-                )}
-                {openOutput.type !== "quiz" && (
-                  <Button variant="ghost" size="sm" onClick={() => handleExport("anki")} aria-label="Export anki" title="Export as Anki cards">
-                    <Sparkles className="size-4" />
-                  </Button>
-                )}
-                {!openOutput.type && (
-                  <Button variant="ghost" size="sm" onClick={() => handleExport("pdf")} aria-label="Export pdf" title="Export as PDF">
-                    <Layers className="size-4" />
-                  </Button>
-                )}
+                <Button variant="ghost" size="sm" onClick={handleDownload} aria-label="Download markdown" title="Download as Markdown">
+                  <FileText className="size-4" />
+                </Button>
               </div>
             </div>
 
