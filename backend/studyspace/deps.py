@@ -1,4 +1,4 @@
-"""FastAPI dependencies: JWT verification, user-scoped DB, rate limits."""
+"""FastAPI dependencies: bearer verification, user-scoped DB, rate limits."""
 
 from __future__ import annotations
 
@@ -8,7 +8,9 @@ from typing import Annotated, Any
 import asyncpg
 from fastapi import Depends, Header, HTTPException, Request, status
 
+from studyspace.config import get_settings
 from studyspace.db import user_conn
+from studyspace.mcp_auth import required_scope, verify_pat
 from studyspace.rate_limit import rate_limit
 from studyspace.security import AuthError, VerifiedUser, verify_token
 
@@ -17,7 +19,7 @@ async def get_verified_user(
     request: Request,
     authorization: Annotated[str | None, Header()] = None,
 ) -> VerifiedUser:
-    """Verify the Supabase JWT on **every** request (401 when missing/invalid)."""
+    """Verify the bearer credential — session JWT or MCP token — on **every** request (401 when missing/invalid)."""
     cached = getattr(request.state, "verified_user", None)
     if cached is not None:
         return cached
@@ -28,16 +30,49 @@ async def get_verified_user(
             headers={"WWW-Authenticate": "Bearer"},
         )
     token = authorization.split(" ", 1)[1].strip()
-    try:
-        user = await verify_token(token)
-    except AuthError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail=str(exc),
-            headers={"WWW-Authenticate": "Bearer"},
-        ) from exc
+    if token.startswith(get_settings().mcp_token_prefix):
+        user = await _pat_user(request, token)
+    else:
+        try:
+            user = await verify_token(token)
+        except AuthError as exc:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail=str(exc),
+                headers={"WWW-Authenticate": "Bearer"},
+            ) from exc
     request.state.verified_user = user
     return user
+
+
+async def _pat_user(request: Request, token: str) -> VerifiedUser:
+    """Authenticate an MCP personal access token as its owner.
+
+    Claims stay deliberately bare — id and role, no email — so
+    ``is_admin`` cannot light up through a token and the admin surface
+    remains session-JWT-only. The scope gate lives here rather than per
+    route: whichever client holds the token, a read-only one cannot POST
+    and a write-only one cannot read.
+    """
+    ident = await verify_pat(token)
+    if ident is None:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="MCP token not found or revoked",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    needed = required_scope(request.method)
+    if needed not in ident.scopes:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=f"MCP token lacks the '{needed}' scope",
+        )
+    return VerifiedUser(
+        id=ident.user_id,
+        email=None,
+        role="authenticated",
+        claims={"sub": ident.user_id, "role": "authenticated"},
+    )
 
 
 UserDep = Annotated[VerifiedUser, Depends(get_verified_user)]
