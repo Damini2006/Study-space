@@ -35,7 +35,12 @@ export default function Dashboard() {
 
   const { data: spaces = [], isLoading } = useQuery({ queryKey: ["spaces"], queryFn: () => spacesApi.list() });
   const { data: due } = useQuery({ queryKey: ["study", "due"], queryFn: studyApi.due });
-  const { data: analytics } = useQuery({ queryKey: ["analytics", "summary"], queryFn: () => analyticsApi.summary(30) });
+  // Windowed key, like Analytics: a page's numbers live under the range
+  // they were fetched for, so the two summaries cannot swap places.
+  const { data: analytics } = useQuery({
+    queryKey: ["analytics", "summary", 30],
+    queryFn: () => analyticsApi.summary(30),
+  });
   const { data: habits = [] } = useQuery({ queryKey: ["habits"], queryFn: habitsApi.list });
   const { data: tasks = [] } = useQuery({ queryKey: ["plan", "tasks"], queryFn: () => plannerApi.listTasks(false) });
 

@@ -79,7 +79,13 @@ function WeekDelta({ now, prev }) {
 }
 
 export default function Analytics() {
-  const { data: analytics, isLoading } = useQuery({ queryKey: ["analytics", "summary"], queryFn: () => analyticsApi.summary(90) });
+  // The window is part of the key: Dashboard caches this same summary at
+  // 30 days, and the shared key used to paint whichever page filled it
+  // first with the other page's numbers.
+  const { data: analytics, isLoading } = useQuery({
+    queryKey: ["analytics", "summary", 90],
+    queryFn: () => analyticsApi.summary(90),
+  });
   
   const weeks = [];
   if (analytics?.heatmap) {
