@@ -95,5 +95,14 @@ export default defineConfig({
     // number a contended runner can actually hit — it changes no
     // expectation, only how long a slow machine is allowed to take.
     testTimeout: 15000,
+    // Vitest defaults to one worker per logical core, so this box ran
+    // all 16 jsdom workers on 16 cores with nothing left for the main
+    // thread: one run died with "heap out of memory" at 27/32 files, and
+    // notes-page/share-links timed out resolving mocked queries under
+    // contention while passing alone in ~3s. Eight workers keeps every
+    // timing-sensitive test fed; on CI's smaller runners the cap never
+    // binds. (poolOptions/maxForks were removed in Vitest 4 — the cap
+    // lives top-level as maxWorkers.)
+    maxWorkers: 8,
   },
 });
