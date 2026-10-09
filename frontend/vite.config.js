@@ -87,5 +87,13 @@ export default defineConfig({
     globals: true,
     setupFiles: ["./tests/setup.js"],
     css: false,
+    // Vitest's 5s default is wall-clock, but the typing tests are not:
+    // planner-form types ~60 characters through userEvent (one act round
+    // trip per keystroke) and the suite creates a fresh jsdom per file in
+    // parallel, so on a loaded machine that test crossed 5s and failed
+    // while passing in isolation. 15s caps the same assertions at a
+    // number a contended runner can actually hit — it changes no
+    // expectation, only how long a slow machine is allowed to take.
+    testTimeout: 15000,
   },
 });

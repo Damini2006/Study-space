@@ -34,10 +34,14 @@ function DemoNotice({ feature }) {
 export default function SettingsPage() {
   const { isDemo, signOut } = useAuth();
   const { theme, setTheme } = useTheme();
-  const { success, error, toast } = useToast();
+  const { success, error } = useToast();
   const queryClient = useQueryClient();
   const [tab, setTab] = useState("tokens");
   const [showCreate, setShowCreate] = useState(false);
+  // The full token exists only in the creation response; it is shown here
+  // until the user closes the dialog, because a toast that disappears
+  // after four seconds would destroy the only copy of a one-time secret.
+  const [createdToken, setCreatedToken] = useState(null);
   const [newTokenName, setNewTokenName] = useState("");
   const [newTokenScopes, setNewTokenScopes] = useState(["read"]);
   const [showRevoke, setShowRevoke] = useState(false);
@@ -75,10 +79,8 @@ export default function SettingsPage() {
     mutationFn: (body) => meApi.createMcpToken(body),
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["me", "mcp-tokens"] });
-      toast(`Token created. Copy it now: ${data.token}`);
-      setShowCreate(false);
-      setNewTokenName("");
-      setNewTokenScopes(["read"]);
+      // Keep the dialog open on the secret itself; see createdToken above.
+      setCreatedToken(data.token);
     },
     onError: error,
   });
@@ -115,9 +117,21 @@ export default function SettingsPage() {
     onError: error,
   });
 
-  const handleCopyToken = (token) => {
-    navigator.clipboard.writeText(token);
-    toast("Token copied to clipboard!");
+  const closeCreate = () => {
+    setShowCreate(false);
+    setCreatedToken(null);
+    setNewTokenName("");
+    setNewTokenScopes(["read"]);
+  };
+
+  const copyCreatedToken = async () => {
+    // The success toast is only true once the clipboard accepted the text.
+    try {
+      await navigator.clipboard.writeText(createdToken);
+      success("Token copied to clipboard!");
+    } catch {
+      error("Couldn't reach the clipboard — select the token above and copy it manually.");
+    }
   };
 
   const confirmRevoke = () => {
@@ -171,14 +185,27 @@ export default function SettingsPage() {
 
             <Dialog
               open={showCreate}
-              onClose={() => {
-                setShowCreate(false);
-                setNewTokenName("");
-                setNewTokenScopes(["read"]);
-              }}
-              title="Create MCP token"
+              onClose={closeCreate}
+              title={createdToken ? "Token created" : "Create MCP token"}
               className="max-w-md"
             >
+              {createdToken ? (
+                <div className="p-4 space-y-3">
+                  <p className="text-sm text-muted-foreground">
+                    Copy your token now. The server returns it exactly once,
+                    and this panel is the only place it will ever appear.
+                  </p>
+                  <code className="block break-all rounded-lg bg-surface-2 p-3 font-mono text-xs">
+                    {createdToken}
+                  </code>
+                  <div className="flex justify-end gap-2 pt-2">
+                    <Button variant="outline" type="button" onClick={copyCreatedToken}>
+                      <Copy className="size-4 mr-1" /> Copy token
+                    </Button>
+                    <Button type="button" onClick={closeCreate}>Done</Button>
+                  </div>
+                </div>
+              ) : (
               <form onSubmit={e => {
                 e.preventDefault();
                 createToken.mutate({ name: newTokenName, scopes: newTokenScopes });
@@ -215,13 +242,14 @@ export default function SettingsPage() {
                   </label>
                 </div>
                 <div className="flex justify-end gap-2 pt-2">
-                  <Button variant="outline" type="button" onClick={() => setShowCreate(false)}>Cancel</Button>
+                  <Button variant="outline" type="button" onClick={closeCreate}>Cancel</Button>
                   <Button type="submit" disabled={!newTokenName.trim() || createToken.isPending}>
                     {createToken.isPending && <Loader2 className="size-4 animate-spin mr-1" />}
                     Create token
                   </Button>
                 </div>
               </form>
+              )}
             </Dialog>
 
             {/* Tokens list */}
@@ -260,16 +288,6 @@ export default function SettingsPage() {
                             }}
                           >
                             <X className="size-3.5 mr-1" /> Revoke
-                          </Button>
-                        )}
-                        {!t.revoked_at && (
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleCopyToken(t.token)}
-                            title="Copy token"
-                          >
-                            <Copy className="size-3.5" />
                           </Button>
                         )}
                       </div>

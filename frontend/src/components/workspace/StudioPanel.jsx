@@ -290,15 +290,12 @@ function FlashcardsView({ output }) {
         <li key={i} className="rounded-lg border border-border bg-surface-2/60 p-2.5">
           <p className="text-xs font-semibold text-muted-foreground">{c.front}</p>
           <p className="mt-1 whitespace-pre-wrap text-xs text-muted-foreground">{c.back}</p>
-          {c.source_chunk_id && (
-            <button
-              type="button"
-              onClick={() => window.open(`/spaces/${output.space_id}/studio/${output.id}?card=${i}`, "_blank")}
-              className="text-[10px] text-primary hover:underline mt-1 block"
-            >
-              Open in study
-            </button>
-          )}
+          {/* There used to be an "Open in study" button here pointing at
+              /spaces/<id>/studio/<output>?card=<i> — a path with no route
+              behind it, so it always opened a 404 in a new tab. Study is
+              one click away in the sidebar, and no endpoint deep-links a
+              single card, so the button is gone rather than re-aimed at
+              something it cannot deliver. */}
         </li>
       ))}
     </ul>

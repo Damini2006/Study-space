@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { FileUp, Loader2, AlertCircle, FileText, Layers, FileSpreadsheet, File } from "lucide-react";
 import { Dialog } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -15,7 +15,11 @@ const IMPORT_FORMATS = [
 
 function FileDropZone({ onFiles, accept, disabled, children }) {
   const [dragActive, setDragActive] = useState(false);
-  const inputRef = useState(null);
+  // A ref, not state: this holds a DOM node. useState returned an array
+  // whose `.current` React silently wrote the drop-zone div into, so
+  // handleClick() called div.click() — which re-entered itself through
+  // this very onClick until the stack blew.
+  const inputRef = useRef(null);
 
   const handleDrop = (e) => {
     e.preventDefault();
@@ -41,7 +45,6 @@ function FileDropZone({ onFiles, accept, disabled, children }) {
 
   return (
     <div
-      ref={inputRef}
       onDrop={handleDrop}
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
@@ -52,10 +55,14 @@ function FileDropZone({ onFiles, accept, disabled, children }) {
         disabled && "opacity-50 cursor-not-allowed"
       )}
     >
+      {/* Only the input carries the ref. The click it dispatches must stop
+          here — bubbling it back to the div's onClick would re-enter
+          handleClick and recurse until the stack blew. */}
       <input
         type="file"
         ref={inputRef}
         onChange={handleChange}
+        onClick={(e) => e.stopPropagation()}
         accept={accept}
         multiple
         className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
