@@ -151,7 +151,7 @@ Question → Embed →
 | **F4 Studio** | Generate summaries, study guides, flashcards, MCQ quizzes — all editable, source-cited, flashcards → FSRS |
 | **F5 FSRS** | Real spaced repetition with card flip, Again/Hard/Good/Easy, per-card state + full review log |
 | **F6 Planner** | LangGraph agent: exam dates + availability + weak topics → ghost tasks → **human approval** → committed plan |
-| **F7 MCP** | Personal access tokens (revocable, scope-limited): `list_spaces`, `search_sources`, `get_due_cards`, `get_study_stats`, `create_note` |
+| **F7 MCP** | Personal access tokens (revocable, scope-limited) for MCP clients, served by the API itself at `/mcp` over SSE: `list_spaces`, `search_sources`, `get_due_cards`, `get_study_stats`, `create_note` |
 
 ### Prototype Ports
 - **Notes** — TipTap rich text, tags, pinning, search, export
@@ -177,7 +177,7 @@ The evaluation suite runs 4 configurations against a 100-question golden dataset
 
 ## Security Model
 
-- **Supabase Auth** (email/password + Google OAuth) — JWT verified on **every** FastAPI request
+- **Supabase Auth** (email/password + Google OAuth) — a JWT is verified on **every** FastAPI request; revocable personal access tokens (`ssk_…`) are accepted as the same bearer credential, and the `/mcp` mount accepts nothing else
 - **Row Level Security** on every user-owned table — `user_id = auth.uid()` is the only authorization
 - **No service-role key** in request handlers or frontend — only in ingestion worker / admin scripts
 - **Private Storage** — uploads under `{user_id}/...`, signed URLs for temporary access
@@ -223,6 +223,7 @@ study-space/
 │   │   ├── rate_limit.py   # Redis rate limiting
 │   │   ├── tracing.py      # Langfuse spans
 │   │   ├── deps.py         # FastAPI deps (auth, DB, rate limit)
+│   │   ├── mcp_app.py      # MCP server, mounted at /mcp (FastMCP, PAT-gated)
 │   │   ├── models/         # Pydantic v2 request/response
 │   │   ├── services/
 │   │   │   ├── llm.py      # LiteLLM chat/stream/json
@@ -262,10 +263,9 @@ study-space/
 │   │   └── styles/globals.css # 4-theme design tokens
 │   └── package.json
 ├── supabase/
-│   ├── migrations/         # 0001–0011 (schema, RLS, evals, sharing, vision)
+│   ├── migrations/         # 0001–0014 (schema, RLS, evals, sharing, vision, PATs)
 │   ├── seed.sql            # Global quotes
 │   └── tests/shim.sql      # Test harness for RLS
-├── mcp/                    # MCP server (FastMCP)
 ├── docker-compose.yml
 ├── .github/workflows/ci.yml
 ├── .env.example

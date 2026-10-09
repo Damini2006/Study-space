@@ -15,7 +15,7 @@ pieces add up. For the gates and workflow, see
 | API | `backend/` | FastAPI over uvicorn: auth, REST + SSE, enqueue | Render (container; image defaults `ENV=production`) |
 | Worker | `worker/` | arq: ingestion + eval-run jobs + a cron cleanup | Render (container; `arq studyspace_worker.main.WorkerSettings`) |
 | Frontend | `frontend/` | React SPA, consent-gated telemetry | Vercel (static build) |
-| MCP server | `mcp/` | FastMCP over stdio, personal-access tokens | The user's own machine |
+| MCP | `backend/studyspace/mcp_app.py` | FastMCP tools mounted at `/mcp` (SSE), personal-access tokens, in-process calls back into the API | Same process as the API (Render container) |
 | Supabase | hosted | Postgres + pgvector, Auth, Storage, RLS | Supabase; schema lives in `supabase/migrations` |
 | Redis | — | Rate-limit counters + the arq queue | Managed, or compose |
 | LiteLLM | in-process | Every LLM and embedding call, provider-agnostic | Inside API and worker |
