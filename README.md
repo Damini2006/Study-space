@@ -49,7 +49,10 @@ python -m pytest -q
 ```
 
 Integration and RLS tests **skip rather than fail** when no database is
-reachable, so the suite stays green on a machine without Postgres.
+reachable, so the suite stays green on a machine without Postgres. CI is
+the exception: the workflow starts a Postgres + pgvector service, and an
+unreachable database there is a **failure**, so the integration suite
+can never quietly skip itself out of a run.
 
 **Frontend** — from `frontend/`:
 

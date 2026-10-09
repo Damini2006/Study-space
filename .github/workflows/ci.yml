@@ -19,6 +19,31 @@ permissions:
 jobs:
   lint-and-test:
     runs-on: ubuntu-latest
+    # The integration suite (RLS, retrieval's candidate SQL, MCP PAT auth,
+    # API routes over real migrations) needs Postgres + pgvector. Without
+    # this service ~80 tests skipped themselves and CI proved only the
+    # DB-free halves — hybrid_search's q.query UndefinedColumnError lived
+    # for weeks that way. The gate in tests/conftest.py fails — not skips
+    # — when this service exists but does not answer.
+    services:
+      postgres:
+        # Same image docker-compose.yml runs locally, so both gates see
+        # the same extensions (vector, pg_trgm) and same major version.
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: studyspace_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d studyspace_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 12
+    env:
+      # conftest reads TEST_DATABASE_URL first; its default port (54329)
+      # is the compose-published one, which nothing on a runner serves.
+      TEST_DATABASE_URL: postgresql://postgres:postgres@localhost:5432/studyspace_test
     steps:
       - uses: actions/checkout@v7
 
