@@ -76,34 +76,43 @@ export default function Focus() {
     onError: error,
   });
 
+  // The tick is pure on purpose. StrictMode re-invokes updater functions
+  // to surface impurity, and the old completion branch ran
+  // createSession.mutate from inside this updater — one completed Pomodoro
+  // logged the session twice and counted two completions. Side effects
+  // belong in the effect below, where one state transition runs once.
   useEffect(() => {
     if (running && remaining > 0) {
-      intervalRef.current = setInterval(() => setRemaining(r => {
-        if (r <= 1) {
-          setRunning(false);
-          setCompleted(c => c + 1);
-          createSession.mutate({ kind, duration_min: duration, completed: true });
-          if (kind === "focus") {
-            setKind("break");
-            setDuration(DEFAULT_BREAK);
-            setRemaining(DEFAULT_BREAK * 60);
-          } else {
-            setKind("focus");
-            setDuration(DEFAULT_FOCUS);
-            setRemaining(DEFAULT_FOCUS * 60);
-          }
-          return 0;
-        }
-        return r - 1;
-      }), 1000);
+      intervalRef.current = setInterval(
+        () => setRemaining(r => (r <= 1 ? 0 : r - 1)),
+        1000
+      );
     } else {
       clearInterval(intervalRef.current);
     }
     return () => clearInterval(intervalRef.current);
-    // `remaining` is intentionally the only changing dep: it re-arms the
-    // interval every tick, so the callback always closes over fresh
-    // `kind`/`duration`/`createSession`. Adding the mutation object here would
-    // re-arm on every render and could starve the timer.
+  }, [running, remaining]);
+
+  // Completion fires once per transition into (running, 0): StrictMode
+  // double-invokes updaters, but runs each committed update's effects a
+  // single time, so the log and the phase switch cannot double.
+  useEffect(() => {
+    if (!running || remaining !== 0) return;
+    setRunning(false);
+    setCompleted(c => c + 1);
+    createSession.mutate({ kind, duration_min: duration, completed: true });
+    if (kind === "focus") {
+      setKind("break");
+      setDuration(DEFAULT_BREAK);
+      setRemaining(DEFAULT_BREAK * 60);
+    } else {
+      setKind("focus");
+      setDuration(DEFAULT_FOCUS);
+      setRemaining(DEFAULT_FOCUS * 60);
+    }
+    // `kind`/`duration`/`createSession` are deliberately not deps: the
+    // guard on (running, remaining) already scopes this to one transition,
+    // and listing them would re-run the effect on every render.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [running, remaining]);
 
