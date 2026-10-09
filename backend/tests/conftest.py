@@ -112,15 +112,33 @@ def db_url() -> str:
     return TEST_DB_URL
 
 
+async def _require_reachable_database(db_url: str) -> None:
+    """Open the integration suite's door: fail under CI, skip elsewhere.
+
+    The skip is a convenience for machines without Postgres — and a
+    liability in CI, where an unreachable database would silently empty
+    the suite (exactly how hybrid_search's q.query bug shipped green).
+    CI starts the database itself, so one that does not answer there is
+    broken infrastructure, not a reason to stop testing.
+    """
+    if await _database_reachable(db_url):
+        return
+    if os.environ.get("CI"):
+        pytest.fail(
+            f"CI expected a database at {db_url!r} but none answered — "
+            "check the postgres service and TEST_DATABASE_URL"
+        )
+    pytest.skip(
+        f"no database at {db_url!r} — set TEST_DATABASE_URL, or run "
+        "`docker compose up -d postgres` and create the studyspace_test "
+        "database (see the module docstring), to run the integration suite"
+    )
+
+
 @pytest.fixture()
 async def migrated_db(db_url):
     """Yield a fresh, fully-migrated test database (per test for isolation)."""
-    if not await _database_reachable(db_url):
-        pytest.skip(
-            f"no database at {db_url!r} — set TEST_DATABASE_URL, or run "
-            "`docker compose up -d postgres` and create the studyspace_test "
-            "database (see the module docstring), to run the integration suite"
-        )
+    await _require_reachable_database(db_url)
     await _apply_migrations(db_url)
     return db_url
 
