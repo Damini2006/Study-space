@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Globe, Copy, Check, ExternalLink } from "lucide-react";
 import { Dialog } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -21,15 +21,45 @@ function CopyButton({ text, onCopied }) {
   );
 }
 
-export default function PublishDialog({ spaceId, open, onClose, initialSlug }) {
+export default function PublishDialog({ spaceId, open, onClose }) {
   const { success, error, toast } = useToast();
-  const [slug, setSlug] = useState(initialSlug || "");
-  const [published, setPublished] = useState(false);
+  const [slug, setSlug] = useState("");
   const [publicInfo, setPublicInfo] = useState(null);
+  const [checking, setChecking] = useState(false);
+  const [checkFailed, setCheckFailed] = useState(false);
   const [saving, setSaving] = useState(false);
 
-  // Load public info when opening
-  // (In real use, parent would pass the current public state)
+  // The link is live only while the space has a public row that has not been
+  // unpublished — the backend keeps the row either way, so `unpublished_at`
+  // is what separates "published" from "was published once".
+  const published = Boolean(publicInfo) && !publicInfo.unpublished_at;
+
+  // Look the current publish state up on every open, so an already-published
+  // space shows its live URL instead of asking the user to publish again.
+  useEffect(() => {
+    if (!open) return undefined;
+    let cancelled = false;
+    setChecking(true);
+    setCheckFailed(false);
+    setPublicInfo(null);
+    setSlug("");
+    spacesApi
+      .getPublicInfo(spaceId)
+      .then((info) => {
+        if (cancelled) return;
+        setPublicInfo(info ?? null);
+        setSlug(info?.slug ?? "");
+        setChecking(false);
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setCheckFailed(true);
+        setChecking(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [open, spaceId]);
 
   const handlePublish = async (e) => {
     e.preventDefault();
@@ -38,7 +68,6 @@ export default function PublishDialog({ spaceId, open, onClose, initialSlug }) {
     try {
       const res = await spacesApi.publish(spaceId, { slug: slug.trim() });
       setPublicInfo(res);
-      setPublished(true);
       success("Space published!");
     } catch (e) {
       if (e.status === 409) {
@@ -55,7 +84,6 @@ export default function PublishDialog({ spaceId, open, onClose, initialSlug }) {
     if (!confirm("Unpublish this space? The public link will stop working immediately.")) return;
     try {
       await spacesApi.unpublish(spaceId);
-      setPublished(false);
       setPublicInfo(null);
       success("Space unpublished");
     } catch (e) {
@@ -75,12 +103,20 @@ export default function PublishDialog({ spaceId, open, onClose, initialSlug }) {
   return (
     <Dialog open={open} onClose={onClose} title="Publish to web" className="max-w-xl p-0">
       <div className="p-4 space-y-4">
-        {!published ? (
+        {checking ? (
+          <p className="text-sm text-muted-foreground">Checking publish status…</p>
+        ) : !published ? (
           <>
             <p className="text-sm text-muted-foreground">
               Publish a read-only version of this space at a public URL. Anyone with the link can view
               sources, cards, and notes — but not edit. You can unpublish anytime.
             </p>
+
+            {checkFailed ? (
+              <p className="text-[11px] text-destructive">
+                Couldn't check this space's publish status.
+              </p>
+            ) : null}
 
             <form onSubmit={handlePublish} className="space-y-3">
               <div className="space-y-1.5">
@@ -138,9 +174,6 @@ export default function PublishDialog({ spaceId, open, onClose, initialSlug }) {
 
               <div className="flex items-center gap-2 text-xs text-muted-foreground">
                 <span>Published {publicInfo?.published_at && new Date(publicInfo.published_at).toLocaleDateString()}</span>
-                {publicInfo?.unpublished_at && (
-                  <> · <span className="text-destructive">Unpublished</span></>
-                )}
               </div>
 
               <div className="pt-2 border-t border-border flex gap-2">

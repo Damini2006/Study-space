@@ -153,15 +153,114 @@ describe("the routes behind share links", () => {
 });
 
 describe("PublishDialog", () => {
-  it("shows the origin the link will actually open on", () => {
+  it("shows the origin the link will actually open on", async () => {
+    spacesApi.getPublicInfo.mockResolvedValue(null);
+
     render(
       <ToastProvider>
         <PublishDialog spaceId="s1" open onClose={() => {}} />
       </ToastProvider>
     );
 
-    expect(screen.getByText(`${window.location.origin}/s/`)).toBeInTheDocument();
+    expect(await screen.findByText(`${window.location.origin}/s/`)).toBeInTheDocument();
     expect(screen.queryByText("studyspace.app/s/")).toBeNull();
+  });
+
+  it("opens on the live URL when the space is already published", async () => {
+    spacesApi.getPublicInfo.mockResolvedValue({
+      space_id: "s1",
+      slug: "bio-notes",
+      public_url: `${window.location.origin}/s/bio-notes`,
+      published_at: "2026-10-01T00:00:00Z",
+      unpublished_at: null,
+    });
+
+    render(
+      <ToastProvider>
+        <PublishDialog spaceId="s1" open onClose={() => {}} />
+      </ToastProvider>
+    );
+
+    expect(await screen.findByText("Published")).toBeInTheDocument();
+    expect(spacesApi.getPublicInfo).toHaveBeenCalledWith("s1");
+    expect(
+      screen.getByText(`${window.location.origin}/s/bio-notes`)
+    ).toBeInTheDocument();
+    // No publish form: the link is already live.
+    expect(screen.queryByRole("button", { name: "Publish" })).toBeNull();
+  });
+
+  it("falls back to the form when the link is not live, keeping the old slug", async () => {
+    spacesApi.getPublicInfo.mockResolvedValue({
+      space_id: "s1",
+      slug: "bio-notes",
+      public_url: `${window.location.origin}/s/bio-notes`,
+      published_at: "2026-10-01T00:00:00Z",
+      unpublished_at: "2026-10-02T00:00:00Z",
+    });
+
+    render(
+      <ToastProvider>
+        <PublishDialog spaceId="s1" open onClose={() => {}} />
+      </ToastProvider>
+    );
+
+    expect(await screen.findByRole("button", { name: "Publish" })).toBeInTheDocument();
+    expect(screen.getByLabelText("Public URL slug")).toHaveValue("bio-notes");
+    // The dead URL is not offered as a link.
+    expect(
+      screen.queryByText(`${window.location.origin}/s/bio-notes`)
+    ).toBeNull();
+  });
+
+  it("shows the form empty for a space that was never published", async () => {
+    spacesApi.getPublicInfo.mockResolvedValue(null);
+
+    render(
+      <ToastProvider>
+        <PublishDialog spaceId="s1" open onClose={() => {}} />
+      </ToastProvider>
+    );
+
+    expect(await screen.findByRole("button", { name: "Publish" })).toBeInTheDocument();
+    expect(screen.getByLabelText("Public URL slug")).toHaveValue("");
+    expect(spacesApi.getPublicInfo).toHaveBeenCalledTimes(1);
+  });
+
+  it("says it is checking instead of flashing the publish form first", async () => {
+    let resolveInfo;
+    spacesApi.getPublicInfo.mockReturnValue(
+      new Promise((resolve) => {
+        resolveInfo = resolve;
+      })
+    );
+
+    render(
+      <ToastProvider>
+        <PublishDialog spaceId="s1" open onClose={() => {}} />
+      </ToastProvider>
+    );
+
+    expect(screen.getByText("Checking publish status…")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Publish" })).toBeNull();
+
+    resolveInfo(null);
+    expect(await screen.findByRole("button", { name: "Publish" })).toBeInTheDocument();
+  });
+
+  it("reports a failed status check instead of assuming the space is unpublished", async () => {
+    spacesApi.getPublicInfo.mockRejectedValue(new Error("network down"));
+
+    render(
+      <ToastProvider>
+        <PublishDialog spaceId="s1" open onClose={() => {}} />
+      </ToastProvider>
+    );
+
+    expect(
+      await screen.findByText("Couldn't check this space's publish status.")
+    ).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Publish" })).toBeInTheDocument();
   });
 });
 
