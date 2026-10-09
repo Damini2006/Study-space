@@ -43,8 +43,7 @@ export default function PublishDialog({ spaceId, open, onClose }) {
     setCheckFailed(false);
     setPublicInfo(null);
     setSlug("");
-    spacesApi
-      .getPublicInfo(spaceId)
+    spacesApi.getPublicInfo(spaceId)
       .then((info) => {
         if (cancelled) return;
         setPublicInfo(info ?? null);

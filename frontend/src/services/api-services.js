@@ -8,9 +8,6 @@ export const spacesApi = {
   list: (opts) => api.get(`/spaces${opts?.includeArchived ? "?include_archived=true" : ""}`),
   get: (id) => api.get(`/spaces/${id}`),
   create: (body) => api.post("/spaces", body),
-  update: (id, body) => api.patch(`/spaces/${id}`, body),
-  delete: (id) => api.delete(`/spaces/${id}`),
-
   // Sharing
   createShare: (spaceId, body) => api.post(`/spaces/${spaceId}/shares`, body),
   listShares: (spaceId) => api.get(`/spaces/${spaceId}/shares`),
@@ -22,14 +19,6 @@ export const spacesApi = {
   unpublish: (spaceId) => api.delete(`/spaces/${spaceId}/public`),
   getPublicSpace: (slug) => api.get(`/spaces/public/${slug}`),
   getSharedSpace: (token) => api.get(`/spaces/shared/${token}`),
-
-  // RAG Settings
-  getRagSettings: (spaceId) => api.get(`/spaces/${spaceId}/rag`),
-  updateRagSettings: (spaceId, body) => api.patch(`/spaces/${spaceId}/rag`, body),
-  resetRagSettings: (spaceId) => api.delete(`/spaces/${spaceId}/rag`),
-
-  // Citation Audit
-  auditCitations: (spaceId, body) => api.post(`/spaces/${spaceId}/citation-audit`, body),
 
   // Export / Import — `export` fetches with auth and hands back a Blob (a
   // plain link would 401), `importBundle` posts a file as multipart form-data.
@@ -56,22 +45,18 @@ export const chatApi = {
 export const studioApi = {
   generate: (spaceId, body) => api.post(`/spaces/${spaceId}/studio/generate`, body),
   listOutputs: (spaceId) => api.get(`/spaces/${spaceId}/studio/outputs`),
-  getOutput: (spaceId, id) => api.get(`/spaces/${spaceId}/studio/outputs/${id}`),
   updateOutput: (spaceId, id, body) => api.patch(`/spaces/${spaceId}/studio/outputs/${id}`, body),
   deleteOutput: (spaceId, id) => api.delete(`/spaces/${spaceId}/studio/outputs/${id}`),
 };
 
 export const studyApi = {
   due: () => api.get("/study/due"),
-  listCards: (spaceId) => api.get(`/study/cards${spaceId ? `?space_id=${spaceId}` : ""}`),
   review: (body) => api.post("/study/review", body),
-  deleteCard: (cardId) => api.delete(`/study/cards/${cardId}`),
 };
 
 export const plannerApi = {
   createRun: (body) => api.post("/planner/runs", body),
   listRuns: () => api.get("/planner/runs"),
-  getRun: (id) => api.get(`/planner/runs/${id}`),
   approveRun: (id, body) => api.post(`/planner/runs/${id}/approve`, body ?? {}),
   rejectRun: (id) => api.post(`/planner/runs/${id}/reject`, {}),
   listTasks: (includeDone) => api.get(`/planner/tasks${includeDone ? "?include_done=true" : ""}`),
@@ -90,7 +75,6 @@ export const notesApi = {
     return api.get(`/notes${qs ? `?${qs}` : ""}`);
   },
   create: (body) => api.post("/notes", body),
-  get: (id) => api.get(`/notes/${id}`),
   update: (id, body) => api.patch(`/notes/${id}`, body),
   delete: (id) => api.delete(`/notes/${id}`),
 };
@@ -98,13 +82,11 @@ export const notesApi = {
 export const focusApi = {
   sessions: (limit = 100) => api.get(`/focus/sessions?limit=${limit}`),
   create: (body) => api.post("/focus/sessions", body),
-  delete: (id) => api.delete(`/focus/sessions/${id}`),
 };
 
 export const habitsApi = {
   list: () => api.get("/habits"),
   create: (body) => api.post("/habits", body),
-  update: (id, body) => api.patch(`/habits/${id}`, body),
   delete: (id) => api.delete(`/habits/${id}`),
   toggleLog: (id, body) => api.post(`/habits/${id}/logs`, body ?? {}),
 };
@@ -130,16 +112,13 @@ export const analyticsApi = {
 };
 
 export const evalsApi = {
-  dataset: () => api.get("/evals/dataset"),
   startRun: (body) => api.post("/evals/run", body),
   listRuns: () => api.get("/evals/runs"),
-  getRun: (id) => api.get(`/evals/runs/${id}`),
   results: (id) => api.get(`/evals/runs/${id}/results`),
 };
 
 export const demoApi = {
   session: (reset = false) => api.post("/demo/session", { reset }),
-  reset: () => api.post("/demo/reset", {}),
 };
 
 export const meApi = {
@@ -156,13 +135,12 @@ export const meApi = {
 
 export const modelsApi = {
   catalog: () => api.get("/models/catalog"),
-  config: () => api.get("/models/config"),
   defaults: () => api.get("/models/defaults"),
 };
 
 export const promptTemplatesApi = {
   // Built-in templates are addressable by their type name ("chat_system"), custom
-  // ones by UUID — so `render` and `get` accept either without the caller caring.
+  // ones by UUID — so `render` accepts either without the caller caring.
   list: ({ spaceId, type } = {}) => {
     const q = new URLSearchParams();
     if (spaceId) q.set("space_id", spaceId);
@@ -170,7 +148,6 @@ export const promptTemplatesApi = {
     const qs = q.toString();
     return api.get(`/prompt-templates${qs ? `?${qs}` : ""}`);
   },
-  get: (id) => api.get(`/prompt-templates/${encodeURIComponent(id)}`),
   create: (body) => {
     const { space_id: spaceId, ...rest } = body;
     const q = spaceId ? `?space_id=${encodeURIComponent(spaceId)}` : "";
