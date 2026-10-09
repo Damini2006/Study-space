@@ -8,7 +8,7 @@ from datetime import date, timedelta
 from fastapi import APIRouter, HTTPException, Query
 
 from studyspace.deps import DbDep
-from studyspace.models.habits import HabitCreate, HabitLogCreate, HabitLogOut, HabitOut, HabitUpdate
+from studyspace.models.habits import HabitCreate, HabitLogCreate, HabitLogOut, HabitOut
 
 router = APIRouter(prefix="/habits", tags=["habits"])
 
@@ -68,26 +68,6 @@ async def create_habit(body: HabitCreate, db: DbDep) -> HabitOut:
     )
 
 
-@router.patch("/{habit_id}", response_model=HabitOut)
-async def update_habit(habit_id: uuid.UUID, body: HabitUpdate, db: DbDep) -> HabitOut:
-    fields = body.model_dump(exclude_unset=True)
-    if not fields:
-        raise HTTPException(status_code=400, detail="No fields to update.")
-    sets = ", ".join(f"{k} = ${i + 2}" for i, k in enumerate(fields))
-    row = await db.fetchrow(
-        f"update public.habits set {sets} where id = $1 and user_id = auth.uid() returning *",
-        habit_id, *fields.values(),
-    )
-    if row is None:
-        raise HTTPException(status_code=404, detail="Habit not found.")
-    return HabitOut(
-        id=row["id"], name=row["name"], color=row["color"], icon=row["icon"],
-        target_days=row["target_days"], archived=row["archived"],
-        created_at=row["created_at"], updated_at=row["updated_at"],
-        logs=[], done_today=False, streak=0,
-    )
-
-
 @router.delete("/{habit_id}", status_code=204)
 async def delete_habit(habit_id: uuid.UUID, db: DbDep) -> None:
     result = await db.execute(
@@ -113,15 +93,6 @@ async def toggle_log(habit_id: uuid.UUID, body: HabitLogCreate, db: DbDep) -> Ha
             "insert into public.habit_logs (user_id, habit_id, log_date, value) values (auth.uid(), $1, $2, $3)",
             habit_id, log_date, body.value,
         )
-    return await _habit_with_logs(habit_id, db)
-
-
-@router.delete("/{habit_id}/logs/{log_date}", response_model=HabitOut)
-async def delete_log(habit_id: uuid.UUID, log_date: date, db: DbDep) -> HabitOut:
-    await db.execute(
-        "delete from public.habit_logs where habit_id = $1 and log_date = $2 and user_id = auth.uid()",
-        habit_id, log_date,
-    )
     return await _habit_with_logs(habit_id, db)
 
 

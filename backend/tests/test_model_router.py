@@ -1,21 +1,18 @@
-"""Model routing: the catalog, per-task resolution, and the fallback chain.
+"""Model routing: the catalog and per-task resolution.
 
 The Settings panel reads these helpers and tells the operator "answering with
-GPT-4o, falling back to ...". Every claim it makes has to be derived from live
-configuration rather than a wish list, and the fallback chain in particular must
-never suggest something that cannot do the task it is falling back *from*.
+GPT-4o". Every claim it makes has to be derived from live configuration
+rather than a wish list.
 """
 
 from __future__ import annotations
 
 from studyspace.config import get_settings
-from studyspace.models.ai_intelligence import ModelRouterConfig, ModelTask
+from studyspace.models.ai_intelligence import ModelTask
 from studyspace.routers.models import (
     MODEL_CATALOG,
     _entry_for,
-    _fallback_chain,
     _task_models,
-    get_router_config,
     get_task_defaults,
     list_models,
 )
@@ -93,8 +90,8 @@ class TestCatalogEntry:
             assert not missing, f"{name} is missing {sorted(missing)}"
 
     def test_pricing_is_never_negative_or_free_for_public_models(self):
-        # Cost is what the fallback chain sorts by; a stray 0.0 would jump a
-        # model to the front of every chain it appears in.
+        # The panel shows these prices as-is; a stray 0.0 would tell the
+        # operator a public model is free to run.
         for name, meta in MODEL_CATALOG.items():
             if meta["provider"] == "local":
                 continue
@@ -125,113 +122,6 @@ class TestTaskRouting:
         assert flat["generate"] == "claude-3-5-sonnet"
         assert flat["embed"] == "text-embedding-3-small"
         assert set(flat) == {t.value for t in ModelTask}
-
-    async def test_config_endpoint_reports_the_same_names(self, monkeypatch):
-        """`/models/config` and `/models/defaults` must never disagree."""
-        _use(monkeypatch, LITELLM_MODEL="gpt-4o", LITELLM_JUDGE_MODEL="claude-3-haiku")
-        cfg = await get_router_config(None)
-        flat = await get_task_defaults(None)
-        assert cfg.chat_model == flat["chat"]
-        assert cfg.judge_model == flat["judge"]
-        assert cfg.generate_model == flat["generate"]
-        assert cfg.classify_model == flat["classify"]
-        assert cfg.embed_model == flat["embed"]
-
-
-class TestFallbackChain:
-    def test_never_offers_an_embedding_model_as_a_text_fallback(self, monkeypatch):
-        """An embed-only model used to sit in the shared pool.
-
-        It was therefore offered as a fallback for chat, judge, generate and
-        classify. Routing a text task to it either fails or returns a vector
-        where prose was expected, and nothing downstream checks for that — the
-        stream would emit a blob as if it were the answer.
-        """
-        _use(monkeypatch, LITELLM_MODEL="gpt-4o", LITELLM_JUDGE_MODEL="gpt-4o")
-        for task in (ModelTask.chat, ModelTask.judge, ModelTask.generate, ModelTask.classify):
-            chain = _fallback_chain(task, "gpt-4o")
-            assert chain, f"{task.value} had no chain to check"
-            for name in chain:
-                assert "embeddings" not in MODEL_CATALOG[name]["capabilities"], (task, name)
-            assert "text-embedding-3-small" not in chain
-
-    def test_embed_task_only_suggests_embedding_models(self, monkeypatch):
-        _use(monkeypatch, EMBEDDING_MODEL="text-embedding-3-large")
-        chain = _fallback_chain(ModelTask.embed, "text-embedding-3-large")
-        assert chain == ["text-embedding-3-small"]
-        for name in chain:
-            assert "embeddings" in MODEL_CATALOG[name]["capabilities"]
-
-    def test_fallbacks_are_ordered_by_ascending_cost(self, monkeypatch):
-        # A fallback always trades some quality for cost, so the cheapest
-        # plausible option comes first.
-        _use(monkeypatch, LITELLM_MODEL="claude-3-5-sonnet")
-        chain = _fallback_chain(ModelTask.chat, "claude-3-5-sonnet")
-        assert chain == ["gpt-4o-mini", "claude-3-haiku"]
-        costs = [MODEL_CATALOG[name]["cost_per_1k_input"] for name in chain]
-        assert costs == sorted(costs)
-
-    def test_primary_is_never_its_own_fallback(self, monkeypatch):
-        _use(monkeypatch, LITELLM_MODEL="gpt-4o")
-        for task in (ModelTask.chat, ModelTask.embed):
-            primary = _task_models()[task]
-            assert primary not in _fallback_chain(task, primary)
-
-    def test_nothing_cheaper_yields_an_empty_chain(self):
-        # gpt-4o-mini is the cheapest documented chat model that can answer.
-        assert _fallback_chain(ModelTask.chat, "gpt-4o-mini") == []
-
-    def test_an_undocumented_primary_gets_no_chain(self, monkeypatch):
-        # Without a price there is no honest way to claim an alternative would
-        # be cheaper, so we decline rather than guess.
-        _use(monkeypatch, LITELLM_MODEL="acme/experimental-llm")
-        assert _fallback_chain(ModelTask.chat, "acme/experimental-llm") == []
-
-    def test_a_proxy_deployment_suggests_nothing(self, monkeypatch):
-        """The operator's own model list is authoritative behind a proxy.
-
-        Naming public endpoints there would propose routes the deployment may
-        not even be able to reach, and would bypass a deliberate routing choice.
-        """
-        _use(
-            monkeypatch,
-            LITELLM_BASE_URL="http://litellm.internal:4000",
-            LITELLM_MODEL="gpt-4o",
-        )
-        assert _fallback_chain(ModelTask.chat, "gpt-4o") == []
-
-    def test_the_local_model_is_never_suggested(self, monkeypatch):
-        # It is free, so it would sort first if cost were the only filter.
-        # Routing to it is a privacy decision, not something to do implicitly.
-        _use(monkeypatch, LITELLM_MODEL="claude-3-5-sonnet")
-        assert "llama3.1:8b" not in _fallback_chain(ModelTask.chat, "claude-3-5-sonnet")
-
-
-class TestRouterConfigEndpoint:
-    async def test_reports_the_exact_routing_the_pipeline_runs(self, monkeypatch):
-        _use(
-            monkeypatch,
-            LITELLM_MODEL="gpt-4o",
-            LITELLM_JUDGE_MODEL="claude-3-haiku",
-            EMBEDDING_MODEL="text-embedding-3-large",
-        )
-        cfg = await get_router_config(None)
-        assert isinstance(cfg, ModelRouterConfig)
-        assert cfg.chat_model == "gpt-4o"
-        assert cfg.judge_model == "claude-3-haiku"
-        assert cfg.generate_model == "gpt-4o"
-        assert cfg.classify_model == "gpt-4o"
-        assert cfg.embed_model == "text-embedding-3-large"
-        assert set(cfg.fallbacks) == {t.value for t in ModelTask}
-
-    async def test_no_reported_text_fallback_is_an_embedding_model(self, monkeypatch):
-        _use(monkeypatch, LITELLM_MODEL="gpt-4o", LITELLM_JUDGE_MODEL="gpt-4o")
-        cfg = await get_router_config(None)
-        for task in ModelTask:
-            if task is ModelTask.embed:
-                continue
-            for name in cfg.fallbacks[task.value]:
-                assert "embeddings" not in MODEL_CATALOG[name]["capabilities"], (task, name)
 
 
 class TestCatalogEndpoint:

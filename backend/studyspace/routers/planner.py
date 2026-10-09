@@ -104,14 +104,6 @@ async def list_runs(db: DbDep) -> list[PlannerRunOut]:
     return [_run_out(r) for r in rows]
 
 
-@router.get("/runs/{run_id}", response_model=PlannerRunOut)
-async def get_run(db: DbDep, run_id: uuid.UUID) -> PlannerRunOut:
-    row = await db.fetchrow(_RUN_SELECT, run_id)
-    if row is None:
-        raise HTTPException(status_code=404, detail="Run not found.")
-    return _run_out(row)
-
-
 @router.post("/runs/{run_id}/approve", response_model=PlannerRunOut)
 async def approve_run(db: DbDep, user: UserDep, run_id: uuid.UUID, body: PlannerApprove) -> PlannerRunOut:
     row = await db.fetchrow(_RUN_SELECT, run_id)

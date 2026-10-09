@@ -151,47 +151,6 @@ async def test_delete_from_storage_maps_a_network_failure(storage_stub):
         await delete_from_storage(token="t", path="u/s/o/f.md")
 
 
-# ----- space deletion removes the files its sources point at -----
-
-
-async def test_space_delete_removes_the_stored_files(
-    api_client, migrated_db, two_users, monkeypatch
-):
-    from studyspace.routers import spaces as spaces_router
-
-    h = headers_for(two_users["alice"], ALICE["email"])
-    paths = [
-        f"{two_users['alice']}/{uuid.uuid4()}/{uuid.uuid4()}/a.md",
-        f"{two_users['alice']}/{uuid.uuid4()}/{uuid.uuid4()}/b.md",
-    ]
-    space_id = await _seed(migrated_db, two_users["alice"], "Space", paths)
-    calls = _record_deletes(monkeypatch, spaces_router)
-
-    resp = await api_client.delete(f"/api/spaces/{space_id}", headers=h)
-    assert resp.status_code == 204
-
-    assert sorted(c["path"] for c in calls) == sorted(paths)
-    bearer = h["Authorization"].split(" ", 1)[1]
-    assert all(c["token"] == bearer for c in calls)
-    assert await _count(
-        migrated_db, "select count(*) from public.sources where space_id = $1::uuid", space_id
-    ) == 0
-
-
-async def test_space_delete_without_stored_files_touches_no_storage(
-    api_client, migrated_db, two_users, monkeypatch
-):
-    from studyspace.routers import spaces as spaces_router
-
-    h = headers_for(two_users["alice"], ALICE["email"])
-    space_id = await _seed(migrated_db, two_users["alice"], "Empty", [])
-    calls = _record_deletes(monkeypatch, spaces_router)
-
-    resp = await api_client.delete(f"/api/spaces/{space_id}", headers=h)
-    assert resp.status_code == 204
-    assert calls == []
-
-
 async def test_source_delete_removes_its_file_through_the_shared_service(
     api_client, migrated_db, two_users, monkeypatch
 ):

@@ -20,7 +20,6 @@ from studyspace.routers.prompt_templates import (
     _hydrate,
     _render,
     _system_row,
-    get_template,
     list_templates,
     render_template,
 )
@@ -219,31 +218,6 @@ class TestListing:
         assert excinfo.value.status_code == 400
         assert "nonsense" in excinfo.value.detail
         assert "chat_system" in excinfo.value.detail
-
-
-class TestFetchingOne:
-    async def test_a_built_in_is_fetchable_by_type_name(self):
-        row = await get_template(FakeDb(), "chat_system")
-        assert row["is_system"] is True
-        assert row["type"] == "chat_system"
-        assert row["id"] is None
-
-    async def test_types_without_a_built_in_return_404_not_500(self):
-        """The enum admits types there is no template for.
-
-        `PromptTemplateType("relevance_gate")` succeeds, then indexing
-        SYSTEM_TEMPLATES raised KeyError — FastAPI turns that into a 500, the
-        exact wrong answer to "show me something that isn't there".
-        """
-        for type_ in sorted(_TYPES_WITHOUT_BUILT_IN):
-            with pytest.raises(HTTPException) as excinfo:
-                await get_template(FakeDb(), type_)
-            assert excinfo.value.status_code == 404, type_
-
-    async def test_an_unknown_id_is_a_404(self):
-        with pytest.raises(HTTPException) as excinfo:
-            await get_template(FakeDb(), "definitely-not-a-type")
-        assert excinfo.value.status_code == 404
 
 
 class TestRenderEndpoint:

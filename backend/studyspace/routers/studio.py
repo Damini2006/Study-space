@@ -44,19 +44,6 @@ async def list_outputs(space_id: uuid.UUID, db: DbDep) -> list[StudioOutputOut]:
     return [StudioOutputOut(**_output_row(r)) for r in rows]
 
 
-@router.get("/outputs/{output_id}", response_model=StudioOutputOut)
-async def get_output(space_id: uuid.UUID, output_id: uuid.UUID, db: DbDep) -> StudioOutputOut:
-    row = await db.fetchrow(
-        "select id, space_id, type, title, content, source_ids, created_at, updated_at "
-        "from public.studio_outputs where id = $1 and space_id = $2 and user_id = auth.uid()",
-        output_id,
-        space_id,
-    )
-    if row is None:
-        raise HTTPException(status_code=404, detail="Output not found.")
-    return StudioOutputOut(**_output_row(row))
-
-
 @router.patch("/outputs/{output_id}", response_model=StudioOutputOut)
 async def update_output(
     space_id: uuid.UUID, output_id: uuid.UUID, body: StudioUpdate, db: DbDep

@@ -72,18 +72,6 @@ async def list_runs(db: DbDep, admin: AdminDep, limit: int = 30) -> list[EvalRun
     return [_run_out(r) for r in rows]
 
 
-@router.get("/runs/{run_id}", response_model=EvalRunOut)
-async def get_run(db: DbDep, admin: AdminDep, run_id: uuid.UUID) -> EvalRunOut:
-    row = await db.fetchrow(
-        "select id, label, dataset_version, config, status, summary, error, started_at, finished_at, created_at "
-        "from public.eval_runs where id = $1 and user_id = auth.uid()",
-        run_id,
-    )
-    if row is None:
-        raise HTTPException(status_code=404, detail="Eval run not found.")
-    return _run_out(row)
-
-
 @router.get("/runs/{run_id}/results", response_model=list[EvalResultOut])
 async def get_results(db: DbDep, admin: AdminDep, run_id: uuid.UUID) -> list[EvalResultOut]:
     rows = await db.fetch(
@@ -105,25 +93,3 @@ async def get_results(db: DbDep, admin: AdminDep, run_id: uuid.UUID) -> list[Eva
             )
         )
     return out
-
-
-@router.get("/dataset")
-async def dataset_info(db: DbDep, admin: AdminDep) -> dict:
-    from studyspace.services.eval_dataset import dataset_path, load_dataset
-
-    try:
-        data = load_dataset()
-    except (OSError, ValueError):
-        # Honest about a missing file (the route used to probe one path
-        # and claim nothing about why it was absent).
-        return {"exists": False, "path": str(dataset_path()), "count": 0}
-    questions = data["questions"]
-    answerable = sum(1 for q in questions if q.get("kind", "answerable") == "answerable")
-    return {
-        "exists": True,
-        "version": data.get("version", "v1"),
-        "count": len(questions),
-        "answerable": answerable,
-        "unanswerable": len(questions) - answerable,
-        "configs": DEFAULT_CONFIGS,
-    }

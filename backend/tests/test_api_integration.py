@@ -19,7 +19,7 @@ async def test_missing_token_is_401(api_client, migrated_db, two_users):
     assert resp.status_code == 401
 
 
-async def test_spaces_crud_scoped_to_user(api_client, migrated_db, two_users):
+async def test_spaces_scoped_to_user(api_client, migrated_db, two_users):
     h = headers_for(USER["id"], USER["email"])
     create = await api_client.post(
         "/api/spaces",
@@ -45,16 +45,6 @@ async def test_spaces_crud_scoped_to_user(api_client, migrated_db, two_users):
         headers=headers_for(OTHER["id"], OTHER["email"]),
     )
     assert fetch_denied.status_code == 404
-
-    # patch + delete by owner
-    patched = await api_client.patch(
-        f"/api/spaces/{space['id']}", json={"title": "Cell Bio 101"}, headers=h
-    )
-    assert patched.status_code == 200 and patched.json()["title"] == "Cell Bio 101"
-    deleted = await api_client.delete(f"/api/spaces/{space['id']}", headers=h)
-    assert deleted.status_code == 204
-    refetch = await api_client.get(f"/api/spaces/{space['id']}", headers=h)
-    assert refetch.status_code == 404
 
 
 async def test_validation_errors_are_422_and_clean(api_client, migrated_db, two_users):
@@ -135,12 +125,6 @@ async def test_review_cards_updates_state_and_logs(api_client, migrated_db, two_
     assert payload["state"] in ("learning", "review", "relearning")
     assert payload["reps"] >= 1
     assert payload["interval_days"] >= 0
-
-    cards = await api_client.get("/api/study/cards", headers=h)
-    assert any(c["id"] == str(card_id) for c in cards.json())
-
-    deleted = await api_client.delete(f"/api/study/cards/{card_id}", headers=h)
-    assert deleted.status_code == 204
 
 
 async def test_focus_analytics_and_plans_roundtrip(api_client, migrated_db, two_users):

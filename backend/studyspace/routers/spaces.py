@@ -6,7 +6,7 @@ import json
 import secrets
 import uuid
 
-from fastapi import APIRouter, HTTPException, Request
+from fastapi import APIRouter, HTTPException
 
 from studyspace.config import get_settings
 from studyspace.deps import DbDep, PublicDbDep
@@ -19,9 +19,7 @@ from studyspace.models.spaces import (
     SpaceShareCreate,
     SpaceShareListItem,
     SpaceShareOut,
-    SpaceUpdate,
 )
-from studyspace.services.source_intake import StorageDeleteError, delete_from_storage
 
 router = APIRouter(prefix="/spaces", tags=["spaces"])
 
@@ -96,51 +94,6 @@ async def get_space(db: DbDep, space_id: uuid.UUID) -> SpaceOut:
     if row is None:
         raise HTTPException(status_code=404, detail="Space not found.")
     return _to_out(row)
-
-
-@router.patch("/{space_id}", response_model=SpaceOut)
-async def update_space(db: DbDep, space_id: uuid.UUID, body: SpaceUpdate) -> SpaceOut:
-    fields = body.model_dump(exclude_unset=True)
-    if not fields:
-        raise HTTPException(status_code=400, detail="No fields to update.")
-    sets = ", ".join(f"{k} = ${i + 2}" for i, k in enumerate(fields))
-    await db.execute(
-        f"update public.spaces set {sets} where id = $1", space_id, *fields.values()
-    )
-    row = await db.fetchrow(_SPACE_SELECT + " where sp.id = $1", space_id)
-    if row is None:
-        raise HTTPException(status_code=404, detail="Space not found.")
-    return _to_out(row)
-
-
-@router.delete("/{space_id}", status_code=204)
-async def delete_space(request: Request, db: DbDep, space_id: uuid.UUID) -> None:
-    """Delete the space, its rows, **and its stored documents**.
-
-    The storage paths come from the sources table (they exist only while
-    the rows do), so they are read before the cascade. File removal is
-    best-effort: the row delete is what "deleted" means, and an object
-    left behind belongs to no row — no claim is made about it either way.
-    """
-    paths = [
-        r["storage_path"]
-        for r in await db.fetch(
-            "select storage_path from public.sources "
-            "where space_id = $1 and storage_path is not null and user_id = auth.uid()",
-            space_id,
-        )
-    ]
-    result = await db.execute("delete from public.spaces where id = $1", space_id)
-    if result == "DELETE 0":
-        raise HTTPException(status_code=404, detail="Space not found.")
-
-    if paths:
-        token = request.headers.get("authorization", "").split(" ", 1)[-1]
-        for path in paths:
-            try:
-                await delete_from_storage(token=token, path=path)
-            except StorageDeleteError:
-                pass  # the rows are gone; this object now belongs to no row
 
 
 # ----- Sharing (invite links) -----

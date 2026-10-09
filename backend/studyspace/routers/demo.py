@@ -44,15 +44,3 @@ async def demo_session(body: DemoRequest, db: DbDep, user: UserDep) -> dict:
     result = await seed_demo(user.id, db)
     result["already_seeded"] = False
     return result
-
-
-@router.post("/reset")
-async def demo_reset(db: DbDep, user: UserDep) -> dict:
-    settings = get_settings()
-    if not settings.demo_enabled:
-        raise HTTPException(status_code=403, detail="Demo workspace is disabled on this deployment.")
-    await reset_user_data(user.id, db)
-    result = await seed_demo(user.id, db)
-    result["reset"] = True
-    result["already_seeded"] = False
-    return result

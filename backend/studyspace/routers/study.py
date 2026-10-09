@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import json
-import uuid
 from datetime import datetime, timezone
 
 from fastapi import APIRouter, HTTPException
@@ -102,15 +101,6 @@ async def due_cards(db: DbDep, limit: int = 50) -> DueOut:
     )
 
 
-@router.get("/cards", response_model=list[CardOut])
-async def list_cards(db: DbDep, space_id: uuid.UUID | None = None) -> list[CardOut]:
-    if space_id:
-        rows = await db.fetch(_CARD_SELECT + " and c.space_id = $1 order by c.created_at desc limit 500", space_id)
-    else:
-        rows = await db.fetch(_CARD_SELECT + " order by c.created_at desc limit 500")
-    return [_card_out(r) for r in rows]
-
-
 @router.post("/review", response_model=ReviewOut)
 async def review_card(body: ReviewIn, db: DbDep, user: UserDep) -> ReviewOut:
     row = await db.fetchrow(
@@ -177,12 +167,3 @@ async def review_card(body: ReviewIn, db: DbDep, user: UserDep) -> ReviewOut:
         interval_days=round(outcome.interval_days, 3),
         due_count=int(remaining or 0),
     )
-
-
-@router.delete("/cards/{card_id}", status_code=204)
-async def delete_card(db: DbDep, card_id: uuid.UUID) -> None:
-    result = await db.execute(
-        "delete from public.cards where id = $1 and user_id = auth.uid()", card_id
-    )
-    if result == "DELETE 0":
-        raise HTTPException(status_code=404, detail="Card not found.")

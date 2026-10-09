@@ -2,10 +2,9 @@
 
 from __future__ import annotations
 
-import uuid
 from datetime import datetime, timezone
 
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, Query
 
 from studyspace.deps import DbDep
 from studyspace.models.focus import FocusSessionCreate, FocusSessionOut
@@ -53,12 +52,3 @@ async def create_session(body: FocusSessionCreate, db: DbDep) -> FocusSessionOut
         started_at=row["started_at"], ended_at=row["ended_at"], completed=row["completed"],
         space_id=row["space_id"], space_title=None, created_at=row["created_at"],
     )
-
-
-@router.delete("/sessions/{session_id}", status_code=204)
-async def delete_session(db: DbDep, session_id: uuid.UUID) -> None:
-    result = await db.execute(
-        "delete from public.focus_sessions where id = $1 and user_id = auth.uid()", session_id
-    )
-    if result == "DELETE 0":
-        raise HTTPException(status_code=404, detail="Session not found.")

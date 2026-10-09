@@ -69,16 +69,6 @@ async def create_note(db: DbDep, body: NoteCreate) -> NoteOut:
     return _to_out(row)
 
 
-@router.get("/{note_id}", response_model=NoteOut)
-async def get_note(db: DbDep, note_id: uuid.UUID) -> NoteOut:
-    row = await db.fetchrow(
-        "select * from public.notes where id = $1 and user_id = auth.uid()", note_id
-    )
-    if row is None:
-        raise HTTPException(status_code=404, detail="Note not found.")
-    return _to_out(row)
-
-
 @router.patch("/{note_id}", response_model=NoteOut)
 async def update_note(db: DbDep, note_id: uuid.UUID, body: NoteUpdate) -> NoteOut:
     fields = body.model_dump(exclude_unset=True)

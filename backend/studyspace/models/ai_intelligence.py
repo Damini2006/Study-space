@@ -43,17 +43,6 @@ class ModelConfig(BaseModel):
     is_default_for: list[ModelTask] = []
 
 
-class ModelRouterConfig(BaseModel):
-    """Per-task model selection with fallbacks, as actually deployed."""
-    chat_model: str
-    judge_model: str
-    generate_model: str
-    embed_model: str
-    classify_model: str
-    # task -> ordered fallback chain, cheapest first
-    fallbacks: dict[str, list[str]] = {}
-
-
 # ============================================================
 # Prompt Templates
 # ============================================================
