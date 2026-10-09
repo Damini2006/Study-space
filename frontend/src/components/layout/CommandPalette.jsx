@@ -10,7 +10,7 @@ import {
   Library,
 } from "lucide-react";
 import { Dialog } from "@/components/ui/dialog";
-import { api } from "@/lib/api";
+import { spacesApi } from "@/services/api-services";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
 import { NAV_ITEMS } from "@/components/layout/use-command-palette";
@@ -63,7 +63,7 @@ export default function CommandPalette({ open, onClose }) {
 
   const { data: spaces = [] } = useQuery({
     queryKey: ["spaces"],
-    queryFn: () => api.get("/spaces"),
+    queryFn: () => spacesApi.list(),
     enabled: open,
   });
 

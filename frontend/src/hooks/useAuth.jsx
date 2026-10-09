@@ -1,6 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import { supabase } from "@/lib/supabase";
-import { api } from "@/lib/api";
+import { demoApi, meApi } from "@/services/api-services";
 
 const AuthContext = createContext(null);
 
@@ -21,7 +21,7 @@ export function AuthProvider({ children }) {
 
   const loadProfile = useCallback(async () => {
     try {
-      const me = await api.get("/me");
+      const me = await meApi.get();
       setProfile(me);
       if (me?.theme) {
         document.documentElement.setAttribute("data-theme", me.theme);
@@ -156,7 +156,7 @@ export function AuthProvider({ children }) {
         }
       }
 
-      const result = await api.post("/demo/session", { reset });
+      const result = await demoApi.session(reset);
       await loadProfile();
       return result;
     },

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { api } from "@/lib/api";
+import { meApi } from "@/services/api-services";
 import { useAuth } from "@/hooks/useAuth";
 
 // `swatch` is the preview colour used by the theme pickers (Settings, AppShell).
@@ -41,7 +41,7 @@ export function useTheme() {
       }
       if (isAuthenticated) {
         try {
-          await api.patch("/me", { theme: next });
+          await meApi.update({ theme: next });
         } catch {
           /* theme still applies locally if the API is unreachable */
         }
