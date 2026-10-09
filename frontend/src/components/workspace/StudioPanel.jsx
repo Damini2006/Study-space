@@ -115,24 +115,24 @@ export default function StudioPanel({ spaceId }) {
               <QuizView output={openOutput} />
             )}
 
-            {/* Version history section */}
+            {/* Every other generation in this space, labelled by type */}
             <div className="mt-4 pt-4 border-t border-border">
-              <h3 className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground mb-2">Previous versions</h3>
+              <h3 className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground mb-2">Other generations</h3>
               {isLoading && <div className="skeleton h-6 w-full rounded-lg" />}
-              {!isLoading && openOutput.type !== "flashcards" && openOutput.type !== "quiz" && outputs.length > 0 ? (
+              {!isLoading && outputs.some((o) => o.id !== openOutput.id) ? (
                 <ul className="space-y-1.5" role="list">
                   {outputs
                     .filter((o) => o.id !== openOutput.id)
                     .map((o) => (
                       <li key={o.id} className="flex items-center gap-2 rounded-lg border border-border bg-surface-2/60 px-2 py-1.5 text-left transition-colors hover:border-primary/40">
-                        <span className="text-[11px] uppercase tracking-wide text-muted-varphi">{labelFor(o.type)}</span>
+                        <span className="text-[11px] uppercase tracking-wide text-muted-foreground">{labelFor(o.type)}</span>
                         <span className="min-w-0 flex-1 truncate text-xs font-medium">{o.title}</span>
                         <span className="shrink-0 text-[10px] text-muted-foreground">{formatDate(o.created_at)}</span>
                       </li>
                     ))}
                 </ul>
               ) : (
-                <p className="text-sm text-muted-foreground rounded-lg border border-dashed border-border px-2 py-3 text-center">No previous versions.</p>
+                <p className="text-sm text-muted-foreground rounded-lg border border-dashed border-border px-2 py-3 text-center">Nothing else generated yet.</p>
               )}
             </div>
           </article>

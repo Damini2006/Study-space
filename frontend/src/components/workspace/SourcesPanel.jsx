@@ -128,7 +128,7 @@ export default function SourcesPanel({ spaceId, selectedPassage, onClearPassage,
             <FileText className="size-6 text-muted-foreground" aria-hidden />
             <p className="text-sm font-medium">No sources yet</p>
             <p className="text-xs text-muted-foreground">
-              Upload a PDF, add a link, or paste text so the assistant has something to work with.
+              Upload a file, or paste text so the assistant has something to work with.
             </p>
             <Button variant="outline" size="sm" onClick={() => fileRef.current?.click()}>
               <Upload className="size-4" /> Upload file

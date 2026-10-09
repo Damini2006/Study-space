@@ -1,6 +1,6 @@
 import { Navigate, Route, Routes, useLocation } from "react-router-dom";
 import { lazy, Suspense, useEffect } from "react";
-import { motion } from "framer-motion";
+import { motion, MotionConfig } from "framer-motion";
 import Protected from "@/components/Protected";
 import Landing from "@/pages/Landing";
 import AuthCallback from "@/pages/AuthCallback";
@@ -130,8 +130,12 @@ export default function App() {
     window.scrollTo({ top: 0 });
   }, [location.pathname]);
 
+  // Settings' reduced-motion card only stays honest if framer-motion listens
+  // too: with reducedMotion="user" it parks transform and layout animation
+  // (the page transition above, hover lifts, dialog slides) whenever the OS
+  // asks, while globals.css's media query already zeroes CSS transitions.
   return (
-    <>
+    <MotionConfig reducedMotion="user">
     <RouteMeta />
     <CookieBanner />
     <motion.div
@@ -177,6 +181,6 @@ export default function App() {
     </Routes>
     </Suspense>
     </motion.div>
-    </>
+    </MotionConfig>
   );
 }

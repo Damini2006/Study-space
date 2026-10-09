@@ -55,21 +55,21 @@ const CAPABILITIES = [
     icon: Brain,
     kicker: "Generation",
     title: "Study material from what you uploaded",
-    body: "Flashcards, cloze deletions, practice questions and summaries. Every generated item keeps a backlink to the passage it was derived from.",
-    meta: "Editable before you save",
+    body: "Flashcards, practice quizzes, summaries and study guides. Every generated item keeps a backlink to the passage it was derived from.",
+    meta: "Summaries and guides edit in place",
   },
   {
     icon: CalendarCheck,
     kicker: "Scheduling",
     title: "Spaced repetition, not a fake progress bar",
-    body: "Real spaced-repetition scheduling — the FSRS algorithm, which works out when each card is about to be forgotten — with per-card difficulty, retention targets and a due queue you can actually finish in a sitting.",
+    body: "Real spaced-repetition scheduling — the FSRS algorithm, which works out when each card is about to be forgotten — with per-card difficulty and a due queue you can actually finish in a sitting.",
     meta: "Per-card difficulty tracking",
   },
   {
     icon: TimerReset,
     kicker: "Focus",
     title: "Timers that record, not perform",
-    body: "Pomodoro sessions, ambient sound beds and habit check-ins feed one honest activity log. No streak theatre, just the minutes you put in.",
+    body: "Every Pomodoro lands in your session history and every habit check-in builds a streak on the dashboard. No streak theatre, just the minutes you put in.",
     meta: "Session history + subject split",
   },
   {
@@ -117,7 +117,7 @@ const PLANS = [
     price: "Free",
     period: "forever",
     note: "Everything you need to stop re-reading slides.",
-    features: ["3 spaces", "Unlimited citations", "FSRS review queue", "Focus timer + habits", "Vision board & finance"],
+    features: ["Unlimited spaces", "Unlimited citations", "FSRS review queue", "Focus timer + habits", "Vision board & finance"],
     cta: "Start free demo",
     featured: false,
   },
@@ -126,7 +126,7 @@ const PLANS = [
     price: "\u20B90",
     period: "during beta",
     note: "For study groups and departments running it together.",
-    features: ["Unlimited spaces", "Shared reading lists", "Group analytics", "Priority retrieval", "Export & backup"],
+    features: ["Everything in Student", "Shareable space links", "Export & backup"],
     cta: "Request access",
     featured: true,
   },
@@ -1120,7 +1120,7 @@ export default function Landing() {
 
               <div className="mt-6">
                 {p.featured ? (
-                  <Link to="/auth" className="block">
+                  <Link to="/contact" className="block">
                     <Button className="w-full" variant="outline">
                       {p.cta}
                     </Button>

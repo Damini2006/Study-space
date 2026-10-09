@@ -472,7 +472,7 @@ export default function SettingsPage() {
             <Card className="p-5 space-y-4">
               <h3 className="font-semibold">Reduced motion</h3>
               <p className="text-sm text-muted-foreground">
-                The app respects your system <code>prefers-reduced-motion</code> setting. All animations are disabled when enabled.
+                The app follows your system <code>prefers-reduced-motion</code> setting: movement animations switch off and CSS transitions are cut to nothing. Only gentle opacity fades remain.
               </p>
             </Card>
           </Card>

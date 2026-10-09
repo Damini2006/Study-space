@@ -576,12 +576,6 @@ function StatsCard({
           icon="AlertCircle"
           className="text-destructive"
         />
-        <StatItem
-          label="Due state"
-          value={reviewCount}
-          icon="Loader2"
-          className="text-warning"
-        />
       </div>
 
       <hr className="my-6" />
