@@ -178,21 +178,12 @@ def create_mcp_mount(backend_app: FastAPI) -> ASGIApp:
         """Search a space's sources by hybrid retrieval: vector + full-text (read scope)."""
         caller = _require_scope("read")
         async with _backend_client(caller) as client:
-            resp = await client.post(
-                f"/api/spaces/{space_id}/chat",
-                json={
-                    "message": query,
-                    "source_ids": [],
-                    "layers": {"relevance_gate": False, "citation_validation": False, "claim_verification": False},
-                },
+            resp = await client.get(
+                f"/api/spaces/{space_id}/search",
+                params={"q": query, "limit": limit},
             )
             _raise_for_status(resp)
-        data = resp.json()
-        chunks: list[dict] = []
-        for event in data.get("events", []):
-            if event.get("type") == "retrieval":
-                chunks.extend(event.get("chunks", []))
-        return SearchSourcesResult(results=chunks[:limit])
+        return SearchSourcesResult(results=resp.json()["results"])
 
     @mcp.tool()
     async def get_due_cards(limit: int = 50) -> DueCardsResult:

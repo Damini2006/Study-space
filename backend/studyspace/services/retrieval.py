@@ -62,7 +62,9 @@ fts as (
          row_number() over (order by ts_rank(c.tsv, q.query) desc, c.id) as r
   from public.chunks c
   join public.sources s on s.id = c.source_id,
-       plainto_tsquery('english', $5) as q
+       -- the column must be named explicitly: `as q` alone names it `q`,
+       -- and q.query (below) then raises UndefinedColumnError
+       plainto_tsquery('english', $5) as q(query)
   where c.space_id = $2
     and c.tsv @@ q
     and ($3::uuid[] is null or c.source_id = any($3))

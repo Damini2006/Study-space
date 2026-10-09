@@ -113,6 +113,11 @@ def _frontend_calls() -> set[tuple[str, str]]:
             method = re.search(r"method:\s*[\"'](\w+)[\"']", m.group(2))
             assert method, f"{path}: fetch to api.base without a method within 300 chars"
             calls.add(_route(_JS_METHODS[method.group(1).lower()], m.group(1)))
+        # streamSSE(`/spaces/${id}/chat`, {...}) — the POST helpers that
+        # consume an SSE stream (ChatPanel). streamSSE is POST-only by its
+        # signature in lib/api.js, so the method needs no parsing.
+        for m in re.finditer(r"streamSSE\(\s*([`'\"])(.*?)\1\s*,", text, re.S):
+            calls.add(_route("POST", m.group(2)))
     return calls
 
 

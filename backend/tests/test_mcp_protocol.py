@@ -49,6 +49,14 @@ def _stub_backend() -> FastAPI:
     async def spaces(request: Request) -> list[dict]:
         return [{"id": "s1", "name": "Biology", "seen_auth": request.headers.get("authorization")}]
 
+    @app.get("/api/spaces/{space_id}/search")
+    async def search(space_id: str, request: Request, q: str = "", limit: int = 10) -> dict:
+        return {
+            "results": [
+                {"chunk_id": "k1", "space": space_id, "content": f"hit for {q}", "limit": limit, "seen_auth": request.headers.get("authorization")}
+            ],
+        }
+
     @app.get("/api/study/due")
     async def due(request: Request, limit: int = 50) -> dict:
         return {"cards": [{"id": "c1", "front": "ATP yield", "limit": limit, "seen_auth": request.headers.get("authorization")}]}
@@ -193,6 +201,16 @@ async def test_create_note_delivers_plain_text_as_a_document(mcp_base):
         paragraph = body["content"]["content"][0]
         assert paragraph["content"][0]["text"] == "Osmosis moves water."
         assert note["seen_auth"] == "Bearer ssk_full"
+
+
+async def test_search_sources_reaches_the_search_endpoint(mcp_base):
+    async with _session(mcp_base, "ssk_read") as session:
+        is_error, text = await _tool_text(session, "search_sources", {"space_id": "s1", "query": "osmosis"})
+        assert not is_error, text
+        payload = json.loads(text)
+        assert payload["results"][0]["content"] == "hit for osmosis"
+        assert payload["results"][0]["limit"] == 10
+        assert payload["results"][0]["seen_auth"] == "Bearer ssk_read"
 
 
 async def test_due_cards_and_stats_flow_through(mcp_base):
