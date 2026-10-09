@@ -96,10 +96,11 @@ async def verify_mcp_token(
     token = authorization.split(" ", 1)[1].strip()
 
     # Verify against backend (which checks hash + scopes + revocation)
+    token_hash = hashlib.sha256(token.encode("utf-8")).hexdigest()
     async with httpx.AsyncClient(timeout=10) as client:
         resp = await client.get(
-            f"{BACKEND_URL}/me/mcp-tokens/verify",
-            headers={"Authorization": f"Bearer {token}"},
+            f"{BACKEND_URL}/me/mcp-tokens/verify-by-hash",
+            params={"token_hash": token_hash},
         )
     if resp.status_code == 401:
         raise HTTPException(
