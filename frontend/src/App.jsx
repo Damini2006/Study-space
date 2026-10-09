@@ -37,6 +37,11 @@ const Terms = lazy(() => import("@/pages/Terms"));
 const ThankYou = lazy(() => import("@/pages/ThankYou"));
 const Security = lazy(() => import("@/pages/Security"));
 const Contact = lazy(() => import("@/pages/Contact"));
+// The page behind a share link. It sits outside /app because it must
+// open for a stranger holding the URL — published pages (/s/:slug) and
+// invite links (/spaces/shared/:token) spend their credential at the
+// API, not this gate.
+const SharedSpace = lazy(() => import("@/pages/SharedSpace"));
 
 function RouteFallback() {
   return (
@@ -145,6 +150,8 @@ export default function App() {
       <Route path="/thanks" element={<ThankYou />} />
       <Route path="/security" element={<Security />} />
       <Route path="/contact" element={<Contact />} />
+      <Route path="/s/:slug" element={<SharedSpace />} />
+      <Route path="/spaces/shared/:token" element={<SharedSpace />} />
       <Route
         path="/app"
         element={

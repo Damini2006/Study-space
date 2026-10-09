@@ -9,12 +9,6 @@ import { useToast } from "@/components/ui/toast";
 import { formatDate } from "@/lib/utils";
 import { spacesApi } from "@/services/api-services";
 
-const ROLE_LABELS = { viewer: "Viewer", editor: "Editor" };
-const ROLE_DESC = {
-  viewer: "Can view space, sources, and chat. Cannot edit.",
-  editor: "Full edit access: add sources, create cards, modify notes.",
-};
-
 function CopyButton({ text, onCopied, children }) {
   const [copied, setCopied] = useState(false);
   const handleClick = async () => {
@@ -37,9 +31,6 @@ function ShareRow({ share, onRevoke }) {
   return (
     <div className="flex items-center justify-between p-3 rounded-lg border border-border bg-card">
       <div className="flex items-center gap-3">
-        <Badge variant={share.role === "editor" ? "success" : "default"} className="text-xs">
-          {ROLE_LABELS[share.role]}
-        </Badge>
         <div className="text-sm text-muted-foreground font-mono">
           {share.token.slice(0, 12)}…
         </div>
@@ -70,7 +61,6 @@ export default function ShareDialog({ spaceId, open, onClose }) {
   const [shares, setShares] = useState([]);
   const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
-  const [newShareRole, setNewShareRole] = useState("viewer");
   const [newShareExpires, setNewShareExpires] = useState(7); // days
 
   useEffect(() => {
@@ -101,7 +91,7 @@ export default function ShareDialog({ spaceId, open, onClose }) {
     if (creating) return;
     setCreating(true);
     try {
-      const body = { role: newShareRole, expires_in_days: newShareExpires || undefined };
+      const body = { expires_in_days: newShareExpires || undefined };
       const share = await spacesApi.createShare(spaceId, body);
       setShares([share, ...shares]);
       success("Invite link created!");
@@ -131,41 +121,26 @@ export default function ShareDialog({ spaceId, open, onClose }) {
     <Dialog open={open} onClose={onClose} title="Share this space" className="max-w-xl p-0">
       <form onSubmit={handleCreate} className="p-4 space-y-4">
         <p className="text-sm text-muted-foreground">
-          Create invite links with specific roles. Links can expire and be revoked anytime.
+          Create an invite link — anyone with the URL can open a read-only view
+          of this space's sources, cards, and notes. Links can expire and be
+          revoked anytime.
         </p>
 
-        <div className="grid grid-cols-2 gap-3">
-          <div className="space-y-1.5">
-            <Label htmlFor="share_role">Role</Label>
-            <Select
-              id="share_role"
-              value={newShareRole}
-              onValueChange={setNewShareRole}
-              placeholder="Select role"
-              options={[
-                { value: "viewer", label: "Viewer — read only" },
-                { value: "editor", label: "Editor — full access" },
-              ]}
-            />
-            <p className="text-[11px] text-muted-foreground">{ROLE_DESC[newShareRole]}</p>
-          </div>
-
-          <div className="space-y-1.5">
-            <Label htmlFor="share_expires">Expires in</Label>
-            <Select
-              id="share_expires"
-              value={String(newShareExpires)}
-              onValueChange={(v) => setNewShareExpires(Number(v))}
-              placeholder="Never"
-              options={[
-                { value: "1", label: "1 day" },
-                { value: "7", label: "1 week" },
-                { value: "30", label: "1 month" },
-                { value: "90", label: "3 months" },
-                { value: "0", label: "Never" },
-              ]}
-            />
-          </div>
+        <div className="space-y-1.5">
+          <Label htmlFor="share_expires">Expires in</Label>
+          <Select
+            id="share_expires"
+            value={String(newShareExpires)}
+            onValueChange={(v) => setNewShareExpires(Number(v))}
+            placeholder="Never"
+            options={[
+              { value: "1", label: "1 day" },
+              { value: "7", label: "1 week" },
+              { value: "30", label: "1 month" },
+              { value: "90", label: "3 months" },
+              { value: "0", label: "Never" },
+            ]}
+          />
         </div>
 
         <Button type="submit" disabled={creating} className="w-full">

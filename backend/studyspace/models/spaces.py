@@ -90,3 +90,56 @@ class SpacePublicOut(BaseModel):
     public_url: str
 
     model_config = {"from_attributes": True}
+
+
+# ---- What a link actually shows (published page / invite link) ----
+
+class SpaceViewMeta(BaseModel):
+    """The header block a link visitor sees — owner-only fields stay out.
+
+    ``due_today`` is deliberately absent: it is the *owner's* review
+    schedule, and it would be a lie on a stranger's screen anyway.
+    """
+
+    title: str
+    description: str | None = None
+    subject: str | None = None
+    color: str | None = None
+    created_at: datetime
+    source_count: int = 0
+    card_count: int = 0
+    note_count: int = 0
+
+
+class SpaceViewSource(BaseModel):
+    title: str
+    type: str
+    status: str
+    char_count: int = 0
+    created_at: datetime
+
+
+class SpaceViewCard(BaseModel):
+    front: str
+    back: str
+    tags: list[str] = []
+
+
+class SpaceViewNote(BaseModel):
+    title: str
+    content_text: str = ""
+    pinned: bool = False
+
+
+class SpaceContentOut(BaseModel):
+    """Read-only content of a published space or an invite link.
+
+    The counts sit next to the lists they describe so the page can say
+    "first 500 of N" when a long deck is capped (see migration 0013),
+    instead of presenting a truncated list as if it were the whole deck.
+    """
+
+    space: SpaceViewMeta
+    sources: list[SpaceViewSource] = []
+    cards: list[SpaceViewCard] = []
+    notes: list[SpaceViewNote] = []

@@ -49,7 +49,28 @@ async def get_user_db(user: UserDep) -> AsyncIterator[asyncpg.Connection]:
         yield conn
 
 
+# What the link-resolving endpoints run as: no subject at all, so
+# auth.uid() is null and every "own rows" policy stays closed.
+_ANON_CLAIMS: dict[str, Any] = {"sub": "", "role": "anon"}
+
+
+async def get_public_db() -> AsyncIterator[asyncpg.Connection]:
+    """Connection for the two link-resolving endpoints (published pages,
+    invite links).
+
+    These routes answer for *anyone holding the URL*, so they deliberately
+    ignore any presented bearer token: the view a link shows must not
+    depend on who is signed in while opening it. Anonymous claims keep row
+    level security fully on — the only rows that can come back live inside
+    the SECURITY DEFINER functions of migration 0013, which re-validate
+    the slug/token in the same statement that reads the data.
+    """
+    async with user_conn(_ANON_CLAIMS) as conn:
+        yield conn
+
+
 DbDep = Annotated[asyncpg.Connection, Depends(get_user_db)]
+PublicDbDep = Annotated[asyncpg.Connection, Depends(get_public_db)]
 
 
 def require_rate_limit(limit: int, window_seconds: int, scope: str) -> Callable[[], Any]:
@@ -80,7 +101,9 @@ AdminDep = Annotated[VerifiedUser, Depends(require_admin)]
 __all__ = [
     "AdminDep",
     "DbDep",
+    "PublicDbDep",
     "UserDep",
+    "get_public_db",
     "get_user_db",
     "get_verified_user",
     "require_admin",

@@ -87,7 +87,7 @@ export default function PublishDialog({ spaceId, open, onClose, initialSlug }) {
                 <Label htmlFor="pub-slug">Public URL slug</Label>
                 <div className="flex items-center gap-2">
                   <span className="text-muted-foreground px-3 py-2 rounded-l-lg border border-r-0 border-border bg-surface-2 text-sm">
-                    studyspace.app/s/
+                    {`${window.location.origin}/s/`}
                   </span>
                   <Input
                     id="pub-slug"

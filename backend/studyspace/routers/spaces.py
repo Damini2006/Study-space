@@ -2,14 +2,16 @@
 
 from __future__ import annotations
 
+import json
 import secrets
 import uuid
 
 from fastapi import APIRouter, HTTPException, Request
 
 from studyspace.config import get_settings
-from studyspace.deps import DbDep
+from studyspace.deps import DbDep, PublicDbDep
 from studyspace.models.spaces import (
+    SpaceContentOut,
     SpaceCreate,
     SpaceOut,
     SpacePublicCreate,
@@ -254,29 +256,38 @@ async def unpublish_space(db: DbDep, space_id: uuid.UUID) -> None:
 
 # ----- Public read-only access (no auth required) -----
 
-@router.get("/public/{slug}", response_model=SpaceOut)
-async def get_public_space(db: DbDep, slug: str) -> SpaceOut:
-    pub = await db.fetchrow(
-        "select sp.* from public.space_public p "
-        "join public.spaces sp on sp.id = p.space_id "
-        "where p.slug = $1 and p.unpublished_at is null",
-        slug,
-    )
-    if pub is None:
+
+def _content_out(view) -> SpaceContentOut:
+    """Parse the SECURITY DEFINER view (asyncpg hands jsonb back as text)."""
+    data = json.loads(view) if isinstance(view, str) else view
+    return SpaceContentOut.model_validate(data)
+
+
+@router.get("/public/{slug}", response_model=SpaceContentOut)
+async def get_public_space(db: PublicDbDep, slug: str) -> SpaceContentOut:
+    """A published space, for anyone holding the link — no bearer token.
+
+    Runs on the anonymous connection: a signed-in visitor sees exactly
+    what an anonymous one sees, because the link, not the viewer, is what
+    grants access.
+    """
+    view = await db.fetchval("select public.published_space_view($1)", slug)
+    if view is None:
         raise HTTPException(status_code=404, detail="Public space not found.")
-    return _to_out(pub)
+    return _content_out(view)
 
 
 # ----- Shared access via token (for invite links) -----
 
-@router.get("/shared/{token}", response_model=SpaceOut)
-async def get_shared_space(db: DbDep, token: str) -> SpaceOut:
-    # Validate share token via function
-    share = await db.fetchrow("select * from public.validate_space_share($1)", token)
-    if share is None:
-        raise HTTPException(status_code=404, detail="Invalid or expired invite link.")
+@router.get("/shared/{token}", response_model=SpaceContentOut)
+async def get_shared_space(db: PublicDbDep, token: str) -> SpaceContentOut:
+    """The space behind an invite link, while the token is still live.
 
-    row = await db.fetchrow(_SPACE_SELECT + " where sp.id = $1", share["space_id"])
-    if row is None:
-        raise HTTPException(status_code=404, detail="Space not found.")
-    return _to_out(row)
+    `shared_space_view` re-validates the token (unrevoked, unexpired) in
+    the same statement that reads the rows, so a withdrawn link reads
+    nothing rather than reading first and checking later.
+    """
+    view = await db.fetchval("select public.shared_space_view($1)", token)
+    if view is None:
+        raise HTTPException(status_code=404, detail="Invalid or expired invite link.")
+    return _content_out(view)
