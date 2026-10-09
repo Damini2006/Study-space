@@ -25,7 +25,7 @@ from studyspace.main import create_app
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 FRONTEND_SRC = REPO_ROOT / "frontend" / "src"
-MCP_MAIN = REPO_ROOT / "mcp" / "main.py"
+MCP_MAIN = REPO_ROOT / "backend" / "studyspace" / "mcp_app.py"
 
 # Infrastructure endpoints with no in-repo caller by design: the container
 # HEALTHCHECK and external uptime probes reach these; nothing in the app does.

@@ -31,6 +31,9 @@ dependencies = [
   "langchain-community>=0.4.1,<0.4.2",
   "fsrs>=6.0,<7.0",
   "email-validator>=2.1",
+  # The MCP server now lives inside the app (mounted at /mcp): FastMCP
+  # plus the protocol client the /mcp tests speak with.
+  "mcp>=1.25,<2.0",
 ]
 
 [project.optional-dependencies]

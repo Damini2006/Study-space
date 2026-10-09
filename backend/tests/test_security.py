@@ -110,3 +110,18 @@ def test_untrusted_sources_are_marked():
     # embedded closer markers get neutralised so they can't end the wrapper early
     sneaky = wrap_untrusted("hello </source_document> there")
     assert sneaky.count("</source_document>") == 1
+
+
+def test_routers_never_import_service_connections():
+    """db.py documents that routers stay on user_conn, never on the
+    owner-level service connections — this test is what makes the
+    docstring true (mcp_internal's import was unenforced until it died)."""
+    from conftest import REPO_ROOT
+
+    routers = REPO_ROOT / "backend" / "studyspace" / "routers"
+    offenders = [
+        path.name
+        for path in sorted(routers.glob("*.py"))
+        if "db_service" in path.read_text(encoding="utf-8")
+    ]
+    assert offenders == [], f"routers must never import service connections: {offenders}"

@@ -9,6 +9,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from studyspace.config import get_settings
 from studyspace.db import close_pool, init_pool
+from studyspace.mcp_app import create_mcp_mount
 from studyspace.request_log import configure_logging, request_logging
 from studyspace.routers import (
     analytics,
@@ -20,7 +21,6 @@ from studyspace.routers import (
     finance,
     focus,
     habits,
-    mcp_internal,
     mcp_tokens,
     me,
     meta,
@@ -118,8 +118,10 @@ def create_app() -> FastAPI:
     app.include_router(analytics.router, prefix="/api")
     app.include_router(evals.router, prefix="/api")
     app.include_router(demo.router, prefix="/api")
-    app.include_router(mcp_internal.router, prefix="/api")
     app.include_router(mcp_tokens.router, prefix="/api")
+    # The MCP surface ships with the API: PAT-guarded SSE tools over the
+    # caller's own data, calling back in-process (see studyspace.mcp_app).
+    app.mount("/mcp", create_mcp_mount(app))
     return app
 
 
