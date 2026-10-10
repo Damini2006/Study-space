@@ -10,7 +10,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
-import { describeImport } from "@/components/workspace/ImportDialog";
+import { describeImport } from "@/lib/import-summary";
 
 const FRONTEND = fs.existsSync(path.join(process.cwd(), "index.html"))
   ? process.cwd()
