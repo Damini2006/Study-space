@@ -1,5 +1,11 @@
 -- ============================================================
--- 0008: Life modules — vision board + finance
+-- 0016: Life modules — vision board + finance
+-- (Written as 0008 and renumbered: 0008_space_sharing.sql already
+-- held that version, and the Supabase CLI treats the version as a
+-- migration's identity — a duplicate makes `db push` refuse the
+-- pair. These tables are self-contained and nothing between 0009
+-- and 0015 references them, so a fresh database applying in version
+-- order builds the same schema either way.)
 -- Restores the two "old version" features from the prototype:
 --   * vision board (drag stickies / images, autosaved)
 --   * finance transactions (working category chart)

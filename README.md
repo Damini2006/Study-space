@@ -207,6 +207,12 @@ vercel deploy --prod
 
 ### Supabase
 1. Run migrations: `supabase db push` or apply via dashboard SQL editor
+   - Hand-applied migrations leave `supabase_migrations.schema_migrations`
+     empty, so the next `db push` sees every file as pending and dies on
+     the first `create table`. If the schema already exists, record it
+     first: `psql "$DATABASE_URL" -f supabase/repair_bookkeeping.sql`
+     (idempotent; check the result with
+     `supabase migration list --db-url "postgresql://…?sslmode=disable"`)
 2. Create `sources` and `vision` storage buckets (private)
 3. Enable Email + Google providers in Auth
 5. Disable "Confirm email" for demo sign-in to work automatically
@@ -266,7 +272,7 @@ study-space/
 │   │   └── styles/globals.css # 4-theme design tokens
 │   └── package.json
 ├── supabase/
-│   ├── migrations/         # 0001–0014 (schema, RLS, evals, sharing, vision, PATs)
+│   ├── migrations/         # 0001–0016 (schema, RLS, evals, sharing, vision, PATs)
 │   ├── seed.sql            # Global quotes
 │   └── tests/shim.sql      # Test harness for RLS
 ├── docker-compose.yml
