@@ -31,6 +31,10 @@ export const spacesApi = {
 
 export const sourcesApi = {
   list: (spaceId) => api.get(`/spaces/${spaceId}/sources`),
+  // Hybrid (vector + full-text) search over the space's indexed chunks —
+  // the same retrieval endpoint chat's RAG and the MCP tool call.
+  search: (spaceId, q, limit = 10) =>
+    api.get(`/spaces/${spaceId}/search?q=${encodeURIComponent(q)}&limit=${limit}`),
   upload: (spaceId, formData) => api.upload(`/spaces/${spaceId}/sources/upload`, formData),
   addPasted: (spaceId, body) => api.post(`/spaces/${spaceId}/sources/pasted`, body),
   delete: (spaceId, sourceId) => api.delete(`/spaces/${spaceId}/sources/${sourceId}`),

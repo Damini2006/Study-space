@@ -110,7 +110,7 @@ export default function Workspace() {
           </TabsTrigger>
         </TabsList>
         <TabsContent value="sources" className="min-h-0 flex-1">
-          <SourcesPanel spaceId={spaceId} selectedPassage={selectedPassage} onClearPassage={() => setSelectedPassage(null)} onSourceChanged={() => {}} />
+          <SourcesPanel spaceId={spaceId} selectedPassage={selectedPassage} onClearPassage={() => setSelectedPassage(null)} onSelectPassage={setSelectedPassage} onSourceChanged={() => {}} />
         </TabsContent>
         <TabsContent value="chat" className="min-h-0 flex-1">
           <ChatPanel spaceId={spaceId} onSelectPassage={handleSelectPassage} />
@@ -123,7 +123,7 @@ export default function Workspace() {
       {/* Desktop — Sources | Chat+Studio (resizable split) */}
       <div className="hidden min-h-0 flex-1 xl:grid xl:grid-cols-[300px_minmax(0,1fr)] gap-3">
         {/* Sources panel — fixed width */}
-        <SourcesPanel spaceId={spaceId} selectedPassage={selectedPassage} onClearPassage={() => setSelectedPassage(null)} onSourceChanged={() => {}} />
+        <SourcesPanel spaceId={spaceId} selectedPassage={selectedPassage} onClearPassage={() => setSelectedPassage(null)} onSelectPassage={setSelectedPassage} onSourceChanged={() => {}} />
 
         {/* Chat + Studio — resizable split */}
         <SplitView

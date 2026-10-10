@@ -1,26 +1,54 @@
 /**
  * Sources panel — the left pane of the Space workspace.
  * Upload files, paste text, watch ingestion status, delete sources.
- * A passage selected from a chat citation is highlighted here.
+ * Search asks the hybrid retrieval endpoint which chunks of this
+ * space's sources mention something; a clicked result is surfaced as
+ * the selected passage, the same slot chat citations fill.
  */
-import { useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { FileText, Plus, Trash2, Upload, X } from "lucide-react";
+import { FileText, Plus, Search, Trash2, Upload, X } from "lucide-react";
 import { sourcesApi } from "@/services/api-services";
 import { Button } from "@/components/ui/button";
 import { Input, Textarea } from "@/components/ui/input";
 import { Dialog } from "@/components/ui/dialog";
 import { SourceStatusBadge } from "@/components/ui/status-badges";
-import { formatBytes, formatDate } from "@/lib/utils";
+import { debounce, formatBytes, formatDate } from "@/lib/utils";
 import { useToast } from "@/components/ui/toast";
 
-export default function SourcesPanel({ spaceId, selectedPassage, onClearPassage, onSourceChanged }) {
+/** Below this many characters a search stays local: one character matches almost everything. */
+const MIN_QUERY = 2;
+
+export default function SourcesPanel({
+  spaceId,
+  selectedPassage,
+  onClearPassage,
+  onSelectPassage,
+  onSourceChanged,
+}) {
   const qc = useQueryClient();
   const { error: toastError, success } = useToast();
   const fileRef = useRef(null);
   const [pasteOpen, setPasteOpen] = useState(false);
   const [pasteTitle, setPasteTitle] = useState("");
   const [pasteText, setPasteText] = useState("");
+  const [term, setTerm] = useState("");
+  const [debouncedTerm, setDebouncedTerm] = useState("");
+  const setTermDebounced = useMemo(() => debounce(setDebouncedTerm, 300), []);
+  useEffect(() => {
+    setTermDebounced(term.trim());
+  }, [term, setTermDebounced]);
+
+  const searching = debouncedTerm.length >= MIN_QUERY;
+  const {
+    data: hits,
+    isLoading: searchLoading,
+    isError: searchFailed,
+  } = useQuery({
+    queryKey: ["source-search", spaceId, debouncedTerm],
+    queryFn: () => sourcesApi.search(spaceId, debouncedTerm),
+    enabled: searching,
+  });
 
   const { data: sources = [], isLoading } = useQuery({
     queryKey: ["sources", spaceId],
@@ -97,6 +125,16 @@ export default function SourcesPanel({ spaceId, selectedPassage, onClearPassage,
         </div>
       </header>
 
+      <div className="border-b border-border px-3 py-2">
+        <Input
+          value={term}
+          onChange={(e) => setTerm(e.target.value)}
+          placeholder="Search this space's sources…"
+          aria-label="Search this space's sources"
+          className="h-8 text-sm"
+        />
+      </div>
+
       <input ref={fileRef} type="file" className="hidden" onChange={onFiles} aria-hidden tabIndex={-1} />
 
       {selectedPassage && (
@@ -114,6 +152,66 @@ export default function SourcesPanel({ spaceId, selectedPassage, onClearPassage,
         </div>
       )}
 
+      {searching ? (
+        <div className="min-h-0 flex-1 overflow-y-auto px-2 py-2 scrollbar-thin">
+          {searchLoading && (
+            <div className="space-y-2 p-1">
+              {[0, 1, 2].map((i) => (
+                <div key={i} className="skeleton h-12 w-full rounded-lg" />
+              ))}
+            </div>
+          )}
+
+          {!searchLoading && searchFailed && (
+            <p className="px-2 py-6 text-center text-xs text-destructive">
+              Search did not go through. Try again.
+            </p>
+          )}
+
+          {!searchLoading && !searchFailed && hits?.results?.length === 0 && (
+            <div className="flex flex-col items-center gap-1 px-4 py-8 text-center">
+              <Search className="size-5 text-muted-foreground" aria-hidden />
+              <p className="text-sm font-medium">No matches for “{debouncedTerm}”</p>
+              <p className="text-xs text-muted-foreground">
+                Search reads the text of this space's sources. Try different words, or
+                wait for indexing to finish.
+              </p>
+            </div>
+          )}
+
+          {!searchLoading && !searchFailed && (hits?.results?.length ?? 0) > 0 && (
+            <ul className="space-y-1.5" role="list">
+              {hits.results.map((r) => (
+                <li key={r.chunk_id} className="rounded-lg border border-border bg-surface-2/60 p-2">
+                  <button
+                    type="button"
+                    onClick={() =>
+                      onSelectPassage?.({
+                        source_id: r.source_id,
+                        source_title: r.source_title,
+                        quote: r.content,
+                        page: r.page,
+                      })
+                    }
+                    className="w-full cursor-pointer text-left"
+                    title="Show this passage"
+                  >
+                    <p className="truncate text-sm font-medium" title={r.source_title}>
+                      {r.source_title}
+                      {r.page != null && (
+                        <span className="ml-1 text-[11px] font-normal text-muted-foreground">
+                          p. {r.page}
+                        </span>
+                      )}
+                    </p>
+                    <p className="mt-1 line-clamp-3 text-xs text-muted-foreground">{r.content}</p>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      ) : (
       <div className="min-h-0 flex-1 overflow-y-auto px-2 pb-2 scrollbar-thin">
         {isLoading && (
           <div className="space-y-2 p-1">
@@ -172,6 +270,7 @@ export default function SourcesPanel({ spaceId, selectedPassage, onClearPassage,
           ))}
         </ul>
       </div>
+      )}
 
       <Dialog
         open={pasteOpen}
