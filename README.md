@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="frontend/public/logo-full.svg" width="420" alt="StudySpace — where studying finally clicks" />
+</p>
+
 # StudySpace — Source-Grounded AI Study Workspace
 
 ![StudySpace Demo](docs/screenshot-dashboard.png)
