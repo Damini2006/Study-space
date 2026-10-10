@@ -137,6 +137,26 @@ describe("the MCP token controls", () => {
     expect(screen.queryByRole("button", { name: "Copy token" })).toBeNull();
   });
 
+  it("says when the token was last used, and never claims a use it did not record", async () => {
+    // Assertions match the label words per card, not formatted dates — a
+    // date rendered from a UTC midnight lands on the previous day west of
+    // Greenwich, and the claim under test is which card says what.
+    apis.meApi.mcpTokens.mockResolvedValue([
+      { ...TOKEN_ROW, id: "t1", name: "Used client", last_used_at: "2026-01-02T00:00:00Z" },
+      { ...TOKEN_ROW, id: "t2", name: "Fresh client", last_used_at: null },
+    ]);
+    renderWithProviders(<SettingsPage />);
+
+    await screen.findByText("Fresh client"); // both rows have rendered
+    // Each card's meta line — scopes · created · last-used — must carry
+    // the label belonging to its own row.
+    const metaOf = (name) =>
+      within(screen.getByText(name).parentElement).getByText(/Last used|Never used|read/);
+    expect(metaOf("Used client").textContent).toContain("Last used");
+    expect(metaOf("Used client").textContent).toContain("read"); // scopes kept
+    expect(metaOf("Fresh client").textContent).toContain("Never used");
+  });
+
   it("shows the one-time token in the dialog and copies exactly it", async () => {
     const SECRET = "ss_live_full_secret_value_123";
     apis.meApi.createMcpToken.mockResolvedValue({ id: "t2", token: SECRET });

@@ -267,7 +267,10 @@ export default function SettingsPage() {
                         <div>
                           <p className="font-medium">{t.name}</p>
                           <p className="text-xs text-muted-foreground">
-                            {t.scopes.join(", ")} · Created {formatDate(t.created_at)}
+                            {t.scopes.join(", ")} · Created {formatDate(t.created_at)} ·{" "}
+                            {t.last_used_at
+                              ? `Last used ${formatDate(t.last_used_at)}`
+                              : "Never used"}
                           </p>
                         </div>
                       </div>
