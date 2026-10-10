@@ -11,13 +11,17 @@ where the API enforces them:
   they say);
 * revocation bites on the very next request;
 * no token can ever reach admin: claims carry no email, so ``is_admin``
-  stays dark while the same human's session JWT lights it up.
+  stays dark while the same human's session JWT lights it up;
+* a live token records when it was last used (throttled to one write
+  per five minutes), so Settings' "last used" is a true field rather
+  than a column that can only ever be null.
 """
 
 from __future__ import annotations
 
 import hashlib
 import uuid
+from datetime import timedelta
 
 from conftest import headers_for
 
@@ -48,6 +52,36 @@ async def _issue_token(dsn: str, user_id: str, scopes: list[str], *, revoked: bo
 
 def _auth(token: str) -> dict:
     return {"Authorization": f"Bearer {token}"}
+
+
+async def _last_used(dsn: str, token: str):
+    """Read last_used_at straight from the table — the ground truth."""
+    import asyncpg
+
+    conn = await asyncpg.connect(dsn=dsn)
+    try:
+        row = await conn.fetchrow(
+            "select last_used_at from public.mcp_tokens where token_hash = $1",
+            _hash(token),
+        )
+        return row["last_used_at"]
+    finally:
+        await conn.close()
+
+
+async def _backdate(dsn: str, token: str, minutes: float) -> None:
+    """Set last_used_at to `minutes` ago, as the DB's own clock sees it."""
+    import asyncpg
+
+    conn = await asyncpg.connect(dsn=dsn)
+    try:
+        await conn.execute(
+            "update public.mcp_tokens set last_used_at = now() - $2::interval where token_hash = $1",
+            _hash(token),
+            timedelta(minutes=minutes),
+        )
+    finally:
+        await conn.close()
 
 
 async def test_token_reads_and_writes_as_its_owner(api_client, two_users, migrated_db):
@@ -136,3 +170,40 @@ async def test_session_jwt_path_is_untouched(api_client, two_users):
     resp = await api_client.get("/api/me", headers=headers_for(two_users["alice"], "alice@test.dev"))
     assert resp.status_code == 200, resp.text
     assert resp.json()["email"] == "alice@test.dev"
+
+
+async def test_a_live_token_records_when_it_was_last_used(api_client, two_users, migrated_db):
+    token = await _issue_token(migrated_db, two_users["alice"], ["read"])
+    assert await _last_used(migrated_db, token) is None
+
+    resp = await api_client.get("/api/me", headers=_auth(token))
+    assert resp.status_code == 200, resp.text
+
+    assert await _last_used(migrated_db, token) is not None
+
+
+async def test_recording_is_throttled_inside_five_minutes(api_client, two_users, migrated_db):
+    """Every MCP message verifies its token; a write per request would tax
+    the hot path for a timestamp the UI prints as a date. A use five
+    minutes or less after the last one leaves the column untouched."""
+    token = await _issue_token(migrated_db, two_users["alice"], ["read"])
+    await _backdate(migrated_db, token, 1)
+    before = await _last_used(migrated_db, token)
+
+    resp = await api_client.get("/api/me", headers=_auth(token))
+    assert resp.status_code == 200, resp.text
+
+    assert await _last_used(migrated_db, token) == before
+
+
+async def test_a_stale_last_used_records_again(api_client, two_users, migrated_db):
+    """Six minutes later the throttle window has passed and the column
+    moves — "last used" stays roughly true without a write per request."""
+    token = await _issue_token(migrated_db, two_users["alice"], ["read"])
+    await _backdate(migrated_db, token, 6)
+    before = await _last_used(migrated_db, token)
+
+    resp = await api_client.get("/api/me", headers=_auth(token))
+    assert resp.status_code == 200, resp.text
+
+    assert await _last_used(migrated_db, token) != before

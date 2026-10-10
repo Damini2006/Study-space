@@ -45,13 +45,19 @@ async def verify_pat(token: str) -> PatIdentity | None:
     """Resolve a token to its holder, or None when it is unknown or revoked.
 
     Indistinguishable by design: a prober learns nothing about which half
-    of "not a token" it hit.
+    of "not a token" it hit. A live token also records the use — throttled
+    inside ``touch_mcp_token`` to at most one write per five minutes, so
+    the hot path (every MCP message, every PAT request) pays a no-op
+    roundtrip instead of a row lock.
     """
+    token_hash = hash_mcp_token(token)
     async with user_conn(dict(_ANON_CLAIMS)) as conn:
         row = await conn.fetchrow(
             "select user_id, scopes from public.verify_mcp_token($1)",
-            hash_mcp_token(token),
+            token_hash,
         )
+        if row is not None:
+            await conn.fetchval("select public.touch_mcp_token($1)", token_hash)
     if row is None:
         return None
     return PatIdentity(
