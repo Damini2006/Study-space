@@ -11,9 +11,9 @@
 # skips quietly while they are unset.
 #
 # Free-plan notes: the web service sleeps after idle (~1 min cold start
-# on the next hit). If Render won't attach a free instance to the
-# worker, take the cheapest offered in the review screen — the worker
-# runs the background jobs (chunk embedding, eval suite, planner).
+# on the next hit). Render has no free tier for background workers —
+# 0.5c-512mb below is the cheapest instance that runs one; without the
+# worker, uploads never get embedded and the eval suite has no runner.
 
 render-version: 1
 
@@ -36,16 +36,17 @@ services:
         value: production
       - key: REDIS_URL
         fromService:
-          type: redis
+          type: keyvalue
           name: studyspace-redis
           property: connectionString
-    envVarGroups:
-      - studyspace-secrets
+      - fromGroup: studyspace-secrets
 
   - type: worker
     name: studyspace-worker
     runtime: docker
-    plan: free
+    # Not "free": Render offers no free background-worker tier; this is
+    # the cheapest instance that exists for the type.
+    plan: 0.5c-512mb
     region: singapore
     # Root build context on purpose: the worker image copies backend/
     # beside itself so pip can install both (the header of
@@ -55,26 +56,27 @@ services:
     envVars:
       - key: REDIS_URL
         fromService:
-          type: redis
+          type: keyvalue
           name: studyspace-redis
           property: connectionString
-    envVarGroups:
-      - studyspace-secrets
+      - fromGroup: studyspace-secrets
 
-databases:
-  - type: redis
+  # Render Key Value (managed Redis) — a service, not a database:
+  # the `databases:` list is Postgres-only.
+  - type: keyvalue
     name: studyspace-redis
     plan: free
-    # No external ingress: only the two services above reach it, over
-    # Render's internal network via connectionString.
+    region: singapore
+    # Required field for key value; [] means no external ingress —
+    # only the two services above reach it, over Render's internal
+    # network via connectionString.
     ipAllowList: []
 
 envVarGroups:
   - name: studyspace-secrets
-    description: >-
-      Values from the Supabase dashboard (project xqywjdvpohbzybcuihnm,
-      Settings -> API / Database), your OpenAI account, and the deployed
-      frontend's URL. The worker reads the same group.
+    # (A description here would be convenient, but the blueprint schema
+    # allows only name + envVars — values come from the Supabase
+    # dashboard, your OpenAI account, and the frontend's URL.)
     envVars:
       # Project URL is public by design (the frontend bundle ships it);
       # every other value stays typed in the dashboard, never in git.
