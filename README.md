@@ -210,16 +210,27 @@ vercel deploy --prod
 4. Set all env vars from `.env.example`
 
 ### Supabase
-1. Run migrations: `supabase db push` or apply via dashboard SQL editor
-   - Hand-applied migrations leave `supabase_migrations.schema_migrations`
-     empty, so the next `db push` sees every file as pending and dies on
-     the first `create table`. If the schema already exists, record it
-     first: `psql "$DATABASE_URL" -f supabase/repair_bookkeeping.sql`
-     (idempotent; check the result with
-     `supabase migration list --db-url "postgresql://…?sslmode=disable"`)
+1. Run migrations with the CLI: `supabase login`, `supabase link
+   --project-ref <ref>`, then `supabase db push` — the CLI exchanges the
+   login for a temporary DB role, so no database password is needed.
+   - Do **not** paste migration files into the dashboard SQL editor: it
+     records nothing in `supabase_migrations.schema_migrations`, so the
+     next `db push` treats every file as pending and dies on the first
+     `create table`. For an already hand-migrated database, record the
+     versions first (`supabase/repair_bookkeeping.sql`, idempotent).
+   - If a file was renumbered after being applied (the CLI treats the
+     version as the migration's identity), its remote row stays on the
+     old number. Relabel that row to the file's current identity before
+     pushing, or `db push` will skip files that genuinely never ran.
+   - After a renumber, `db push` can refuse with
+     `DbPushMissingRemoteError` ("local files to be inserted before the
+     last migration on remote"). Confirm the pending files really are
+     unapplied (`supabase db dump --schema public`, look for their
+     objects), then rerun with `--include-all`.
+   - Check pairing any time with `supabase migration list`.
 2. Create `sources` and `vision` storage buckets (private)
 3. Enable Email + Google providers in Auth
-5. Disable "Confirm email" for demo sign-in to work automatically
+4. Disable "Confirm email" for demo sign-in to work automatically
 
 ---
 
