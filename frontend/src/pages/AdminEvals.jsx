@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Badge, Input, Label } from "@/components/ui/input";
 import { Dialog } from "@/components/ui/dialog";
 import { evalsApi } from "@/services/api-services";
+import { useAuth } from "@/hooks/useAuth";
 import { pollInterval, progressPercent, resultsToCsv, selectConfigs } from "@/lib/evals";
 import { useToast } from "@/components/ui/toast";
 import { cn, formatDate } from "@/lib/utils";
@@ -177,6 +178,7 @@ function RunCard({ run, onRun, showDetails }) {
 
 export default function AdminEvals() {
   const { success, error } = useToast();
+  const { profile } = useAuth();
   const queryClient = useQueryClient();
   const [running, setRunning] = useState(false);
   const [configs, setConfigs] = useState(DEFAULT_CONFIGS);
@@ -189,10 +191,13 @@ export default function AdminEvals() {
   const [exportFormat, setExportFormat] = useState("csv");
 
   // Poll while any run is pending or running — the worker moves runs
-  // forward server-side, so a settled list stops refetching.
+  // forward server-side, so a settled list stops refetching. The runs
+  // endpoint is admin-only, so a non-admin never fires the request.
+  const isAdmin = Boolean(profile?.is_admin);
   const { data: runs = [], isLoading } = useQuery({
     queryKey: ["evals", "runs"],
     queryFn: evalsApi.listRuns,
+    enabled: isAdmin,
     refetchInterval: (query) => pollInterval(query.state.data),
   });
 
@@ -274,6 +279,25 @@ export default function AdminEvals() {
   const avgRelevancy = meanOf("relevancy");
   const avgPrecision = meanOf("precision");
   const avgRecall = meanOf("recall");
+
+  // The backend answers every evals endpoint with 403 for non-admins, so
+  // show who can use this page instead of a suite that would only fail.
+  if (profile && !isAdmin) {
+    return (
+      <div className="mx-auto max-w-4xl space-y-6">
+        <h1 className="text-2xl font-bold tracking-tight">Admin / Evals</h1>
+        <Card className="p-8 text-center">
+          <ShieldCheck className="size-12 mx-auto text-muted-foreground mb-3" />
+          <h3 className="text-lg font-semibold">Admins only</h3>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Evaluation runs execute on the server, so this page is limited to the
+            deployment's admins — the e-mail addresses listed in its ADMIN_EMAILS
+            setting. Ask whoever runs this instance to add you.
+          </p>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="mx-auto max-w-4xl space-y-6">

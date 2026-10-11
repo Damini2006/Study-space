@@ -40,6 +40,20 @@ describe("the space pickers", () => {
   });
 });
 
+describe("the demo gates", () => {
+  it("lets the demo workspace use models, prompts, retrieval and audit", () => {
+    // The demo session is a real throwaway account whose rows are RLS-
+    // scoped to it, so these panels cannot touch anyone else; only the
+    // destructive account-wide delete stays out of the demo.
+    expect(SETTINGS).not.toContain("<DemoNotice");
+    expect(SETTINGS).not.toContain("enabled: !isDemo");
+    expect(SETTINGS).toContain("<ModelRouterPanel />");
+    expect(SETTINGS).toContain("<PromptTemplatesPanel spaceId={activeSpaceId || null} />");
+    expect(SETTINGS).toContain("<RagSettingsPanel spaceId={activeSpaceId} />");
+    expect(SETTINGS).toContain("<CitationAuditPanel spaceId={activeSpaceId} />");
+  });
+});
+
 describe("the token cards", () => {
   it("carry no phantom editing state whose close button can never render", () => {
     expect(SETTINGS).not.toContain("editingToken");

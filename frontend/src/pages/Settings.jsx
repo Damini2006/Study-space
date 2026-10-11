@@ -20,17 +20,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/dialog
 import { cn, formatDate } from "@/lib/utils";
 import { Copy, Loader2, Plus, X } from "lucide-react";
 
-function DemoNotice({ feature }) {
-  return (
-    <Card className="p-5">
-      <h3 className="font-semibold">{feature}</h3>
-      <p className="mt-1 text-sm text-muted-foreground">
-        Not available in the demo workspace. Create your own space to use it.
-      </p>
-    </Card>
-  );
-}
-
 export default function SettingsPage() {
   const { isDemo, signOut } = useAuth();
   const { theme, setTheme } = useTheme();
@@ -62,10 +51,12 @@ export default function SettingsPage() {
     refreshQueue();
     if (flushed) success(`Synced ${flushed} queued review${flushed === 1 ? "" : "s"}.`);
   };
+  // The demo workspace owns a real (throwaway) account, so every panel that
+  // reads or tunes this account's own spaces works there too — only the
+  // destructive account-wide delete below stays out of the demo.
   const { data: spaces = [] } = useQuery({
     queryKey: ["spaces"],
     queryFn: () => spacesApi.list(),
-    enabled: !isDemo,
   });
 
   // RAG tuning and citation audit are per-space; default to the first space so
@@ -303,56 +294,48 @@ export default function SettingsPage() {
         </TabsContent>
 
         <TabsContent value="models" className="space-y-4">
-          {isDemo ? <DemoNotice feature="Model router" /> : <ModelRouterPanel />}
+          <ModelRouterPanel />
         </TabsContent>
 
         <TabsContent value="prompts" className="space-y-4">
-          {isDemo ? <DemoNotice feature="Prompt templates" /> : <PromptTemplatesPanel spaceId={activeSpaceId || null} />}
+          <PromptTemplatesPanel spaceId={activeSpaceId || null} />
         </TabsContent>
 
         <TabsContent value="retrieval" className="space-y-4">
-          {isDemo ? (
-            <DemoNotice feature="Retrieval tuning" />
-          ) : (
-            <div className="space-y-4">
-              <Card className="p-4">
-                <Label htmlFor="rag_space">Space</Label>
-                <Select
-                  id="rag_space"
-                  className="mt-1.5 max-w-sm"
-                  value={activeSpaceId}
-                  onValueChange={setActiveSpaceId}
-                  placeholder="Choose a space"
-                  options={spaces.map((s) => ({ value: s.id, label: s.title }))}
-                />
-                <p className="mt-2 text-xs text-muted-foreground">
-                  Retrieval settings are stored per space, so each subject can have its own tuning.
-                </p>
-              </Card>
-              <RagSettingsPanel spaceId={activeSpaceId} />
-            </div>
-          )}
+          <div className="space-y-4">
+            <Card className="p-4">
+              <Label htmlFor="rag_space">Space</Label>
+              <Select
+                id="rag_space"
+                className="mt-1.5 max-w-sm"
+                value={activeSpaceId}
+                onValueChange={setActiveSpaceId}
+                placeholder="Choose a space"
+                options={spaces.map((s) => ({ value: s.id, label: s.title }))}
+              />
+              <p className="mt-2 text-xs text-muted-foreground">
+                Retrieval settings are stored per space, so each subject can have its own tuning.
+              </p>
+            </Card>
+            <RagSettingsPanel spaceId={activeSpaceId} />
+          </div>
         </TabsContent>
 
         <TabsContent value="audit" className="space-y-4">
-          {isDemo ? (
-            <DemoNotice feature="Citation audit" />
-          ) : (
-            <div className="space-y-4">
-              <Card className="p-4">
-                <Label htmlFor="audit_space">Space</Label>
-                <Select
-                  id="audit_space"
-                  className="mt-1.5 max-w-sm"
-                  value={activeSpaceId}
-                  onValueChange={setActiveSpaceId}
-                  placeholder="Choose a space"
-                  options={spaces.map((s) => ({ value: s.id, label: s.title }))}
-                />
-              </Card>
-              <CitationAuditPanel spaceId={activeSpaceId} />
-            </div>
-          )}
+          <div className="space-y-4">
+            <Card className="p-4">
+              <Label htmlFor="audit_space">Space</Label>
+              <Select
+                id="audit_space"
+                className="mt-1.5 max-w-sm"
+                value={activeSpaceId}
+                onValueChange={setActiveSpaceId}
+                placeholder="Choose a space"
+                options={spaces.map((s) => ({ value: s.id, label: s.title }))}
+              />
+            </Card>
+            <CitationAuditPanel spaceId={activeSpaceId} />
+          </div>
         </TabsContent>
 
         <TabsContent value="app" className="space-y-4">

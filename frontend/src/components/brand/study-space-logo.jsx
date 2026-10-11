@@ -3,8 +3,10 @@ import { cn } from "@/lib/utils";
 
 /**
  * Theme-aware bunny mark. Uses CSS variables so it auto-adapts to light/dark.
+ * This is the same artwork as public/logo-mark.svg, kept inline so the
+ * strokes follow the theme instead of freezing the light-mode colors.
  */
-function BunnyMark({ size, className }) {
+export function BunnyMark({ size, className }) {
   return (
     <svg
       viewBox="0 0 438 362"

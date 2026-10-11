@@ -156,6 +156,14 @@ describe("page wiring", () => {
     expect(PAGE).toContain("refetchInterval: (query) => pollInterval(query.state.data)");
   });
 
+  it("keeps the suite behind the same admin gate the backend enforces", () => {
+    // /api/evals/* answers 403 for non-admins, so the query must not fire
+    // for them and the page must say who can use it instead.
+    expect(PAGE).toContain("enabled: isAdmin");
+    expect(PAGE).toContain("profile?.is_admin");
+    expect(PAGE).toContain("Admins only");
+  });
+
   it("exports through the authenticated api client, not a bare fetch", () => {
     expect(PAGE).toContain("await evalsApi.results(");
     expect(PAGE).not.toContain("fetch(evalsApi");

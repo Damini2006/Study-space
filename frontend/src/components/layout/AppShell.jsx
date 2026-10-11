@@ -25,6 +25,7 @@ import { cn } from "@/lib/utils";
 import { useCommandPalette } from "@/components/layout/use-command-palette";
 import CommandPalette from "@/components/layout/CommandPalette";
 import OfflineIndicator from "@/components/pwa/OfflineIndicator";
+import { BunnyMark } from "@/components/brand/study-space-logo";
 import { initials } from "@/lib/utils";
 
 const NAV = [
@@ -185,9 +186,7 @@ export default function AppShell() {
       {/* Desktop sidebar */}
       <aside className="hidden border-r border-border bg-surface lg:flex lg:flex-col">
         <div className="flex items-center gap-3 border-b border-border px-5 py-5">
-          <div className="brand-gradient flex size-10 items-center justify-center rounded-xl text-sm font-bold text-white shadow-xs">
-            SS
-          </div>
+          <BunnyMark size={34} className="drop-shadow-xs" />
           <div className="min-w-0">
             <div className="truncate text-sm font-semibold leading-tight">StudySpace</div>
             <div className="text-[11px] text-muted-foreground">
@@ -275,9 +274,7 @@ export default function AppShell() {
           >
             <Menu className="size-5" />
           </button>
-          <div className="brand-gradient flex size-8 items-center justify-center rounded-lg text-xs font-bold text-white">
-            SS
-          </div>
+          <BunnyMark size={26} className="drop-shadow-xs" />
           <div className="min-w-0 flex-1 truncate text-sm font-semibold">StudySpace</div>
           <OfflineIndicator />
           <button
