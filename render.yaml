@@ -1,7 +1,7 @@
 # StudySpace on Render — deployed as a Blueprint.
 #
-# Render → New → Blueprint → this repo: the three resources below are
-# created from this file. Secret values are typed once, in the
+# Render → New → Blueprint → this repo: the resources below are created
+# from this file. Secret values are typed once, in the
 # "studyspace-secrets" env group, during the blueprint review — the
 # repo never holds them (sync: false).
 #
@@ -11,11 +11,10 @@
 # skips quietly while they are unset.
 #
 # Free-plan notes: the web service sleeps after idle (~1 min cold start
-# on the next hit). Render has no free tier for background workers —
-# 0.5c-512mb below is the cheapest instance that runs one; without the
-# worker, uploads never get embedded and the eval suite has no runner.
-
-render-version: 1
+# on the next hit). Validated with `render blueprints validate` (CLI
+# v2.28): the current validator rejects the once-standard
+# `render-version` header AND any paid resource while the workspace has
+# no payment method — which is why the worker below is commented out.
 
 services:
   - type: web
@@ -41,25 +40,33 @@ services:
           property: connectionString
       - fromGroup: studyspace-secrets
 
-  - type: worker
-    name: studyspace-worker
-    runtime: docker
-    # Not "free": Render offers no free background-worker tier; this is
-    # the cheapest instance that exists for the type.
-    plan: 0.5c-512mb
-    region: singapore
-    # Root build context on purpose: the worker image copies backend/
-    # beside itself so pip can install both (the header of
-    # worker/Dockerfile records the import failure that taught this).
-    dockerfilePath: worker/Dockerfile
-    dockerContext: .
-    envVars:
-      - key: REDIS_URL
-        fromService:
-          type: keyvalue
-          name: studyspace-redis
-          property: connectionString
-      - fromGroup: studyspace-secrets
+  # The background worker is temporarily OUT of the blueprint: Render
+  # validates paid resources against the workspace's payment method
+  # ("need_payment_info" on services[1]) and no card is attached. Web
+  # + Redis deploy free today; re-enable the block below by adding a
+  # card and deleting the comment markers. Until then uploads still
+  # store fine but their chunks never get embedded, so chat over NEW
+  # sources returns nothing — seeded demo data is unaffected.
+  #
+  # - type: worker
+  #   name: studyspace-worker
+  #   runtime: docker
+  #   # Not "free": Render offers no free background-worker tier; this
+  #   # is the cheapest instance that exists for the type.
+  #   plan: 0.5c-512mb
+  #   region: singapore
+  #   # Root build context on purpose: the worker image copies backend/
+  #   # beside itself so pip can install both (the header of
+  #   # worker/Dockerfile records the import failure that taught this).
+  #   dockerfilePath: worker/Dockerfile
+  #   dockerContext: .
+  #   envVars:
+  #     - key: REDIS_URL
+  #       fromService:
+  #         type: keyvalue
+  #         name: studyspace-redis
+  #         property: connectionString
+  #     - fromGroup: studyspace-secrets
 
   # Render Key Value (managed Redis) — a service, not a database:
   # the `databases:` list is Postgres-only.
