@@ -1,0 +1,97 @@
+# StudySpace on Render — deployed as a Blueprint.
+#
+# Render → New → Blueprint → this repo: the three resources below are
+# created from this file. Secret values are typed once, in the
+# "studyspace-secrets" env group, during the blueprint review — the
+# repo never holds them (sync: false).
+#
+# After the first deploy, CI can trigger redeploys: paste each service's
+# deploy hook into the GitHub secrets RENDER_BACKEND_DEPLOY_HOOK /
+# RENDER_WORKER_DEPLOY_HOOK — ci.yml's deploy-render job uses them and
+# skips quietly while they are unset.
+#
+# Free-plan notes: the web service sleeps after idle (~1 min cold start
+# on the next hit). If Render won't attach a free instance to the
+# worker, take the cheapest offered in the review screen — the worker
+# runs the background jobs (chunk embedding, eval suite, planner).
+
+render-version: 1
+
+services:
+  - type: web
+    name: studyspace-api
+    runtime: docker
+    plan: free
+    # Closest Render region to the Supabase project (ap-south-1).
+    region: singapore
+    dockerfilePath: backend/Dockerfile
+    dockerContext: backend
+    healthCheckPath: /api/health
+    envVars:
+      # uvicorn binds 8000 (backend/Dockerfile CMD); telling Render's
+      # router the same port is simpler than rewriting the command.
+      - key: PORT
+        value: "8000"
+      - key: ENV
+        value: production
+      - key: REDIS_URL
+        fromService:
+          type: redis
+          name: studyspace-redis
+          property: connectionString
+    envVarGroups:
+      - studyspace-secrets
+
+  - type: worker
+    name: studyspace-worker
+    runtime: docker
+    plan: free
+    region: singapore
+    # Root build context on purpose: the worker image copies backend/
+    # beside itself so pip can install both (the header of
+    # worker/Dockerfile records the import failure that taught this).
+    dockerfilePath: worker/Dockerfile
+    dockerContext: .
+    envVars:
+      - key: REDIS_URL
+        fromService:
+          type: redis
+          name: studyspace-redis
+          property: connectionString
+    envVarGroups:
+      - studyspace-secrets
+
+databases:
+  - type: redis
+    name: studyspace-redis
+    plan: free
+    # No external ingress: only the two services above reach it, over
+    # Render's internal network via connectionString.
+    ipAllowList: []
+
+envVarGroups:
+  - name: studyspace-secrets
+    description: >-
+      Values from the Supabase dashboard (project xqywjdvpohbzybcuihnm,
+      Settings -> API / Database), your OpenAI account, and the deployed
+      frontend's URL. The worker reads the same group.
+    envVars:
+      # Project URL is public by design (the frontend bundle ships it);
+      # every other value stays typed in the dashboard, never in git.
+      - key: SUPABASE_URL
+        value: https://xqywjdvpohbzybcuihnm.supabase.co
+      - key: SUPABASE_ANON_KEY
+        sync: false
+      - key: SUPABASE_JWT_SECRET
+        sync: false
+      # Direct connection (port 5432), not the pooler: the backend is a
+      # long-running server holding a pool, which is exactly what the
+      # transaction pooler is bad at.
+      - key: DATABASE_URL
+        sync: false
+      - key: LITELLM_API_KEY
+        sync: false
+      # Comma-separated origins of the deployed frontend, e.g.
+      # https://studyspace.vercel.app
+      - key: CORS_ORIGINS
+        sync: false
