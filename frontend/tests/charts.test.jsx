@@ -7,6 +7,8 @@
  */
 import { describe, expect, it } from "vitest";
 import {
+  comparePeriods,
+  dailyTotals,
   donutArcs,
   heatLevel,
   heatmapWeeks,
@@ -108,6 +110,69 @@ describe("lastNDaysSeries", () => {
     for (const d of series) {
       expect("SMTWTFS".includes(d.label)).toBe(true);
     }
+  });
+});
+
+describe("dailyTotals", () => {
+  // A fixed "now" keeps the calendar maths deterministic.
+  const now = new Date(2026, 9, 11); // 2026-10-11 local
+  const tx = [
+    { spent_on: "2026-10-11", amount: 180, kind: "expense" },
+    { spent_on: "2026-10-11", amount: 20, kind: "expense" }, // same day -> summed
+    { spent_on: "2026-10-11", amount: 500, kind: "income" }, // income excluded
+    { spent_on: "2026-10-09", amount: 50, kind: "expense" },
+  ];
+
+  it("returns exactly `days` zero-filled calendar days, ending at `now`", () => {
+    const series = dailyTotals(tx, { days: 7, now });
+    expect(series).toHaveLength(7);
+    expect(series[series.length - 1].day).toBe("2026-10-11");
+    expect(series[0].day).toBe("2026-10-05");
+  });
+
+  it("sums same-day transactions and never counts the other kind", () => {
+    const series = dailyTotals(tx, { days: 7, now });
+    const today = series[series.length - 1];
+    expect(today.value).toBe(200); // 180 + 20, income 500 ignored
+  });
+
+  it("zero-fills a day with no spending instead of compressing the axis", () => {
+    const series = dailyTotals(tx, { days: 7, now });
+    // 2026-10-10 has no expense -> a real 0, not a missing point
+    const gap = series.find((d) => d.day === "2026-10-10");
+    expect(gap.value).toBe(0);
+  });
+
+  it("defaults to expenses, so income-only data yields an all-zero series", () => {
+    const incomeOnly = [{ spent_on: "2026-10-11", amount: 999, kind: "income" }];
+    const series = dailyTotals(incomeOnly, { days: 5, now });
+    expect(series.every((d) => d.value === 0)).toBe(true);
+  });
+});
+
+describe("comparePeriods", () => {
+  it("splits the series in half and reports a real percentage change", () => {
+    const r = comparePeriods([
+      { day: "p1", value: 40 },
+      { day: "p2", value: 60 }, // previous period = 100
+      { day: "c1", value: 70 },
+      { day: "c2", value: 80 }, // current period = 150
+    ]);
+    expect(r.previous).toBe(100);
+    expect(r.current).toBe(150);
+    expect(r.pct).toBe(50);
+  });
+
+  it("returns a null pct when there is no honest baseline (first-ever spend)", () => {
+    const r = comparePeriods([{ day: "p1", value: 0 }, { day: "p2", value: 0 }, { day: "c1", value: 40 }, { day: "c2", value: 0 }]);
+    expect(r.previous).toBe(0);
+    expect(r.current).toBe(40);
+    expect(r.pct).toBeNull(); // "+100%" would be invented
+  });
+
+  it("handles an empty series without inventing numbers", () => {
+    const r = comparePeriods([]);
+    expect(r).toEqual({ previous: 0, current: 0, pct: null });
   });
 });
 

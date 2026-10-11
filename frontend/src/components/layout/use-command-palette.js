@@ -7,6 +7,7 @@ import {
   LayoutDashboard,
   Settings,
   Timer,
+  User,
 } from "lucide-react";
 
 /**
@@ -26,6 +27,7 @@ export const NAV_ITEMS = [
   { to: "/app/focus", label: "Focus", icon: Timer },
   { to: "/app/analytics", label: "Analytics", icon: BarChart3 },
   { to: "/app/settings", label: "Settings", icon: Settings },
+  { to: "/app/profile", label: "Profile", icon: User },
 ];
 
 /**

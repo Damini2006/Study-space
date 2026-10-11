@@ -13,6 +13,8 @@ import { Input, Label } from "@/components/ui/input";
 import { Dialog } from "@/components/ui/dialog";
 import { useToast } from "@/components/ui/toast";
 import { cn, formatDate } from "@/lib/utils";
+import { ChartCard, TrendBars } from "@/components/charts/charts";
+import { comparePeriods, dailyTotals } from "@/components/charts/chart-maths";
 
 const CATEGORIES = [
   "Food", "Housing", "Transport", "Supplies", "Health", "Fun", "Income", "Other",
@@ -100,6 +102,13 @@ export default function Finance() {
   const donut = useMemo(() => buildDonut(summary?.by_category ?? []), [summary]);
   const recent = transactions.slice(0, 30);
 
+  // Real spending trend: 30 zero-filled days split into the last 15 vs the
+  // 15 before. pct is null when there is no honest baseline (first-ever
+  // spending), so the card says "no comparison" instead of inventing a number.
+  const spend30 = useMemo(() => dailyTotals(transactions, { days: 30, kind: "expense" }), [transactions]);
+  const spendPct = useMemo(() => comparePeriods(spend30).pct, [spend30]);
+  const hasSpend = spend30.some((d) => d.value > 0);
+
   return (
     <div className="mx-auto max-w-6xl space-y-5">
       <div className="flex flex-wrap items-end justify-between gap-3">
@@ -116,8 +125,18 @@ export default function Finance() {
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
         <SummaryCard label="Balance" value={summary?.balance ?? 0} icon={Wallet} tone="text-primary" />
         <SummaryCard label="Income" value={summary?.income ?? 0} icon={TrendingUp} tone="text-success" />
-        <SummaryCard label="Expenses" value={summary?.expense ?? 0} icon={TrendingDown} tone="text-danger" />
+        <SummaryCard label="Expenses" value={summary?.expense ?? 0} icon={TrendingDown} tone="text-danger" delta={spendPct} />
       </div>
+
+      {/* Spending trend — real daily totals, gap-free */}
+      <ChartCard
+        title="Spending trend"
+        description="Expense per day, last 30 days"
+        isEmpty={!hasSpend}
+        emptyMessage="No expenses yet — add one to see your trend here."
+      >
+        <TrendBars data={spend30} height={120} format={(v) => `₹${v}`} caption="Expense per day, last 30 days" />
+      </ChartCard>
 
       <div className="grid gap-5 lg:grid-cols-[1fr_320px]">
         {/* Transactions */}
@@ -309,7 +328,7 @@ export default function Finance() {
   );
 }
 
-function SummaryCard({ label, value, icon: Icon, tone }) {
+function SummaryCard({ label, value, icon: Icon, tone, delta }) {
   return (
     <Card className="p-4 transition-[transform,box-shadow] hover:-translate-y-0.5 hover:shadow-[var(--shadow-md)]">
       <div className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
@@ -319,6 +338,20 @@ function SummaryCard({ label, value, icon: Icon, tone }) {
       <div className="mt-1.5 text-2xl font-bold tabular-nums tracking-tight">
         {inr.format(value)}
       </div>
+      {typeof delta === "number" ? (
+        <div className="mt-1 flex items-center gap-1 text-[11px]">
+          <span
+            className={cn(
+              "inline-flex items-center gap-0.5 rounded-full px-1.5 py-0.5 font-medium tabular-nums",
+              delta > 0 ? "bg-danger/10 text-danger" : delta < 0 ? "bg-success-bg text-success" : "bg-surface-2 text-muted-foreground"
+            )}
+          >
+            <TrendingUp className={cn("size-3", delta < 0 && "rotate-180")} aria-hidden />
+            {Math.abs(delta)}%
+          </span>
+          <span className="text-muted-foreground">vs previous 15 days</span>
+        </div>
+      ) : null}
     </Card>
   );
 }

@@ -17,6 +17,7 @@ import {
   X,
   BarChart3,
   Image,
+  UserRound,
   Wallet,
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
@@ -38,6 +39,7 @@ const NAV = [
   { to: "/app/finance", label: "Finance", icon: Wallet },
   { to: "/app/analytics", label: "Analytics", icon: BarChart3 },
   { to: "/app/settings", label: "Settings", icon: Settings },
+  { to: "/app/profile", label: "Profile", icon: UserRound },
 ];
 
 /** Shell-shaped placeholder shown while a lazily-loaded route chunk arrives. */
@@ -244,6 +246,21 @@ export default function AppShell() {
               </div>
             )}
           </div>
+
+          <NavLink
+            to="/app/profile"
+            className={({ isActive }) =>
+              cn(
+                "mt-1 flex items-center gap-2 rounded-lg px-3 py-2 text-sm transition-colors",
+                isActive
+                  ? "bg-primary/10 text-primary"
+                  : "text-muted-foreground hover:bg-surface-2 hover:text-foreground"
+              )
+            }
+          >
+            <UserRound className="size-4" aria-hidden />
+            Profile
+          </NavLink>
 
           <button
             type="button"

@@ -65,8 +65,11 @@ export function relativeTime(value) {
 
 export function initials(name) {
   const value = name || "?";
+  // Split on whitespace *and* the separators an email address uses, so a
+  // signed-in user with no display name still gets a readable "DE" from
+  // "demo-x@studyspace.demo" rather than a lone "D".
   return value
-    .split(/\s+/)
+    .split(/[\s@._-]+/)
     .filter(Boolean)
     .slice(0, 2)
     .map(function (w) { return w[0].toUpperCase(); })

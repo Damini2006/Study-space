@@ -62,6 +62,65 @@ export function lastNDaysSeries(heatmap, valueKey, n = 7) {
 }
 
 /**
+ * Percentage change between two periods, for a real trend arrow. Returns null
+ * when there is no meaningful comparison (no baseline, or a zero baseline with
+ * activity this period) so callers can show "no comparison" instead of an
+ * invented "+100%".
+ */
+export function trendPct(thisPeriod, lastPeriod) {
+  if (!Number.isFinite(thisPeriod) || !Number.isFinite(lastPeriod)) return null;
+  if (lastPeriod === 0) return thisPeriod === 0 ? 0 : null;
+  return Math.round(((thisPeriod - lastPeriod) / lastPeriod) * 100);
+}
+
+/**
+ * Group transactions into a zero-filled daily series so a spending trend has a
+ * gap-free timeline: days with no spending are a real 0, not a missing point
+ * that would compress the axis.
+ * `transactions` need { spent_on, amount, kind }; `kind` restricts which ones
+ * count (e.g. "expense" only). Returns [{ day, value, label }] oldest -> newest.
+ */
+export function dailyTotals(transactions, { days = 30, kind = "expense", now = new Date() } = {}) {
+  const byDay = new Map();
+  for (const tx of transactions || []) {
+    if (kind && tx.kind !== kind) continue;
+    const iso = String(tx.spent_on).slice(0, 10);
+    byDay.set(iso, (byDay.get(iso) || 0) + (Number(tx.amount) || 0));
+  }
+  const out = [];
+  for (let i = days - 1; i >= 0; i -= 1) {
+    const date = new Date(now);
+    date.setDate(now.getDate() - i);
+    const iso = toLocalIso(date);
+    out.push({
+      day: iso,
+      value: Number((byDay.get(iso) || 0).toFixed(2)),
+      // day-of-month reads clearer than a weekday initial on a month-scale axis
+      label: String(date.getDate()),
+    });
+  }
+  return out;
+}
+
+/**
+ * Compare two equally-sized periods (this one vs the one before it) and return
+ * a percentage change plus both totals. Null when there is no honest baseline
+ * (no previous spending) so a caller can say "no comparison" rather than
+ * inventing "+100%".
+ */
+export function comparePeriods(series) {
+  const half = Math.floor((series?.length || 0) / 2);
+  if (half === 0) return { previous: 0, current: 0, pct: null };
+  const previous = series.slice(0, half).reduce((s, d) => s + d.value, 0);
+  const current = series.slice(half).reduce((s, d) => s + d.value, 0);
+  return {
+    previous: Number(previous.toFixed(2)),
+    current: Number(current.toFixed(2)),
+    pct: trendPct(current, previous),
+  };
+}
+
+/**
  * Turn raw values into per-slice arc geometry (fractions of the ring). Kept pure
  * so the "slices add up and skip zero-value entries" claim is testable.
  * Returns [{ value, fraction, offset, length }]; offset/length are fractions of
@@ -79,18 +138,6 @@ export function donutArcs(values) {
       cursor += slice.fraction;
       return arc;
     });
-}
-
-/**
- * Percentage change between two periods, for a real trend arrow. Returns null
- * when there is no meaningful comparison (no baseline, or a zero baseline with
- * activity this period) so callers can show "no comparison" instead of an
- * invented "+100%".
- */
-export function trendPct(thisPeriod, lastPeriod) {
-  if (!Number.isFinite(thisPeriod) || !Number.isFinite(lastPeriod)) return null;
-  if (lastPeriod === 0) return thisPeriod === 0 ? 0 : null;
-  return Math.round(((thisPeriod - lastPeriod) / lastPeriod) * 100);
 }
 
 /**

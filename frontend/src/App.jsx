@@ -31,6 +31,7 @@ const Finance = lazy(() => import("@/pages/Finance"));
 // for an editor they cannot reach without signing in first.
 const Notes = lazy(() => import("@/pages/Notes"));
 const Settings = lazy(() => import("@/pages/Settings"));
+const Profile = lazy(() => import("@/pages/Profile"));
 const AdminEvals = lazy(() => import("@/pages/AdminEvals"));
 const Privacy = lazy(() => import("@/pages/Privacy"));
 const Terms = lazy(() => import("@/pages/Terms"));
@@ -175,6 +176,7 @@ export default function App() {
         <Route path="finance" element={<Finance />} />
         <Route path="analytics" element={<Analytics />} />
         <Route path="settings" element={<Settings />} />
+        <Route path="profile" element={<Profile />} />
         <Route path="admin" element={<AdminEvals />} />
       </Route>
       <Route path="*" element={<NotFound />} />
