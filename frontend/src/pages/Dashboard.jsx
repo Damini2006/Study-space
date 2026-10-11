@@ -2,12 +2,15 @@ import { useCallback, useMemo, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
+  ArrowDownRight,
+  ArrowUpRight,
   BarChart3,
   CalendarDays,
   Check,
   Flame,
   Layers,
   Loader2,
+  Minus,
   Plus,
   Quote,
   RotateCcw,
@@ -25,6 +28,13 @@ import { Dialog } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/input";
 import { cn, formatDate, relativeTime } from "@/lib/utils";
 import { usePullToRefresh } from "@/hooks/useGestures";
+import {
+  ActivityHeatmap,
+  ChartCard,
+  Sparkline,
+  TrendBars,
+} from "@/components/charts/charts";
+import { lastNDaysSeries, trendPct } from "@/components/charts/chart-maths";
 
 export default function Dashboard() {
   const { profile } = useAuth();
@@ -54,6 +64,17 @@ export default function Dashboard() {
     if (h < 21) return "Good evening";
     return "Good night";
   }, []);
+
+  // Real chart series, derived only from what the analytics summary actually
+  // returned — no fabricated numbers. weekDelta is null whenever a truthful
+  // comparison isn't possible (a zero baseline), so the UI can say so.
+  const week = useMemo(() => lastNDaysSeries(analytics?.heatmap || [], "minutes", 7), [analytics]);
+  const weekDelta = useMemo(
+    () => trendPct(analytics?.minutes_this_week ?? 0, analytics?.minutes_last_week ?? 0),
+    [analytics]
+  );
+  const heatmapDays = useMemo(() => analytics?.heatmap || [], [analytics]);
+  const hasFocus = week.some((d) => d.value > 0);
 
   const createSpace = useMutation({
     mutationFn: (payload) => spacesApi.create(payload),
@@ -126,35 +147,91 @@ export default function Dashboard() {
         </div>
       ) : null}
 
-      {/* Greeting */}
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <p className="text-xs font-medium uppercase tracking-[0.14em] text-primary">{greeting}</p>
-          <h1 className="text-2xl font-bold tracking-tight">
-            {profile?.display_name ? profile.display_name.split(" ")[0] : "there"} 👋
-          </h1>
-          <p className="mt-0.5 text-sm text-muted-foreground">
-            {new Date().toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric" })}
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          <Link to="/app/analytics">
-            <Button variant="outline" size="sm">
-              <BarChart3 className="size-4" /> Analytics
+      {/* Hero */}
+      <div className="relative overflow-hidden rounded-2xl border border-border bg-gradient-to-br from-primary/12 via-primary/5 to-accent/10 p-5 sm:p-6">
+        <div className="flex flex-wrap items-end justify-between gap-3">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-primary">{greeting}</p>
+            <h1 className="mt-1 text-2xl font-bold tracking-tight sm:text-3xl">
+              {profile?.display_name ? profile.display_name.split(" ")[0] : "there"} 👋
+            </h1>
+            <p className="mt-1 text-sm text-muted-foreground">
+              {new Date().toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric" })}
+            </p>
+          </div>
+          <div className="flex items-center gap-2">
+            <Link to="/app/analytics">
+              <Button variant="outline" size="sm">
+                <BarChart3 className="size-4" /> Analytics
+              </Button>
+            </Link>
+            <Button size="sm" onClick={() => setCreatingSpace(true)}>
+              <Plus className="size-4" /> New Space
             </Button>
-          </Link>
-          <Button size="sm" onClick={() => setCreatingSpace(true)}>
-            <Plus className="size-4" /> New Space
-          </Button>
+          </div>
         </div>
       </div>
 
       {/* Stat strip */}
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <StatCard label="Due today" value={due?.due_count ?? 0} icon={Layers} hint={`${due?.total_cards ?? 0} cards total`} to="/app/study" />
-        <StatCard label="Day streak" value={analytics?.streak_days ?? 0} icon={Flame} hint="days active in a row" />
-        <StatCard label="This week" value={`${analytics?.minutes_this_week ?? 0}m`} icon={Timer} hint={`${analytics?.focus_sessions_this_week ?? 0} focus sessions`} to="/app/focus" />
-        <StatCard label="Reviews today" value={analytics?.reviews_today ?? 0} icon={CalendarDays} hint="cards reviewed" to="/app/study" />
+        <StatCard
+          label="Due today"
+          value={due?.due_count ?? 0}
+          icon={Layers}
+          hint={`${due?.total_cards ?? 0} cards total`}
+          to="/app/study"
+        />
+        <StatCard
+          label="Day streak"
+          value={analytics?.streak_days ?? 0}
+          icon={Flame}
+          hint="days active in a row"
+        />
+        <StatCard
+          label="This week"
+          value={`${analytics?.minutes_this_week ?? 0}m`}
+          icon={Timer}
+          hint={`${analytics?.focus_sessions_this_week ?? 0} focus sessions`}
+          to="/app/focus"
+          sparkline={hasFocus ? week.map((d) => d.value) : null}
+          delta={weekDelta}
+        />
+        <StatCard
+          label="Reviews today"
+          value={analytics?.reviews_today ?? 0}
+          icon={CalendarDays}
+          hint="cards reviewed"
+          to="/app/study"
+        />
+      </div>
+
+      {/* Insights — real charts from the analytics summary */}
+      <div className="grid gap-4 lg:grid-cols-3">
+        <ChartCard
+          className="lg:col-span-2"
+          title="Focus this week"
+          description="Minutes focused per day, last 7 days"
+          isEmpty={!hasFocus}
+          emptyMessage="No focus sessions yet this week — start one from Focus."
+        >
+          <TrendBars data={week} format={(v) => `${v}m`} height={120} caption="Focus minutes per day, last 7 days" />
+        </ChartCard>
+
+        <ChartCard
+          title="Activity"
+          description="Focused minutes by day"
+          isEmpty={heatmapDays.length === 0}
+          emptyMessage="Once you study or focus, your daily activity shows up here."
+        >
+          <ActivityHeatmap days={heatmapDays} valueKey="minutes" weeks={10} format={(v) => `${v}m`} caption="Daily focused minutes" />
+          <div className="mt-2 flex items-center justify-end gap-1 text-[10px] text-muted-foreground">
+            Less
+            <span className="size-2.5 rounded-[3px]" style={{ background: "var(--surface-2)" }} />
+            <span className="size-2.5 rounded-[3px]" style={{ background: "color-mix(in srgb, var(--primary) 45%, var(--surface-2))" }} />
+            <span className="size-2.5 rounded-[3px]" style={{ background: "var(--primary)" }} />
+            More
+          </div>
+        </ChartCard>
       </div>
 
       {/* Quick actions */}
@@ -208,7 +285,10 @@ export default function Dashboard() {
             <div className="grid gap-3 sm:grid-cols-2">
               {spaces.map((s) => (
                 <Link key={s.id} to={`/app/spaces/${s.id}`}>
-                  <Card className="h-full p-4 transition-[transform,box-shadow] hover:-translate-y-0.5 hover:shadow-[var(--shadow-md)]">
+                  <Card
+                    className="h-full p-4 transition-[transform,box-shadow] hover:-translate-y-0.5 hover:shadow-[var(--shadow-md)]"
+                    style={{ borderLeft: `3px solid ${s.color || "var(--primary)"}` }}
+                  >
                     <div className="flex items-center gap-2">
                       <span className="size-2.5 rounded-full" style={{ background: s.color || "#4F5BD5" }} aria-hidden />
                       <h3 className="truncate text-sm font-semibold">{s.title}</h3>
@@ -338,18 +418,53 @@ export default function Dashboard() {
   );
 }
 
-function StatCard({ label, value, icon: Icon, hint, to }) {
+function StatCard({ label, value, icon: Icon, hint, to, sparkline, delta }) {
   const inner = (
     <Card className="p-4 flex flex-col gap-2 transition-[transform,box-shadow] hover:-translate-y-0.5 hover:shadow-[var(--shadow-md)]">
       <div className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
         <Icon className="size-3.5 text-primary" aria-hidden />
         {label}
       </div>
-      <div className="mt-1 flex-1 text-2xl font-bold tracking-tight">{value}</div>
-      {hint && <div className="mt-0.5 text-[11px] text-muted-foreground">{hint}</div>}
+      <div className="mt-1 flex items-end justify-between gap-2">
+        <div className="text-2xl font-bold tracking-tight">{value}</div>
+        {sparkline && sparkline.length > 1 ? (
+          <Sparkline points={sparkline} label={`${label} trend, last 7 days`} />
+        ) : null}
+      </div>
+      <div className="mt-0.5 flex items-center gap-1.5 text-[11px] text-muted-foreground">
+        {delta === null || delta === undefined ? null : <DeltaBadge delta={delta} />}
+        {hint ? <span>{hint}</span> : null}
+      </div>
     </Card>
   );
   return to ? <Link to={to}>{inner}</Link> : inner;
+}
+
+/**
+ * A real week-over-week delta. When trendPct had no honest baseline it hands
+ * back null, and we show "no baseline" rather than inventing a number.
+ */
+function DeltaBadge({ delta }) {
+  if (delta === 0) {
+    return (
+      <span className="inline-flex items-center gap-0.5 rounded-full bg-surface-2 px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">
+        <Minus className="size-3" aria-hidden /> no change
+      </span>
+    );
+  }
+  const up = delta > 0;
+  const Arrow = up ? ArrowUpRight : ArrowDownRight;
+  return (
+    <span
+      className={cn(
+        "inline-flex items-center gap-0.5 rounded-full px-1.5 py-0.5 text-[10px] font-medium",
+        up ? "bg-success-bg text-success" : "bg-destructive/10 text-destructive"
+      )}
+    >
+      <Arrow className="size-3" aria-hidden />
+      {up ? "+" : ""}{delta}%
+    </span>
+  );
 }
 
 function NewSpaceDialog({ open, onClose, onSubmit, busy }) {
