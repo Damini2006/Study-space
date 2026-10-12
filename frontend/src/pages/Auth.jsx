@@ -338,9 +338,15 @@ export default function AuthPage() {
         <Card className="max-w-md p-6">
           <h1 className="text-lg font-semibold">Supabase isn&apos;t configured</h1>
           <p className="mt-2 text-sm text-muted-foreground">
-            Copy <code className="font-mono text-xs">.env.example</code> to{" "}
-            <code className="font-mono text-xs">.env</code> at the repo root, fill in your
-            Supabase URL and anon key, and restart Vite.
+            This app reads its config from{" "}
+            <code className="font-mono text-xs">frontend/.env</code>, not the repo root. Copy{" "}
+            <code className="font-mono text-xs">.env.example</code> to{" "}
+            <code className="font-mono text-xs">frontend/.env</code>, fill in{" "}
+            <code className="font-mono text-xs">VITE_SUPABASE_URL</code>,{" "}
+            <code className="font-mono text-xs">VITE_SUPABASE_ANON_KEY</code> and{" "}
+            <code className="font-mono text-xs">VITE_API_URL</code>, and restart Vite. The{" "}
+            <code className="font-mono text-xs">.env</code> at the repo root configures the
+            backend, and Vite never loads it.
           </p>
         </Card>
       </div>

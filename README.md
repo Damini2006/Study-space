@@ -23,8 +23,14 @@ git clone https://github.com/your-org/studyspace
 cd studyspace
 
 # 2. Configure environment
+#    These two files hold different things — Vite only ever reads frontend/.env.
 cp .env.example .env
 # Edit .env with your Supabase URL, anon key, JWT secret, and OpenAI API key
+# Then create the frontend's own env file with the VITE_ vars it needs:
+cp .env.example frontend/.env
+# Edit frontend/.env: VITE_SUPABASE_URL, VITE_SUPABASE_ANON_KEY, VITE_API_URL
+# The root .env configures the backend only; a VITE_ var placed there is
+# never bundled into the frontend.
 
 # 3. Start infrastructure (Postgres + Redis)
 docker compose up -d postgres redis
