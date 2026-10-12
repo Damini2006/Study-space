@@ -6,7 +6,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { motion } from "framer-motion";
-import { ImagePlus, Loader2, Plus, StickyNote, Trash2, Eye } from "lucide-react";
+import { ImagePlus, Loader2, Pencil, Plus, StickyNote, Trash2, Eye } from "lucide-react";
 import { visionApi } from "@/services/api-services";
 import { Button } from "@/components/ui/button";
 import { Input, Label } from "@/components/ui/input";
@@ -197,21 +197,29 @@ export default function VisionBoard() {
         </div>
 
         <div className="flex items-center gap-2">
-          {/* Board switcher */}
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setRenameBoardId(currentBoardId)}
-            disabled={boards.length === 0}
-          >
-            {currentBoardId ? (
-              <span className="flex items-center gap-1">
-                <Eye className="size-3.5" /> {boards.find((b) => b.id === currentBoardId)?.name || "Board"}
-              </span>
-            ) : (
-              <span>All boards</span>
-            )}
-          </Button>
+          {/* Board switcher. A null `currentBoardId` means every item on the
+              canvas at once; picking a board scopes the canvas to it, which is
+              also what Export SVG and Delete act on. Previously this control
+              only ever opened the rename dialog, so a board created on an
+              earlier visit could never be reopened. */}
+          <Select
+            value={currentBoardId || ""}
+            onValueChange={(id) => setCurrentBoardId(id || null)}
+            options={[{ value: "", label: "All boards" }, ...boardOptions]}
+            ariaLabel="Switch vision board"
+            className="h-9 w-44"
+          />
+
+          {/* Rename board */}
+          {currentBoardId && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setRenameBoardId(currentBoardId)}
+            >
+              <Pencil className="size-3.5" /> Rename
+            </Button>
+          )}
 
           {/* Add board button */}
           <Button

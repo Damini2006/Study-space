@@ -46,7 +46,7 @@ create index if not exists note_versions_user_idx on public.note_versions (user_
 -- (user, category, month) so a second save updates rather than duplicates.
 -- ---------------------------------------------------------------------------
 create table if not exists public.budgets (
-  user_id      uuid not null references auth.users(id) on delete cascade,
+  user_id      uuid not null default auth.uid() references auth.users(id) on delete cascade,
   category     text not null check (char_length(category) between 1 and 40),
   month        date not null,           -- first day of the budget month
   limit_amount double precision not null check (limit_amount > 0),
@@ -84,13 +84,17 @@ create trigger vision_boards_set_updated_at
 alter table public.vision_items add column if not exists board_id uuid references public.vision_boards(id) on delete cascade;
 
 -- Give every user who already has items a "My board" and move their
--- items onto it, so nothing is left ownerless by the new column.
+-- items onto it, so nothing is left ownerless by the new column. The
+-- loop only picks up users who still have unassigned items, so running
+-- this twice cannot hand anyone a second board.
 do $$
 declare
   u uuid;
   b uuid;
 begin
-  for u in select distinct user_id from public.vision_items loop
+  for u in
+    select distinct user_id from public.vision_items where board_id is null
+  loop
     insert into public.vision_boards (user_id, name) values (u, 'My board') returning id into b;
     update public.vision_items set board_id = b where user_id = u and board_id is null;
   end loop;

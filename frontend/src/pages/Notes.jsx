@@ -97,20 +97,26 @@ function NoteEditor({ note, onSave, onClose, allTags }) {
   const [pinned, setPinned] = useState(note?.pinned || false);
   const [tagInput, setTagInput] = useState("");
 
-  // One TipTap instance per dialog. Constructing it inline during render (as
-  // this previously did) allocated a fresh editor on every keystroke.
-  const editor = useMemo(
-    () =>
-      createNoteEditor({
-        content: note?.content,
-        onUpdate: ({ editor: e }) => setContent(e.getJSON()),
-      }),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    []
-  );
   const [content, setContent] = useState(note?.content || { type: "doc", content: [] });
 
-  useEffect(() => () => editor.destroy(), [editor]);
+  // One TipTap instance per dialog, built inside an effect rather than during
+  // render. Constructing it inline (as this previously did) allocated a fresh
+  // editor on every keystroke; moving it to `useMemo` still failed under
+  // Strict Mode, whose simulated unmount runs the cleanup below and destroys
+  // the editor — while `EditorContent` never re-initialises an instance it
+  // saw destroyed, so the document rendered blank and could not be typed
+  // into. Creating it on every mount means Strict Mode's throwaway copy is
+  // simply replaced by a live one.
+  const [editor, setEditor] = useState(null);
+  useEffect(() => {
+    const instance = createNoteEditor({
+      content: note?.content,
+      onUpdate: ({ editor: e }) => setContent(e.getJSON()),
+    });
+    setEditor(instance);
+    return () => instance.destroy();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Version history and related notes are only meaningful for a
   // saved note — a brand-new one has neither.
@@ -135,7 +141,9 @@ function NoteEditor({ note, onSave, onClose, allTags }) {
       setColor(restored.color);
       setNoteTags(restored.tags || []);
       setPinned(restored.pinned);
-      editor.commands.setContent(restored.content);
+      // The editor is built on mount, so it is always here by the time a
+      // restore can run; the guard keeps the call safe regardless.
+      editor?.commands?.setContent(restored.content);
       setContent(restored.content);
       queryClient.invalidateQueries({ queryKey: ["note-versions", note.id] });
       queryClient.invalidateQueries({ queryKey: ["notes"] });
@@ -146,7 +154,7 @@ function NoteEditor({ note, onSave, onClose, allTags }) {
 
   // Live writing stats for the footer, recomputed whenever the doc changes.
   const stats = useMemo(() => {
-    const text = (editor.getText?.() || "").trim();
+    const text = (editor?.getText?.() || "").trim();
     const words = text ? text.split(/\s+/).length : 0;
     return {
       words,
@@ -238,7 +246,14 @@ function NoteEditor({ note, onSave, onClose, allTags }) {
                   <li key={v.id} className="flex items-center justify-between gap-2 rounded-md border border-border bg-card px-2.5 py-1.5">
                     <div className="min-w-0">
                       <div className="truncate text-sm">{v.title || "Untitled"}</div>
-                      <div className="text-[11px] text-muted-foreground">{formatDate(v.created_at)}</div>
+                      {/* Two saves on the same day otherwise look identical, so
+                          the row leads with a line of what that version
+                          actually said. */}
+                      <div className="truncate text-[11px] text-muted-foreground">
+                        {formatDate(v.created_at)}
+                        {" — "}
+                        {(v.content_text || "").trim().replace(/\s+/g, " ") || "No text"}
+                      </div>
                     </div>
                     <Button
                       type="button"
