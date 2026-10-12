@@ -20,6 +20,7 @@ import { ToastProvider } from "@/components/ui/toast";
 import ImportDialog from "@/components/workspace/ImportDialog";
 import StudioPanel from "@/components/workspace/StudioPanel";
 import SettingsPage from "@/pages/Settings";
+import VisionBoard from "@/pages/VisionBoard";
 
 // Every export of api-services, so any panel Settings imports resolves;
 // the tests only exercise the tokens tab, which mounts these three.
@@ -211,5 +212,37 @@ describe("the studio flashcards view", () => {
 
     expect(await screen.findByText("What is ATP?")).toBeInTheDocument();
     expect(screen.queryByText("Open in study")).toBeNull();
+  });
+});
+
+describe("the vision board switcher", () => {
+  it("scopes the canvas to the chosen board instead of only opening rename", async () => {
+    apis.visionApi.boards = {
+      list: vi.fn().mockResolvedValue([
+        { id: "b1", name: "Dream university" },
+        { id: "b2", name: "Travel more" },
+      ]),
+    };
+    apis.visionApi.list.mockResolvedValue([
+      { id: "i1", board_id: "b1", type: "text", text: "Oxford", x: 0, y: 0 },
+    ]);
+    renderWithProviders(<VisionBoard />);
+
+    // The control itself is the regression: the only board button opened the
+    // rename dialog, so a board saved on an earlier visit could never be
+    // reopened — and Export/Delete vanished with it. This find fails outright
+    // on that code.
+    const switcher = await screen.findByLabelText("Switch vision board");
+    expect(
+      await within(switcher).findByRole("option", { name: "Dream university" })
+    ).toBeInTheDocument();
+
+    fireEvent.change(switcher, { target: { value: "b2" } });
+
+    // The heading — not the option — names the newly scoped board, and the
+    // canvas refetches for it rather than keeping the unscoped list.
+    const heading = await screen.findByRole("heading", { level: 1 });
+    expect(within(heading).getByText("Travel more")).toBeInTheDocument();
+    expect(apis.visionApi.list).toHaveBeenCalledWith("b2");
   });
 });
