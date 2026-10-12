@@ -12,6 +12,7 @@
  */
 import fs from "node:fs";
 import path from "node:path";
+import { StrictMode } from "react";
 import { describe, expect, it, vi, beforeEach } from "vitest";
 import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
@@ -110,6 +111,42 @@ describe("opening an existing note", () => {
 
     await waitFor(() => expect(notesApi.create).toHaveBeenCalledTimes(1));
     expect(notesApi.update).not.toHaveBeenCalled();
+  });
+});
+
+// Strict Mode's simulated unmount runs every cleanup once on mount. When the
+// TipTap instance was built in a useMemo and destroyed by a cleanup effect,
+// that pass destroyed it — and EditorContent will not re-initialise an
+// instance it saw destroyed, so the document rendered as an empty, uneditable
+// div while everything else on the page looked fine. Rendering under
+// StrictMode is the only way to catch that, so this one does.
+describe("the note editor under Strict Mode", () => {
+  it("mounts a live ProseMirror surface holding the note", async () => {
+    const user = userEvent.setup();
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+    });
+    render(
+      <StrictMode>
+        <QueryClientProvider client={queryClient}>
+          <ToastProvider>
+            <Notes />
+          </ToastProvider>
+        </QueryClientProvider>
+      </StrictMode>
+    );
+
+    await user.click(await screen.findByRole("button", { name: "Edit Mitosis notes" }));
+    await screen.findByRole("dialog", { name: "Edit note" });
+
+    const prose = await waitFor(() => {
+      const el = document.querySelector(".ProseMirror");
+      expect(el, "TipTap's editable surface never mounted").not.toBeNull();
+      return el;
+    });
+    // jsdom doesn't implement `isContentEditable`, so read the attribute.
+    expect(prose.getAttribute("contenteditable")).toBe("true");
+    expect(prose.textContent).toContain("Osmosis moves water.");
   });
 });
 
