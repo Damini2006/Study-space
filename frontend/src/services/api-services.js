@@ -75,12 +75,24 @@ export const notesApi = {
     if (params.tag) q.set("tag", params.tag);
     if (params.sort) q.set("sort", params.sort);
     if (params.space_id) q.set("space_id", params.space_id);
+    if (params.folder_id) q.set("folder_id", params.folder_id);
     const qs = q.toString();
     return api.get(`/notes${qs ? `?${qs}` : ""}`);
   },
   create: (body) => api.post("/notes", body),
   update: (id, body) => api.patch(`/notes/${id}`, body),
   delete: (id) => api.delete(`/notes/${id}`),
+  // Version history — snapshots the server keeps on every edit.
+  versions: (id) => api.get(`/notes/${id}/versions`),
+  restore: (id, versionId) => api.post(`/notes/${id}/restore`, { version_id: versionId }),
+  related: (id) => api.get(`/notes/${id}/related`),
+  bulk: (body) => api.post("/notes/bulk", body),
+  folders: {
+    list: () => api.get("/notes/folders"),
+    create: (body) => api.post("/notes/folders", body),
+    rename: (id, body) => api.patch(`/notes/folders/${id}`, body),
+    delete: (id) => api.delete(`/notes/folders/${id}`),
+  },
 };
 
 export const focusApi = {
@@ -96,11 +108,20 @@ export const habitsApi = {
 };
 
 export const visionApi = {
-  list: () => api.get("/vision"),
+  list: (boardId) => api.get(`/vision${boardId ? `?board_id=${boardId}` : ""}`),
   create: (body) => api.post("/vision", body),
   upload: (formData) => api.upload("/vision/upload", formData),
   update: (id, body) => api.patch(`/vision/${id}`, body),
   delete: (id) => api.delete(`/vision/${id}`),
+  // Multiple named boards.
+  boards: {
+    list: () => api.get("/vision/boards"),
+    create: (body) => api.post("/vision/boards", body),
+    rename: (id, body) => api.patch(`/vision/boards/${id}`, body),
+    delete: (id) => api.delete(`/vision/boards/${id}`),
+  },
+  // A self-contained SVG image of a board.
+  export: (boardId) => api.download(`/vision/boards/${boardId}/export`),
 };
 
 export const financeApi = {
@@ -109,6 +130,16 @@ export const financeApi = {
   update: (id, body) => api.patch(`/finance/transactions/${id}`, body),
   delete: (id) => api.delete(`/finance/transactions/${id}`),
   summary: (days = 30) => api.get(`/finance/summary?days=${days}`),
+  // Per-category monthly limits; the summary reports
+  // each one's spent-so-far and ok/near/over status.
+  budgets: {
+    list: () => api.get("/finance/budgets"),
+    upsert: (body) => api.post("/finance/budgets", body),
+    update: (category, month, body) =>
+      api.patch(`/finance/budgets?category=${encodeURIComponent(category)}&month=${month}`, body),
+    delete: (category, month) =>
+      api.delete(`/finance/budgets?category=${encodeURIComponent(category)}&month=${month}`),
+  },
 };
 
 export const analyticsApi = {

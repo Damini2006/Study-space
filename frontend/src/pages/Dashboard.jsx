@@ -1,10 +1,11 @@
-import { useCallback, useMemo, useState } from "react";
+import { Fragment, useCallback, useMemo, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   ArrowDownRight,
   ArrowUpRight,
   BarChart3,
+  CalendarCheck,
   CalendarDays,
   Check,
   Flame,
@@ -52,6 +53,15 @@ export default function Dashboard() {
     queryFn: () => analyticsApi.summary(30),
   });
   const { data: habits = [] } = useQuery({ queryKey: ["habits"], queryFn: habitsApi.list });
+  // A per-habit set of logged dates, so the grid can show
+  // which days are checked without re-reading every log.
+  const habitLogSet = useMemo(() => {
+    const map = new Map();
+    for (const h of habits) {
+      map.set(h.id, new Set((h.logs || []).map((l) => l.log_date)));
+    }
+    return map;
+  }, [habits]);
   const { data: tasks = [] } = useQuery({ queryKey: ["plan", "tasks"], queryFn: () => plannerApi.listTasks(false) });
 
   const upcoming = useMemo(() => tasks.filter((t) => t.status === "pending").slice(0, 5), [tasks]);
@@ -88,12 +98,15 @@ export default function Dashboard() {
   });
 
   const toggleHabit = useMutation({
-    mutationFn: (id) => habitsApi.toggleLog(id),
+    // log_date defaults to today when omitted, so the
+    // "today" toggle and the grid share one code path.
+    mutationFn: ({ id, log_date }) => habitsApi.toggleLog(id, log_date ? { log_date } : {}),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["habits"] }),
     onError: (err) => error(err.message),
   });
 
   const [creatingHabit, setCreatingHabit] = useState(false);
+  const [habitView, setHabitView] = useState("week");
 
   const createHabit = useMutation({
     mutationFn: (body) => habitsApi.create(body),
@@ -337,7 +350,7 @@ export default function Dashboard() {
                 <div key={h.id} className="flex items-center gap-1">
                   <button
                     type="button"
-                    onClick={() => toggleHabit.mutate(h.id)}
+                    onClick={() => toggleHabit.mutate({ id: h.id })}
                     aria-pressed={h.done_today}
                     className="flex flex-1 items-center gap-2.5 rounded-lg px-2 py-1.5 text-left text-sm hover:bg-surface-2"
                   >
@@ -396,6 +409,15 @@ export default function Dashboard() {
         </div>
       </div>
 
+      {/* Habit tracker — a weekly or monthly grid of real check-offs */}
+      <HabitGrid
+        habits={habits}
+        logSet={habitLogSet}
+        view={habitView}
+        onViewChange={setHabitView}
+        onToggle={(id, log_date) => toggleHabit.mutate({ id, log_date })}
+      />
+
       {/* Create space dialog */}
       <NewSpaceDialog
         open={creatingSpace}
@@ -415,6 +437,134 @@ export default function Dashboard() {
         busy={createHabit.isPending}
       />
     </div>
+  );
+}
+
+function HabitGrid({ habits, logSet, view, onViewChange, onToggle }) {
+  const today = new Date();
+  const days = useMemo(() => {
+    const out = [];
+    if (view === "week") {
+      for (let i = 6; i >= 0; i -= 1) {
+        const d = new Date(today.getFullYear(), today.getMonth(), today.getDate() - i);
+        out.push(d);
+      }
+    } else {
+      const dim = new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate();
+      for (let i = 1; i <= dim; i += 1) {
+        out.push(new Date(today.getFullYear(), today.getMonth(), i));
+      }
+    }
+    return out;
+    // `view` changes the shape; `today` anchors it.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [view, today.toDateString()]);
+
+  const iso = (d) =>
+    `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+
+  const isFuture = (d) => iso(d) > iso(today);
+
+  return (
+    <Card>
+      <CardHeader className="pb-1">
+        <CardTitle className="flex flex-wrap items-center justify-between gap-2 text-sm">
+          <span className="flex items-center gap-1.5">
+            <CalendarCheck className="size-4 text-accent" /> Habit tracker
+          </span>
+          <div className="flex items-center gap-1" role="tablist" aria-label="Tracker view">
+            {["week", "month"].map((v) => (
+              <button
+                key={v}
+                type="button"
+                role="tab"
+                aria-selected={view === v}
+                onClick={() => onViewChange(v)}
+                className={cn(
+                  "rounded-lg px-2.5 py-1 text-xs capitalize",
+                  view === v ? "bg-primary/10 text-primary" : "text-muted-foreground hover:bg-surface-2"
+                )}
+              >
+                {v}
+              </button>
+            ))}
+          </div>
+        </CardTitle>
+        <CardDescription>
+          {view === "week" ? "The last 7 days" : `${today.toLocaleDateString(undefined, { month: "long", year: "numeric" })}`}
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        {habits.length === 0 ? (
+          <p className="text-xs text-muted-foreground">Check-ins you mark off will appear here.</p>
+        ) : (
+          <div className="overflow-x-auto">
+            <div
+              className="grid"
+              style={{
+                gridTemplateColumns: `minmax(120px, 160px) repeat(${days.length}, minmax(24px, 1fr))`,
+              }}
+            >
+              {/* Header row: weekday initials (week) or day numbers (month) */}
+              <div />
+              {days.map((d, i) => (
+                <div
+                  key={i}
+                  className="pb-1 text-center text-[10px] text-muted-foreground"
+                  title={d.toLocaleDateString(undefined, { weekday: "long", month: "short", day: "numeric" })}
+                >
+                  {view === "week"
+                    ? d.toLocaleDateString(undefined, { weekday: "narrow" })
+                    : d.getDate()}
+                </div>
+              ))}
+
+              {habits.map((h) => {
+                const logged = logSet.get(h.id) || new Set();
+                return (
+                  <Fragment key={h.id}>
+                    <div className="flex items-center gap-1.5 pr-2 text-sm">
+                      <span
+                        className="size-2 shrink-0 rounded-full"
+                        style={{ background: h.color }}
+                        aria-hidden
+                      />
+                      <span className="truncate">{h.name}</span>
+                    </div>
+                    {days.map((d, i) => {
+                      const key = iso(d);
+                      const done = logged.has(key);
+                      const future = isFuture(d);
+                      return (
+                        <button
+                          key={i}
+                          type="button"
+                          onClick={() => !future && onToggle(h.id, key)}
+                          disabled={future}
+                          aria-pressed={done}
+                          aria-label={`${h.name} on ${key}${done ? " (done)" : ""}`}
+                          title={`${key}${done ? " — done" : ""}`}
+                          className={cn(
+                            "mx-[2px] my-[2px] flex size-6 items-center justify-center rounded-md border text-[10px]",
+                            done
+                              ? "border-transparent bg-success text-white"
+                              : future
+                                ? "border-dashed border-border opacity-40"
+                                : "border-border hover:border-success/60 hover:bg-success/10"
+                          )}
+                        >
+                          {done && <Check className="size-3" />}
+                        </button>
+                      );
+                    })}
+                  </Fragment>
+                );
+              })}
+            </div>
+          </div>
+        )}
+      </CardContent>
+    </Card>
   );
 }
 

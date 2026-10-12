@@ -10,7 +10,7 @@ import { financeApi } from "@/services/api-services";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input, Label } from "@/components/ui/input";
-import { Dialog } from "@/components/ui/dialog";
+import { Dialog, Select } from "@/components/ui/dialog";
 import { useToast } from "@/components/ui/toast";
 import { cn, formatDate } from "@/lib/utils";
 import { ChartCard, TrendBars } from "@/components/charts/charts";
@@ -19,10 +19,19 @@ import { comparePeriods, dailyTotals } from "@/components/charts/chart-maths";
 const CATEGORIES = [
   "Food", "Housing", "Transport", "Supplies", "Health", "Fun", "Income", "Other",
 ];
+// Income is a transaction kind, not something you set a spending limit on.
+const BUDGET_CATEGORIES = CATEGORIES.filter((c) => c !== "Income");
 const DONUT_COLORS = [
   "var(--chart-1)", "var(--chart-2)", "var(--chart-3)",
   "var(--chart-4)", "var(--chart-5)", "var(--chart-6)",
 ];
+
+// Budgets are always for the current calendar month — the same rule the
+// summary uses — so the first of this month is every key we write and delete.
+const monthStart = () => {
+  const now = new Date();
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-01`;
+};
 
 const inr = new Intl.NumberFormat("en-IN", {
   style: "currency",
@@ -67,6 +76,51 @@ export default function Finance() {
     },
     onError: (e) => toastError(e.message || "Could not delete that transaction."),
   });
+
+  // Budgets are a per-month notion, so every budget
+  // write targets the current calendar month.
+  const [budgetDialog, setBudgetDialog] = useState(false);
+  const [budgetForm, setBudgetForm] = useState({ category: "Food", limit: "" });
+
+  const saveBudget = useMutation({
+    mutationFn: (body) => financeApi.budgets.upsert(body),
+    onSuccess: () => {
+      invalidate();
+      setBudgetDialog(false);
+      success("Budget saved.");
+    },
+    onError: (e) => toastError(e.message || "Could not save that budget."),
+  });
+
+  const removeBudget = useMutation({
+    mutationFn: (category) => financeApi.budgets.delete(category, monthStart()),
+    onSuccess: () => {
+      invalidate();
+      success("Budget removed.");
+    },
+    onError: (e) => toastError(e.message || "Could not remove that budget."),
+  });
+
+  const openBudget = (category) => {
+    const existing = summary?.budgets?.find((b) => b.category === category);
+    setBudgetForm({
+      category,
+      limit: existing ? String(existing.limit_amount) : "",
+    });
+    setBudgetDialog(true);
+  };
+
+  const submitBudget = () => {
+    const limit = Number(budgetForm.limit);
+    if (!Number.isFinite(limit) || limit <= 0) return;
+    saveBudget.mutate({
+      category: budgetForm.category,
+      month: monthStart(),
+      limit_amount: limit,
+    });
+  };
+
+  const budgetLimitValid = Number.isFinite(Number(budgetForm.limit)) && Number(budgetForm.limit) > 0;
 
   const openNew = () => {
     setForm({ title: "", amount: "", kind: "expense", category: "Food", spent_on: "", note: "" });
@@ -121,7 +175,70 @@ export default function Finance() {
         </Button>
       </div>
 
-      {/* Summary strip */}
+      {/* Per-category monthly budgets */}
+      <Card>
+        <CardHeader className="flex-row items-center justify-between">
+          <CardTitle>Budgets</CardTitle>
+          <Button variant="outline" size="sm" onClick={() => openBudget("Food")}>
+            <Plus className="size-3.5" /> Set budget
+          </Button>
+        </CardHeader>
+        <CardContent>
+          {(summary?.budgets?.length ?? 0) === 0 ? (
+            <p className="text-xs text-muted-foreground">No budgets set. Set a monthly limit for a category to track it here.</p>
+          ) : (
+            <ul className="space-y-3">
+              {summary.budgets.map((b) => {
+                const pct = b.limit_amount > 0 ? Math.min(100, (b.spent / b.limit_amount) * 100) : 0;
+                const tone = b.status === "over" ? "bg-danger" : b.status === "near" ? "bg-warning" : "bg-success";
+                return (
+                  <li key={b.category}>
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => openBudget(b.category)}
+                          title="Edit this budget"
+                          className="rounded-md px-1 py-0.5 text-left transition-colors hover:bg-surface-2"
+                        >
+                          {b.category}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (confirm(`Remove the ${b.category} budget for this month?`)) {
+                              removeBudget.mutate(b.category);
+                            }
+                          }}
+                          aria-label={`Remove ${b.category} budget`}
+                          title="Remove budget"
+                          className="rounded-md p-1 text-muted-foreground transition-colors hover:text-destructive"
+                        >
+                          <Trash2 className="size-3.5" />
+                        </button>
+                      </span>
+                      <span className="tabular-nums text-muted-foreground">
+                        {inr.format(b.spent)} / {inr.format(b.limit_amount)}
+                      </span>
+                    </div>
+                    <div className="mt-1 h-2 overflow-hidden rounded-full bg-surface-2">
+                      <div className={cn("h-full rounded-full", tone)} style={{ width: `${pct}%` }} />
+                    </div>
+                    <div className="mt-0.5 flex items-center justify-between text-[11px] text-muted-foreground">
+                      {b.status === "over"
+                        ? `Over by ${inr.format(b.spent - b.limit_amount)}`
+                        : b.status === "near"
+                          ? "Close to the limit"
+                          : "On track"}
+                      <span>{Math.round((b.spent / b.limit_amount) * 100)}%</span>
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </CardContent>
+      </Card>
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
         <SummaryCard label="Balance" value={summary?.balance ?? 0} icon={Wallet} tone="text-primary" />
         <SummaryCard label="Income" value={summary?.income ?? 0} icon={TrendingUp} tone="text-success" />
@@ -321,6 +438,57 @@ export default function Finance() {
               onChange={(e) => setForm({ ...form, note: e.target.value })}
               placeholder="With friends"
             />
+          </div>
+        </form>
+      </Dialog>
+
+      {/* Set / edit budget dialog */}
+      <Dialog
+        open={budgetDialog}
+        onClose={() => setBudgetDialog(false)}
+        title="Set a monthly budget"
+        description="Budgets apply to the current calendar month. Saving replaces any limit already set for this category."
+        footer={
+          <>
+            <Button variant="outline" onClick={() => setBudgetDialog(false)}>Cancel</Button>
+            <Button onClick={submitBudget} disabled={saveBudget.isPending || !budgetLimitValid}>
+              {saveBudget.isPending && <Loader2 className="size-4 animate-spin" />} Save budget
+            </Button>
+          </>
+        }
+      >
+        <form
+          className="space-y-3"
+          onSubmit={(e) => {
+            e.preventDefault();
+            submitBudget();
+          }}
+        >
+          <div className="space-y-1.5">
+            <Label htmlFor="budget-category">Category</Label>
+            <Select
+              id="budget-category"
+              value={budgetForm.category}
+              onValueChange={(category) => setBudgetForm((f) => ({ ...f, category }))}
+              options={BUDGET_CATEGORIES.map((c) => ({ value: c, label: c }))}
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="budget-limit">Monthly limit</Label>
+            <Input
+              id="budget-limit"
+              type="number"
+              min="1"
+              step="1"
+              inputMode="numeric"
+              value={budgetForm.limit}
+              onChange={(e) => setBudgetForm((f) => ({ ...f, limit: e.target.value }))}
+              placeholder="5000"
+              autoFocus
+            />
+            {!budgetLimitValid && budgetForm.limit !== "" ? (
+              <p className="text-xs text-destructive">Enter an amount greater than zero.</p>
+            ) : null}
           </div>
         </form>
       </Dialog>

@@ -13,6 +13,10 @@ from fastapi import APIRouter, HTTPException, Query
 
 from studyspace.deps import DbDep
 from studyspace.models.finance import (
+    BudgetCreate,
+    BudgetOut,
+    BudgetStatus,
+    BudgetUpdate,
     CategorySlice,
     FinanceSummary,
     TransactionCreate,
@@ -111,9 +115,101 @@ async def summary(db: DbDep, days: int = Query(default=30, ge=1, le=366)) -> Fin
         )
         for cat, total in sorted(per_category.items(), key=lambda kv: -kv[1])
     ]
+
+    # Budget status is a per-month notion, so it is always
+    # computed for the current calendar month — not the
+    # `days` window, which is about the transaction history.
+    month_start = date.today().replace(day=1)
+    month_end = (month_start + timedelta(days=32)).replace(day=1)
+    month_rows = await db.fetch(
+        "select amount, category from public.transactions "
+        "where user_id = auth.uid() and kind = 'expense' "
+        "and spent_on >= $1 and spent_on < $2",
+        month_start, month_end,
+    )
+    spent_by_category: dict[str, float] = {}
+    for r in month_rows:
+        spent_by_category[r["category"]] = spent_by_category.get(r["category"], 0.0) + r["amount"]
+
+    budget_rows = await db.fetch(
+        "select category, limit_amount from public.budgets "
+        "where user_id = auth.uid() and month = $1",
+        month_start,
+    )
+    budgets = []
+    for b in budget_rows:
+        spent = spent_by_category.get(b["category"], 0.0)
+        limit = b["limit_amount"]
+        if spent > limit:
+            status = "over"
+        elif limit > 0 and spent >= 0.8 * limit:
+            status = "near"
+        else:
+            status = "ok"
+        budgets.append(
+            BudgetStatus(
+                category=b["category"],
+                limit_amount=round(limit, 2),
+                spent=round(spent, 2),
+                status=status,
+            )
+        )
+
     return FinanceSummary(
         balance=round(income - expense, 2),
         income=round(income, 2),
         expense=round(expense, 2),
         by_category=by_category,
+        budgets=budgets,
     )
+
+
+# ---------------------------------------------------------------------------
+# Budgets — one limit per category per month
+# ---------------------------------------------------------------------------
+@router.get("/budgets", response_model=list[BudgetOut])
+async def list_budgets(db: DbDep) -> list[BudgetOut]:
+    rows = await db.fetch(
+        "select category, month, limit_amount, created_at, updated_at "
+        "from public.budgets where user_id = auth.uid() order by month desc, category"
+    )
+    return [BudgetOut(**dict(r)) for r in rows]
+
+
+@router.post("/budgets", response_model=BudgetOut, status_code=201)
+async def upsert_budget(db: DbDep, body: BudgetCreate) -> BudgetOut:
+    # The primary key is (user, category, month), so a second
+    # save for the same slot updates the limit rather than
+    # duplicating the row.
+    row = await db.fetchrow(
+        "insert into public.budgets (category, month, limit_amount) values ($1, $2, $3) "
+        "on conflict (user_id, category, month) do update set limit_amount = $3 "
+        "returning category, month, limit_amount, created_at, updated_at",
+        body.category, body.month, body.limit_amount,
+    )
+    return BudgetOut(**dict(row))
+
+
+@router.patch("/budgets", response_model=BudgetOut)
+async def update_budget(db: DbDep, body: BudgetUpdate, category: str = Query(min_length=1, max_length=40), month: date = Query()) -> BudgetOut:
+    if body.limit_amount is None:
+        raise HTTPException(status_code=400, detail="No fields to update.")
+    row = await db.fetchrow(
+        "update public.budgets set limit_amount = $3 "
+        "where user_id = auth.uid() and category = $1 and month = $2 "
+        "returning category, month, limit_amount, created_at, updated_at",
+        category, month, body.limit_amount,
+    )
+    if row is None:
+        raise HTTPException(status_code=404, detail="Budget not found.")
+    return BudgetOut(**dict(row))
+
+
+@router.delete("/budgets", status_code=204)
+async def delete_budget(db: DbDep, category: str = Query(min_length=1, max_length=40), month: date = Query()) -> None:
+    result = await db.execute(
+        "delete from public.budgets where user_id = auth.uid() and category = $1 and month = $2",
+        category, month,
+    )
+    if result == "DELETE 0":
+        raise HTTPException(status_code=404, detail="Budget not found.")

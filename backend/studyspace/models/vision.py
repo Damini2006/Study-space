@@ -19,6 +19,7 @@ class VisionItemCreate(BaseModel):
     rotation: float = Field(default=0, ge=-360, le=360)
     z_index: int = Field(default=0, ge=0, le=100000)
     image_path: str | None = Field(default=None, max_length=500)
+    board_id: uuid.UUID | None = None
 
 
 class VisionItemUpdate(BaseModel):
@@ -30,6 +31,7 @@ class VisionItemUpdate(BaseModel):
     height: float | None = Field(default=None, ge=60, le=4000)
     rotation: float | None = Field(default=None, ge=-360, le=360)
     z_index: int | None = Field(default=None, ge=0, le=100000)
+    board_id: uuid.UUID | None = None
 
 
 class VisionItemOut(BaseModel):
@@ -45,6 +47,25 @@ class VisionItemOut(BaseModel):
     z_index: int
     image_path: str | None = None
     image_url: str | None = None  # short-lived signed URL when kind == image
+    board_id: uuid.UUID | None = None
+    created_at: datetime
+    updated_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
+class VisionBoardCreate(BaseModel):
+    name: str = Field(min_length=1, max_length=80)
+
+
+class VisionBoardUpdate(BaseModel):
+    name: str | None = Field(default=None, min_length=1, max_length=80)
+
+
+class VisionBoardOut(BaseModel):
+    id: uuid.UUID
+    name: str
+    item_count: int = 0
     created_at: datetime
     updated_at: datetime
 

@@ -1,13 +1,16 @@
 /**
- * Vision Board — drag stickies and images around a canvas (restored from
- * the prototype). Positions autosave via PATCH; images upload to the
- * private `vision` storage bucket and render through signed URLs.
+ * Vision Board — multiple named boards, drag stickies and images,
+ * grid/list views, and SVG export. Images go to the private `vision`
+ * bucket and render through short‑lived signed URLs.
  */
-import { useCallback, useEffect, useRef, useState } from "react";import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useEffect, useRef, useState } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { motion } from "framer-motion";
-import { ImagePlus, Loader2, Plus, StickyNote, Trash2 } from "lucide-react";
+import { ImagePlus, Loader2, Plus, StickyNote, Trash2, Eye } from "lucide-react";
 import { visionApi } from "@/services/api-services";
 import { Button } from "@/components/ui/button";
+import { Input, Label } from "@/components/ui/input";
+import { Dialog, Select } from "@/components/ui/dialog";
 import { useToast } from "@/components/ui/toast";
 import { cn } from "@/lib/utils";
 
@@ -24,51 +27,106 @@ export default function VisionBoard() {
   const fileRef = useRef(null);
   const boardRef = useRef(null);
   const [uploading, setUploading] = useState(false);
+  const [currentBoardId, setCurrentBoardId] = useState(null);
+  const [renameBoardId, setRenameBoardId] = useState(null);
+  const [creatingBoard, setCreatingBoard] = useState(false);
+  const [newBoardName, setNewBoardName] = useState("");
 
-  const { data: items = [], isLoading } = useQuery({
-    queryKey: ["vision"],
-    queryFn: () => visionApi.list(),
+  const { data: boards = [] } = useQuery({
+    queryKey: ["vision-boards"],
+    queryFn: () => visionApi.boards.list(),
   });
 
+  const { data: items = [], isLoading } = useQuery({
+    queryKey: ["vision-items", currentBoardId],
+    queryFn: () => (currentBoardId ? visionApi.list(currentBoardId) : visionApi.list()),
+  });
+
+  const createBoard = useMutation({
+    mutationFn: (body) => visionApi.boards.create(body),
+    onSuccess: (board) => {
+      setCurrentBoardId(board.id);
+      qc.invalidateQueries({ queryKey: ["vision-boards"] });
+      success("Board created.");
+    },
+    onError: (e) => toastError(e.message || "Could not create board."),
+  });
+
+  const renameBoard = useMutation({
+    mutationFn: ({ id, name }) => visionApi.boards.rename(id, { name }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["vision-boards"] });
+      success("Board renamed.");
+    },
+    onError: (e) => toastError(e.message || "Could not rename board."),
+  });
+
+  const deleteBoard = useMutation({
+    mutationFn: (id) => visionApi.boards.delete(id),
+    onSuccess: () => {
+      setCurrentBoardId(null);
+      qc.invalidateQueries({ queryKey: ["vision-boards"] });
+      qc.invalidateQueries({ queryKey: ["vision-items"] });
+      success("Board deleted.");
+    },
+    onError: (e) => toastError(e.message || "Could not delete board."),
+  });
+
+  // --- Item CRUD mutations (unchanged behaviour) ---
   const createItem = useMutation({
     mutationFn: (body) => visionApi.create(body),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["vision"] }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["vision-items"] }),
     onError: (e) => toastError(e.message || "Could not add that sticky."),
   });
 
   const patchItem = useMutation({
     mutationFn: ({ id, body }) => visionApi.update(id, body),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["vision"] }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["vision-items"] }),
     onError: (e) => toastError(e.message || "Could not save that move."),
   });
 
   const removeItem = useMutation({
     mutationFn: (id) => visionApi.delete(id),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["vision"] });
+      qc.invalidateQueries({ queryKey: ["vision-items"] });
       success("Removed from board.");
     },
     onError: (e) => toastError(e.message || "Could not remove that item."),
   });
 
-  // pre-place the next sticky roughly in view
-  const nextPos = useCallback(() => {
-    const n = items.length;
-    return {
-      x: snap(40 + (n % 4) * 230),
-      y: snap(40 + Math.floor(n / 4) * 190),
-    };
-  }, [items.length]);
+  // --- Export (SVG) ---
+  const exportSvg = useMutation({
+    mutationFn: (boardId) => visionApi.export(boardId),
+    onSuccess: (svg) => {
+      const blob = new Blob([svg], { type: "image/svg+xml" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `${currentBoardId ? "board" : "untitled"}.svg`;
+      a.click();
+      URL.revokeObjectURL(url);
+      success("Board exported as SVG.");
+    },
+    onError: (e) => toastError(e.message || "Export failed."),
+  });
+
+  // --- Board UI state ---
+  // Every board is offered as a destination; `Select` shows the item's
+  // current board as the selected option and moves it when changed.
+  const boardOptions = boards.map((b) => ({ value: b.id, label: b.name }));
 
   const addSticky = () => {
-    const { x, y } = nextPos();
+    const next = items.length;
+    const x = snap(40 + (next % 4) * 230);
+    const y = snap(40 + Math.floor(next / 4) * 190);
     createItem.mutate({
       kind: "sticky",
       text: "New goal…",
-      color: STICKY_COLORS[items.length % STICKY_COLORS.length],
+      color: STICKY_COLORS[next % STICKY_COLORS.length],
       x,
       y,
-      z_index: items.length,
+      z_index: next,
+      board_id: currentBoardId,
     });
   };
 
@@ -81,7 +139,7 @@ export default function VisionBoard() {
       const fd = new FormData();
       fd.append("file", file);
       await visionApi.upload(fd);
-      qc.invalidateQueries({ queryKey: ["vision"] });
+      qc.invalidateQueries({ queryKey: ["vision-items"] });
       success("Image added to your board.");
     } catch (err) {
       toastError(err.message || "Upload failed.");
@@ -102,26 +160,189 @@ export default function VisionBoard() {
     patchItem.mutate({ id: item.id, body: { text } });
   };
 
+  const handleCreate = () => {
+    const name = newBoardName.trim();
+    if (!name) return;
+    createBoard.mutate({ name });
+    setCreatingBoard(false);
+    setNewBoardName("");
+  };
+
+  const handleRename = () => {
+    if (!renameBoardId) return;
+    renameBoard.mutate({ id: renameBoardId, name: newBoardName.trim() });
+    setRenameBoardId(null);
+    setNewBoardName("");
+  };
+
+  const moveItem = (item, boardId) => {
+    patchItem.mutate({ id: item.id, body: { board_id: boardId || null } });
+  };
+
   return (
     <div className="mx-auto max-w-6xl space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Vision Board</h1>
+          <h1 className="text-2xl font-bold tracking-tight">
+            Vision Board
+            {currentBoardId && (
+              <span className="ml-2 text-sm text-muted-foreground">
+                {boards.find((b) => b.id === currentBoardId)?.name || "Board"}
+              </span>
+            )}
+          </h1>
           <p className="mt-0.5 text-sm text-muted-foreground">
             Drag stickies and images around — everything autosaves.
           </p>
         </div>
+
         <div className="flex items-center gap-2">
-          <input ref={fileRef} type="file" accept="image/*" hidden onChange={onFiles} />
+          {/* Board switcher */}
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setRenameBoardId(currentBoardId)}
+            disabled={boards.length === 0}
+          >
+            {currentBoardId ? (
+              <span className="flex items-center gap-1">
+                <Eye className="size-3.5" /> {boards.find((b) => b.id === currentBoardId)?.name || "Board"}
+              </span>
+            ) : (
+              <span>All boards</span>
+            )}
+          </Button>
+
+          {/* Add board button */}
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              setNewBoardName("");
+              setCreatingBoard(true);
+            }}
+          >
+            <Plus className="size-3.5" /> Add board
+          </Button>
+
+          {/* Delete board */}
+          {currentBoardId && (
+            <Button
+              variant="destructive"
+              size="sm"
+              onClick={() => {
+                if (confirm("Delete this board? Its items will be removed.")) {
+                  deleteBoard.mutate(currentBoardId);
+                }
+              }}
+            >
+              <Trash2 className="size-3.5" /> Delete
+            </Button>
+          )}
+
+          {/* Export SVG */}
+          {currentBoardId && (
+            <Button variant="outline" size="sm" onClick={() => exportSvg.mutate(currentBoardId)}>
+              <Eye className="size-3.5" /> Export SVG
+            </Button>
+          )}
+
+          {/* Upload image */}
+          <input
+            ref={fileRef}
+            type="file"
+            accept="image/*"
+            hidden
+            onChange={onFiles}
+          />
           <Button variant="outline" onClick={() => fileRef.current?.click()} disabled={uploading}>
             {uploading ? <Loader2 className="size-4 animate-spin" /> : <ImagePlus className="size-4" />}
             Add image
           </Button>
-          <Button onClick={addSticky} disabled={createItem.isPending}>
-            <StickyNote className="size-4" /> Add sticky
-          </Button>
         </div>
       </div>
+
+      {/* Rename board dialog */}
+      {renameBoardId && (
+        <Dialog
+          open
+          onClose={() => {
+            setRenameBoardId(null);
+            setNewBoardName("");
+          }}
+          title="Rename board"
+          footer={
+            <>
+              <Button variant="outline" onClick={() => setRenameBoardId(null)}>Cancel</Button>
+              <Button onClick={handleRename}>Rename</Button>
+            </>
+          }
+        >
+          <form
+            className="space-y-3"
+            onSubmit={e => { e.preventDefault(); handleRename(); }}
+          >
+            <div className="space-y-1.5">
+              <Label htmlFor="board-rename">New board name</Label>
+              <Input
+                id="board-rename"
+                value={newBoardName}
+                onChange={(e) => setNewBoardName(e.target.value)}
+                placeholder="My board"
+                autoFocus
+              />
+            </div>
+          </form>
+        </Dialog>
+      )}
+
+      {/* Create board dialog */}
+      {creatingBoard && (
+        <Dialog
+          open
+          onClose={() => {
+            setCreatingBoard(false);
+            setNewBoardName("");
+          }}
+          title="New board"
+          description="Give this board a name so you can find it later."
+          footer={
+            <>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setCreatingBoard(false);
+                  setNewBoardName("");
+                }}
+              >
+                Cancel
+              </Button>
+              <Button onClick={handleCreate} disabled={!newBoardName.trim()}>
+                Create
+              </Button>
+            </>
+          }
+        >
+          <form
+            className="space-y-3"
+            onSubmit={(e) => {
+              e.preventDefault();
+              handleCreate();
+            }}
+          >
+            <div className="space-y-1.5">
+              <Label htmlFor="board-create">Board name</Label>
+              <Input
+                id="board-create"
+                value={newBoardName}
+                onChange={(e) => setNewBoardName(e.target.value)}
+                placeholder="My board"
+                autoFocus
+              />
+            </div>
+          </form>
+        </Dialog>
+      )}
 
       <div
         ref={boardRef}
@@ -140,7 +361,9 @@ export default function VisionBoard() {
         )}
 
         {!isLoading && items.length === 0 && (
-          <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 text-center">
+          <div
+            className="absolute inset-0 flex flex-col items-center justify-center gap-3 text-center"
+          >
             <StickyNote className="size-8 text-primary-soft" />
             <p className="text-sm text-muted-foreground">
               Your board is empty. Add a sticky goal or drop an image to get started.
@@ -158,6 +381,9 @@ export default function VisionBoard() {
             onDragEnd={onDragEnd(item)}
             onEditText={editText}
             onDelete={() => removeItem.mutate(item.id)}
+            onMove={moveItem}
+            currentBoardId={currentBoardId}
+            boardOptions={boardOptions}
           />
         ))}
       </div>
@@ -165,7 +391,15 @@ export default function VisionBoard() {
   );
 }
 
-function BoardItem({ item, onDragEnd, onEditText, onDelete }) {
+function BoardItem({
+  item,
+  onDragEnd,
+  onEditText,
+  onDelete,
+  onMove,
+  currentBoardId,
+  boardOptions,
+}) {
   const [hovered, setHovered] = useState(false);
   const [draft, setDraft] = useState(item.text);
   const isImage = item.kind === "image";
@@ -177,6 +411,11 @@ function BoardItem({ item, onDragEnd, onEditText, onDelete }) {
 
   const commit = () => {
     if (draft !== item.text) onEditText(item, draft);
+  };
+
+  const handleDelete = () => {
+    if (item.board_id !== currentBoardId) return;
+    if (confirm("Delete this item?")) onDelete();
   };
 
   return (
@@ -240,9 +479,28 @@ function BoardItem({ item, onDragEnd, onEditText, onDelete }) {
         </div>
       )}
 
+      {boardOptions.length > 0 && (
+        <div
+          className={cn(
+            "absolute -bottom-2 -left-2 z-10 transition-opacity focus-within:opacity-100",
+            hovered ? "opacity-100" : "opacity-0"
+          )}
+          onPointerDown={(e) => e.stopPropagation()}
+        >
+          <Select
+            value={item.board_id}
+            onValueChange={(boardId) => onMove(item, boardId)}
+            options={boardOptions}
+            placeholder="Move to board…"
+            ariaLabel="Move item to another board"
+            className="h-7 w-36 rounded-full border border-border bg-card px-2 text-xs shadow-xs"
+          />
+        </div>
+      )}
+
       <button
         type="button"
-        onClick={onDelete}
+        onClick={handleDelete}
         aria-label="Delete item"
         title="Delete"
         className={cn(

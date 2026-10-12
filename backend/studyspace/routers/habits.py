@@ -24,6 +24,20 @@ def _streak(log_dates: set[date], today: date) -> int:
     return streak
 
 
+def _longest_streak(log_dates: set[date]) -> int:
+    """Longest run of consecutive days across the whole history,
+    not just the recent window — a month-long streak last year
+    still counts."""
+    longest = 0
+    run = 0
+    prev: date | None = None
+    for d in sorted(log_dates):
+        run = run + 1 if prev is not None and (d - prev).days == 1 else 1
+        longest = max(longest, run)
+        prev = d
+    return longest
+
+
 @router.get("", response_model=list[HabitOut])
 async def list_habits(db: DbDep, days: int = Query(default=30, ge=7, le=180)) -> list[HabitOut]:
     since = date.today() - timedelta(days=days)
@@ -36,11 +50,21 @@ async def list_habits(db: DbDep, days: int = Query(default=30, ge=7, le=180)) ->
         "where user_id = auth.uid() and log_date >= $1 order by log_date desc",
         since,
     )
+    # Full history for the longest-streak figure; habits are
+    # low-volume, so reading every check-off is cheap.
+    all_dates = await db.fetch(
+        "select habit_id, log_date from public.habit_logs where user_id = auth.uid()"
+    )
+    dates_by_habit: dict[uuid.UUID, set[date]] = {}
+    for entry in all_dates:
+        dates_by_habit.setdefault(entry["habit_id"], set()).add(entry["log_date"])
+
     today = date.today()
     out: list[HabitOut] = []
     for h in habits:
         h_logs = [entry for entry in logs if entry["habit_id"] == h["id"]]
         log_dates = {entry["log_date"] for entry in h_logs}
+        full_dates = dates_by_habit.get(h["id"], set())
         out.append(
             HabitOut(
                 id=h["id"], name=h["name"], color=h["color"], icon=h["icon"],
@@ -49,6 +73,7 @@ async def list_habits(db: DbDep, days: int = Query(default=30, ge=7, le=180)) ->
                 logs=[HabitLogOut(**dict(entry)) for entry in h_logs[:60]],
                 done_today=today in log_dates,
                 streak=_streak(log_dates, today),
+                longest_streak=_longest_streak(full_dates),
             )
         )
     return out
@@ -107,6 +132,11 @@ async def _habit_with_logs(habit_id: uuid.UUID, db) -> HabitOut:
         "where habit_id = $1 order by log_date desc limit 60",
         habit_id,
     )
+    # Full history for the longest streak.
+    all_dates = await db.fetch(
+        "select log_date from public.habit_logs where habit_id = $1", habit_id
+    )
+    full_dates = {entry["log_date"] for entry in all_dates}
     log_dates = {entry["log_date"] for entry in logs}
     return HabitOut(
         id=h["id"], name=h["name"], color=h["color"], icon=h["icon"],
@@ -115,4 +145,5 @@ async def _habit_with_logs(habit_id: uuid.UUID, db) -> HabitOut:
         logs=[HabitLogOut(**dict(entry)) for entry in logs],
         done_today=date.today() in log_dates,
         streak=_streak(log_dates, date.today()),
+        longest_streak=_longest_streak(full_dates),
     )

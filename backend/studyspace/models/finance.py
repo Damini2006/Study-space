@@ -46,9 +46,40 @@ class CategorySlice(BaseModel):
     share: float  # 0..1 of the expense total
 
 
+class BudgetCreate(BaseModel):
+    category: str = Field(min_length=1, max_length=40)
+    month: date  # first day of the budget month
+    limit_amount: float = Field(gt=0, le=100_000_000)
+
+
+class BudgetUpdate(BaseModel):
+    limit_amount: float | None = Field(default=None, gt=0, le=100_000_000)
+
+
+class BudgetOut(BaseModel):
+    category: str
+    month: date
+    limit_amount: float
+    created_at: datetime
+    updated_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
+class BudgetStatus(BaseModel):
+    """A limit alongside what has actually been spent against it."""
+
+    category: str
+    limit_amount: float
+    spent: float
+    # 'ok' (under 80%), 'near' (80–100%), 'over' (over 100%)
+    status: str = "ok"
+
+
 class FinanceSummary(BaseModel):
     balance: float
     income: float
     expense: float
     by_category: list[CategorySlice]
+    budgets: list[BudgetStatus] = Field(default_factory=list)
     currency: str = "INR"

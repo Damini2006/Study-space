@@ -45,6 +45,7 @@ class HabitOut(BaseModel):
     logs: list[HabitLogOut] = Field(default_factory=list)
     done_today: bool = False
     streak: int = 0
+    longest_streak: int = 0
 
     model_config = {"from_attributes": True}
 
