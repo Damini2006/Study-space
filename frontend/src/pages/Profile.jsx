@@ -5,20 +5,25 @@
  * GET /me, a value it accepts on PATCH /me, or a stat computed from
  * GET /analytics/summary. Nothing is invented: there are no placeholder
  * avatars, no fake "level" or "points", and the joined date is shown only
- * when the API gave us one.
+ * when the API gave us one. The charts read the same daily rows Analytics
+ * and the Dashboard use, through the shared chart components — so an empty
+ * chart says so in words instead of drawing a convincing empty frame.
  */
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
-  CalendarDays,
+  ArrowDownRight,
+  ArrowUpRight,
   BarChart3,
+  CalendarDays,
   Check,
   Flame,
   Layers,
   Loader2,
   LogOut,
   Mail,
+  Minus,
   Pencil,
   Shield,
   Timer,
@@ -31,6 +36,8 @@ import { analyticsApi, meApi } from "@/services/api-services";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input, Label } from "@/components/ui/input";
+import { ActivityHeatmap, BarList, ChartCard, Sparkline, TrendBars } from "@/components/charts/charts";
+import { lastNDaysSeries, trendPct } from "@/components/charts/chart-maths";
 import { cn, formatDate, initials } from "@/lib/utils";
 
 export default function Profile() {
@@ -40,9 +47,12 @@ export default function Profile() {
   const queryClient = useQueryClient();
 
   // The stats are the same real summary the Dashboard uses — no separate
-  // "profile stats" endpoint exists, so we do not pretend one does.
+  // "profile stats" endpoint exists, so we do not pretend one does. The
+  // window is part of the key: Dashboard owns 30 days and Analytics owns
+  // 90, and sharing one key painted whichever page loaded first with the
+  // other's numbers. This page asks for 120 and stores it under 120.
   const { data: summary, isLoading: statsLoading } = useQuery({
-    queryKey: ["analytics", "summary"],
+    queryKey: ["analytics", "summary", 120],
     queryFn: () => analyticsApi.summary(120),
   });
 
@@ -75,15 +85,37 @@ export default function Profile() {
     setThemeSaving(false);
   };
 
+  // Real chart series, derived only from what the summary actually returned.
+  // weekDelta stays null whenever there is no truthful baseline (zero minutes
+  // last week), and the UI says "no baseline" rather than inventing "+100%".
+  const week = useMemo(() => lastNDaysSeries(summary?.heatmap || [], "minutes", 7), [summary]);
+  const weekDelta = useMemo(
+    () => trendPct(summary?.minutes_this_week ?? 0, summary?.minutes_last_week ?? 0),
+    [summary]
+  );
+  const heatmapDays = useMemo(() => summary?.heatmap || [], [summary]);
+  const subjects = useMemo(
+    () => (summary?.per_subject || []).map((s) => ({ label: s.subject, value: s.minutes })),
+    [summary]
+  );
+  const hasFocus = week.some((d) => d.value > 0);
+
   const stats = useMemo(() => {
     const s = summary || {};
     return [
       { label: "Day streak", value: s.streak_days ?? 0, icon: Flame, unit: "days" },
       { label: "Cards", value: s.cards_total ?? 0, icon: Layers, unit: "total" },
       { label: "Due today", value: s.due_today ?? 0, icon: CalendarDays, unit: "cards" },
-      { label: "This week", value: s.minutes_this_week ?? 0, icon: Timer, unit: "min focused" },
+      {
+        label: "This week",
+        value: s.minutes_this_week ?? 0,
+        icon: Timer,
+        unit: "min focused",
+        sparkline: hasFocus ? week.map((d) => d.value) : null,
+        delta: weekDelta,
+      },
     ];
-  }, [summary]);
+  }, [summary, hasFocus, week, weekDelta]);
 
   const joined = profile?.created_at ? formatDate(profile.created_at) : null;
   const trimmed = name.trim();
@@ -91,25 +123,20 @@ export default function Profile() {
 
   return (
     <div className="mx-auto max-w-3xl space-y-6">
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">Profile</h1>
-          <p className="mt-0.5 text-sm text-muted-foreground">
-            Your name, appearance, and the study stats your account has earned.
-          </p>
+      {/* Hero — identity on the same gradient band the Dashboard opens with */}
+      <div className="relative overflow-hidden rounded-2xl border border-border bg-gradient-to-br from-primary/12 via-primary/5 to-accent/10 p-5 sm:p-6">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <p className="text-xs font-semibold uppercase tracking-[0.14em] text-primary">Your account</p>
+          {isDemo ? (
+            <span className="rounded-full bg-info-bg px-2 py-0.5 text-[10px] font-semibold uppercase text-info">
+              Demo account
+            </span>
+          ) : null}
         </div>
-        {isDemo && (
-          <span className="rounded-full bg-info-bg px-2 py-0.5 text-[10px] font-semibold uppercase text-info">
-            Demo account
-          </span>
-        )}
-      </div>
 
-      {/* Identity */}
-      <Card className="p-5">
-        <div className="flex items-start gap-4">
+        <div className="mt-4 flex items-start gap-4">
           <span
-            className="flex size-16 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xl font-bold text-primary"
+            className="flex size-16 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xl font-bold text-primary ring-4 ring-background/50"
             aria-hidden
           >
             {initials(profile?.display_name || profile?.email || "S")}
@@ -146,7 +173,9 @@ export default function Profile() {
               </div>
             ) : (
               <div className="flex items-center gap-2">
-                <h2 className="truncate text-xl font-semibold">{profile?.display_name || "Unnamed"}</h2>
+                <h1 className="truncate text-2xl font-bold tracking-tight">
+                  {profile?.display_name || "Unnamed"}
+                </h1>
                 <Button size="sm" variant="ghost" aria-label="Edit display name" onClick={() => setEditing(true)}>
                   <Pencil className="size-3.5" />
                 </Button>
@@ -175,6 +204,11 @@ export default function Profile() {
         </div>
 
         <div className="mt-4 flex flex-wrap gap-2 border-t border-border pt-4">
+          <Link to="/app/analytics">
+            <Button size="sm" variant="outline">
+              <BarChart3 className="size-4" /> Open analytics
+            </Button>
+          </Link>
           <Link to="/app/settings">
             <Button size="sm" variant="outline">
               <User className="size-4" /> Account settings
@@ -184,7 +218,78 @@ export default function Profile() {
             <LogOut className="size-4" /> Sign out
           </Button>
         </div>
-      </Card>
+      </div>
+
+      {/* Stat strip — real numbers from the same summary */}
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+        {stats.map(({ label, value, icon: Icon, unit, sparkline, delta }) => (
+          <div key={label} className="rounded-xl border border-border bg-surface p-3">
+            <div className="flex items-center gap-1.5 text-[11px] font-medium text-muted-foreground">
+              <Icon className="size-3.5 text-primary" aria-hidden />
+              {label}
+            </div>
+            <div className="mt-1 flex items-end justify-between gap-2">
+              <div className="text-2xl font-bold tabular-nums">{statsLoading ? "—" : value}</div>
+              {sparkline && sparkline.length > 1 ? (
+                <Sparkline points={sparkline} label={`${label} trend, last 7 days`} />
+              ) : null}
+            </div>
+            <div className="mt-0.5 flex items-center gap-1.5 text-[11px] text-muted-foreground">
+              {delta === undefined ? null : <DeltaBadge delta={delta} />}
+              <span>{unit}</span>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Charts — a skeleton while loading, an honest sentence when empty */}
+      {statsLoading ? (
+        <div className="grid gap-4 lg:grid-cols-2">
+          <div className="skeleton h-48 w-full rounded-2xl lg:col-span-2" />
+          <div className="skeleton h-48 w-full rounded-2xl" />
+          <div className="skeleton h-48 w-full rounded-2xl" />
+        </div>
+      ) : (
+        <div className="grid gap-4 lg:grid-cols-2">
+          <ChartCard
+            className="lg:col-span-2"
+            title="Focus, last 7 days"
+            description="Minutes focused per day — a flat bar means no session that day."
+            isEmpty={!hasFocus}
+            emptyMessage="No focus sessions yet — start one from Focus."
+          >
+            <TrendBars data={week} format={(v) => `${v}m`} height={120} caption="Focus minutes per day, last 7 days" />
+          </ChartCard>
+
+          <ChartCard
+            title="Activity"
+            description="Focused minutes by day, last 12 weeks"
+            isEmpty={heatmapDays.length === 0}
+            emptyMessage="Once you study or focus, your daily activity shows up here."
+          >
+            <ActivityHeatmap days={heatmapDays} valueKey="minutes" weeks={12} format={(v) => `${v}m`} caption="Daily focused minutes" />
+            <div className="mt-2 flex items-center justify-end gap-1 text-[10px] text-muted-foreground">
+              Less
+              <span className="size-2.5 rounded-[3px]" style={{ background: "var(--surface-2)" }} />
+              <span
+                className="size-2.5 rounded-[3px]"
+                style={{ background: "color-mix(in srgb, var(--primary) 45%, var(--surface-2))" }}
+              />
+              <span className="size-2.5 rounded-[3px]" style={{ background: "var(--primary)" }} />
+              More
+            </div>
+          </ChartCard>
+
+          <ChartCard
+            title="Time per subject"
+            description="Focused minutes, all time"
+            isEmpty={subjects.length === 0}
+            emptyMessage="Log focus sessions against Spaces that have a subject."
+          >
+            <BarList items={subjects} format={(v) => `${v}m`} caption="Focused minutes per subject" />
+          </ChartCard>
+        </div>
+      )}
 
       {/* Appearance */}
       <Card className="p-5">
@@ -214,7 +319,7 @@ export default function Profile() {
                   aria-hidden
                 />
                 {t.label}
-                {active && <Check className="size-3.5" aria-hidden />}
+                {active ? <Check className="size-3.5" aria-hidden /> : null}
               </button>
             );
           })}
@@ -225,35 +330,42 @@ export default function Profile() {
           </p>
         ) : null}
       </Card>
-
-      {/* Real stats from analytics */}
-      <Card className="p-5">
-        <h3 className="font-semibold">Your activity</h3>
-        <p className="mt-0.5 text-sm text-muted-foreground">
-          Straight from your study history — nothing here is estimated.
-        </p>
-        <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-4">
-          {stats.map(({ label, value, icon: Icon, unit }) => (
-            <div key={label} className="rounded-xl border border-border bg-surface p-3">
-              <div className="flex items-center gap-1.5 text-[11px] font-medium text-muted-foreground">
-                <Icon className="size-3.5 text-primary" aria-hidden />
-                {label}
-              </div>
-              <div className="mt-1 text-2xl font-bold tabular-nums">
-                {statsLoading ? "—" : value}
-              </div>
-              <div className="text-[11px] text-muted-foreground">{unit}</div>
-            </div>
-          ))}
-        </div>
-        <div className="mt-3 flex justify-end">
-          <Link to="/app/analytics">
-            <Button size="sm" variant="outline">
-              <BarChart3 className="size-4" /> Open analytics
-            </Button>
-          </Link>
-        </div>
-      </Card>
     </div>
+  );
+}
+
+/**
+ * A real week-over-week delta. `trendPct` returns null whenever there is no
+ * honest baseline to compare against (nothing focused last week), and we say
+ * so in words rather than inventing a "+100%".
+ */
+function DeltaBadge({ delta }) {
+  if (delta === null || delta === undefined) {
+    return (
+      <span className="inline-flex items-center gap-0.5 rounded-full bg-surface-2 px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">
+        <Minus className="size-3" aria-hidden /> no baseline
+      </span>
+    );
+  }
+  if (delta === 0) {
+    return (
+      <span className="inline-flex items-center gap-0.5 rounded-full bg-surface-2 px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">
+        <Minus className="size-3" aria-hidden /> no change
+      </span>
+    );
+  }
+  const up = delta > 0;
+  const Arrow = up ? ArrowUpRight : ArrowDownRight;
+  return (
+    <span
+      className={cn(
+        "inline-flex items-center gap-0.5 rounded-full px-1.5 py-0.5 text-[10px] font-medium",
+        up ? "bg-success-bg text-success" : "bg-destructive/10 text-destructive"
+      )}
+    >
+      <Arrow className="size-3" aria-hidden />
+      {up ? "+" : ""}
+      {delta}%
+    </span>
   );
 }

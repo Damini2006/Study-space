@@ -120,35 +120,48 @@ export function BarList({ items, format = (v) => v, caption, color = "var(--prim
  */
 export function TrendBars({ data, height = 96, format = (v) => v, caption, className }) {
   const max = Math.max(1, ...data.map((d) => d.value));
+  // Height in pixels, not a percentage. The column holding each bar is a flex
+  // item under `align-items: flex-end`, which does not stretch, so the column
+  // is auto-height — and a percentage of an auto height never resolves. Every
+  // bar fell back to its 3px minHeight and the chart drew a flat line for a
+  // day with 20 minutes and a day with 80. Deriving px from the `height` prop
+  // needs no layout pass to be correct.
+  const barPx = (value) => (value > 0 ? Math.max(3, Math.round((value / max) * height)) : 0);
   return (
     <div className={className}>
       <A11yTable
         caption={caption || "By day"}
         columns={["Day", "Value"]}
-        rows={data.map((d) => ({ key: d.label, cells: [d.label, String(format(d.value))] }))}
+        rows={data.map((d, i) => ({
+          // Day labels repeat inside a week (two Saturdays, two Tuesdays),
+          // so they are not unique keys — React would drop or duplicate rows.
+          key: `${i}-${d.label}`,
+          cells: [d.label, String(format(d.value))],
+        }))}
       />
       <div className="flex items-end gap-1.5" style={{ height }}>
-        {data.map((d) => {
-          const pct = d.value > 0 ? Math.max(3, (d.value / max) * 100) : 0;
-          return (
-            <div key={d.label} className="group flex flex-1 flex-col items-center justify-end gap-1">
-              <span className="text-[10px] tabular-nums text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100">
-                {format(d.value)}
-              </span>
-              <div
-                role="img"
-                aria-label={`${d.label}: ${format(d.value)}`}
-                title={`${d.label}: ${format(d.value)}`}
-                className="w-full rounded-t-md bg-primary/85 transition-all duration-500 ease-out group-hover:bg-primary"
-                style={{ height: `${pct}%`, minHeight: d.value > 0 ? 3 : 1, background: d.value > 0 ? undefined : "var(--surface-2)" }}
-              />
-            </div>
-          );
-        })}
+        {data.map((d, i) => (
+          <div key={`${i}-${d.label}`} className="group flex flex-1 flex-col items-center justify-end gap-1">
+            <span className="text-[10px] tabular-nums text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100">
+              {format(d.value)}
+            </span>
+            <div
+              role="img"
+              aria-label={`${d.label}: ${format(d.value)}`}
+              title={`${d.label}: ${format(d.value)}`}
+              className="w-full rounded-t-md bg-primary/85 transition-all duration-500 ease-out group-hover:bg-primary"
+              style={{
+                height: `${barPx(d.value)}px`,
+                minHeight: d.value > 0 ? 3 : 1,
+                background: d.value > 0 ? undefined : "var(--surface-2)",
+              }}
+            />
+          </div>
+        ))}
       </div>
       <div className="mt-1.5 flex gap-1.5">
-        {data.map((d) => (
-          <span key={d.label} className="flex-1 text-center text-[10px] text-muted-foreground">
+        {data.map((d, i) => (
+          <span key={`${i}-${d.label}`} className="flex-1 text-center text-[10px] text-muted-foreground">
             {d.label}
           </span>
         ))}

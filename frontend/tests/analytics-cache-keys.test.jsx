@@ -1,9 +1,9 @@
 /**
- * Analytics and the Dashboard ask for different windows of the same
- * summary — 90 days and 30 days — but both used the one cache key
- * ["analytics", "summary"]. Whichever page filled the cache first won:
- * opening Analytics after the Dashboard painted the Dashboard's 30-day
- * payload as if it were the 90-day page (and vice versa) until a
+ * Analytics, the Dashboard and Profile ask for different windows of the
+ * same summary — 90, 30 and 120 days — but all three used the one cache
+ * key ["analytics", "summary"]. Whichever page filled the cache first
+ * won: opening Analytics after the Dashboard painted the Dashboard's
+ * 30-day payload as if it were the 90-day page (and vice versa) until a
  * background refetch quietly corrected it. These pin one key per
  * window: each page starts from its own request and its cache entry
  * names the range it was fetched for.
@@ -15,6 +15,7 @@ import { MemoryRouter } from "react-router-dom";
 import { ToastProvider } from "@/components/ui/toast";
 import Analytics from "@/pages/Analytics";
 import Dashboard from "@/pages/Dashboard";
+import Profile from "@/pages/Profile";
 
 const { analyticsApi, habitsApi, plannerApi, spacesApi, studyApi } = vi.hoisted(() => ({
   analyticsApi: { summary: vi.fn() },
@@ -127,6 +128,15 @@ describe("the summary cache", () => {
     await waitFor(() =>
       expect(client.getQueryData(["analytics", "summary", 90])).toBeDefined()
     );
+    expect(client.getQueryData(["analytics", "summary"])).toBeUndefined();
+  });
+
+  it("stores Profile's summary under its own 120-day window", async () => {
+    renderWith(<Profile />);
+    await waitFor(() =>
+      expect(client.getQueryData(["analytics", "summary", 120])).toBeDefined()
+    );
+    expect(analyticsApi.summary).toHaveBeenLastCalledWith(120);
     expect(client.getQueryData(["analytics", "summary"])).toBeUndefined();
   });
 });
