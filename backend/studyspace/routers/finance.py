@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import uuid
 from datetime import date, timedelta
+from typing import Annotated
 
 from fastapi import APIRouter, HTTPException, Query
 
@@ -191,7 +192,12 @@ async def upsert_budget(db: DbDep, body: BudgetCreate) -> BudgetOut:
 
 
 @router.patch("/budgets", response_model=BudgetOut)
-async def update_budget(db: DbDep, body: BudgetUpdate, category: str = Query(min_length=1, max_length=40), month: date = Query()) -> BudgetOut:
+async def update_budget(
+    db: DbDep,
+    body: BudgetUpdate,
+    category: Annotated[str, Query(min_length=1, max_length=40)],
+    month: Annotated[date, Query()],
+) -> BudgetOut:
     if body.limit_amount is None:
         raise HTTPException(status_code=400, detail="No fields to update.")
     row = await db.fetchrow(
@@ -206,7 +212,11 @@ async def update_budget(db: DbDep, body: BudgetUpdate, category: str = Query(min
 
 
 @router.delete("/budgets", status_code=204)
-async def delete_budget(db: DbDep, category: str = Query(min_length=1, max_length=40), month: date = Query()) -> None:
+async def delete_budget(
+    db: DbDep,
+    category: Annotated[str, Query(min_length=1, max_length=40)],
+    month: Annotated[date, Query()],
+) -> None:
     result = await db.execute(
         "delete from public.budgets where user_id = auth.uid() and category = $1 and month = $2",
         category, month,
