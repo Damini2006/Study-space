@@ -17,6 +17,14 @@ class FocusSessionCreate(BaseModel):
     completed: bool = True
 
 
+class FocusSessionUpdate(BaseModel):
+    kind: Literal["focus", "break"] | None = None
+    duration_min: int | None = Field(default=None, ge=1, le=180)
+    started_at: datetime | None = None
+    space_id: uuid.UUID | None = None
+    completed: bool | None = None
+
+
 class FocusSessionOut(BaseModel):
     id: uuid.UUID
     kind: Literal["focus", "break"]

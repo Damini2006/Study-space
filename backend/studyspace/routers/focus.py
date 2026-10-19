@@ -2,12 +2,13 @@
 
 from __future__ import annotations
 
+import uuid
 from datetime import datetime, timezone
 
 from fastapi import APIRouter, Query
 
 from studyspace.deps import DbDep
-from studyspace.models.focus import FocusSessionCreate, FocusSessionOut
+from studyspace.models.focus import FocusSessionCreate, FocusSessionOut, FocusSessionUpdate
 
 router = APIRouter(prefix="/focus", tags=["focus"])
 
@@ -51,4 +52,47 @@ async def create_session(body: FocusSessionCreate, db: DbDep) -> FocusSessionOut
         id=row["id"], kind=row["kind"], duration_min=row["duration_min"],
         started_at=row["started_at"], ended_at=row["ended_at"], completed=row["completed"],
         space_id=row["space_id"], space_title=None, created_at=row["created_at"],
+    )
+
+
+@router.patch("/sessions/{session_id}", response_model=FocusSessionOut)
+async def update_session(session_id: uuid.UUID, body: FocusSessionUpdate, db: DbDep) -> FocusSessionOut:
+    sets, args, i = [], [], 0
+    for field in ("kind", "duration_min", "started_at", "space_id", "completed"):
+        val = getattr(body, field)
+        if val is not None:
+            i += 1
+            sets.append(f"{field} = ${i}")
+            args.append(val)
+    if not sets:
+        row = await db.fetchrow(
+            "select id, kind, duration_min, started_at, ended_at, completed, space_id, created_at "
+            "from public.focus_sessions where id = $1 and user_id = auth.uid()",
+            session_id,
+        )
+    else:
+        sets_sql = ", ".join(sets)
+        i += 1
+        args.append(session_id)
+        row = await db.fetchrow(
+            f"update public.focus_sessions set {sets_sql} where id = ${i} and user_id = auth.uid() "
+            "returning id, kind, duration_min, started_at, ended_at, completed, space_id, created_at",
+            *args,
+        )
+    if row is None:
+        from fastapi import HTTPException
+
+        raise HTTPException(status_code=404, detail="Focus session not found")
+    return FocusSessionOut(
+        id=row["id"], kind=row["kind"], duration_min=row["duration_min"],
+        started_at=row["started_at"], ended_at=row["ended_at"], completed=row["completed"],
+        space_id=row["space_id"], space_title=None, created_at=row["created_at"],
+    )
+
+
+@router.delete("/sessions/{session_id}", status_code=204)
+async def delete_session(session_id: uuid.UUID, db: DbDep) -> None:
+    await db.execute(
+        "delete from public.focus_sessions where id = $1 and user_id = auth.uid()",
+        session_id,
     )
