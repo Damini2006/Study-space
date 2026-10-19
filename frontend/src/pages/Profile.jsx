@@ -66,6 +66,17 @@ export default function Profile() {
     if (!editing) setName(profile?.display_name || "");
   }, [profile?.display_name, editing]);
 
+  // Keyboard shortcuts: "e" toggles name editing, Escape exits editing
+  useEffect(() => {
+    const onKeyDown = (e) => {
+      if (e.target.tagName === "INPUT" || e.target.tagName === "TEXTAREA") return;
+      if (e.key === "Escape") setEditing(false);
+      if (e.key === "e" && !e.metaKey && !e.ctrlKey) setEditing(true);
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, []);
+
   const saveName = useMutation({
     mutationFn: (displayName) => meApi.update({ display_name: displayName }),
     onSuccess: async () => {

@@ -1,4 +1,4 @@
-import { Fragment, useCallback, useMemo, useState } from "react";
+import { Fragment, useCallback, useEffect, useMemo, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
@@ -139,6 +139,30 @@ export default function Dashboard() {
       queryClient.invalidateQueries({ queryKey: ["plan", "tasks"] }),
     ]);
   }, [queryClient]);
+
+  // Keyboard shortcuts for navigation
+  useEffect(() => {
+    const handleKeyDown = (event) => {
+      // Number keys 1-4 for quick tab navigation
+      if (event.key >= "1" && event.key <= "4") {
+        event.preventDefault();
+        const links = document.querySelectorAll('a[href^="/app/"]');
+        if (links[parseInt(event.key, 10) - 1]) {
+          links[parseInt(event.key, 10) - 1].click();
+        }
+      }
+      // Escape key
+      if (event.key === "Escape") {
+        // Close any open dialogs/modals
+        const openDialogs = document.querySelectorAll('.dialog[open]');
+        if (openDialogs.length > 0) {
+          openDialogs[0].close();
+        }
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, []);
 
   const pull = usePullToRefresh({ onRefresh: refreshAll });
 

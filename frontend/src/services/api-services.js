@@ -98,6 +98,8 @@ export const notesApi = {
 export const focusApi = {
   sessions: (limit = 100) => api.get(`/focus/sessions?limit=${limit}`),
   create: (body) => api.post("/focus/sessions", body),
+  update: (id, body) => api.patch(`/focus/sessions/${id}`, body),
+  delete: (id) => api.delete(`/focus/sessions/${id}`),
 };
 
 export const habitsApi = {

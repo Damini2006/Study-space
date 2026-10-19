@@ -32,6 +32,22 @@ export default function VisionBoard() {
   const [creatingBoard, setCreatingBoard] = useState(false);
   const [newBoardName, setNewBoardName] = useState("");
 
+  // Keyboard shortcuts: "n" opens a new sticky, "b" opens a new board, Escape closes dialogs
+  useEffect(() => {
+    const onKeyDown = (e) => {
+      if (e.target.tagName === "INPUT" || e.target.tagName === "TEXTAREA") return;
+      if (e.key === "Escape") {
+        setCreatingBoard(false);
+        setRenameBoardId(null);
+      }
+      if (e.key === "b" && !e.metaKey && !e.ctrlKey) {
+        setCreatingBoard(true);
+      }
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, []);
+
   const { data: boards = [] } = useQuery({
     queryKey: ["vision-boards"],
     queryFn: () => visionApi.boards.list(),

@@ -66,6 +66,24 @@ export default function SettingsPage() {
     if (!activeSpaceId && spaces.length) setActiveSpaceId(spaces[0].id);
   }, [spaces, activeSpaceId]);
 
+  // Keyboard shortcuts: number keys 1-8 switch tabs, Escape closes dialogs
+  useEffect(() => {
+    const SETTINGS_TABS = ["tokens", "models", "prompts", "retrieval", "audit", "app", "data", "settings"];
+    const onKeyDown = (e) => {
+      if (e.target.tagName === "INPUT" || e.target.tagName === "TEXTAREA") return;
+      const idx = parseInt(e.key, 10);
+      if (idx >= 1 && idx <= SETTINGS_TABS.length) {
+        setTab(SETTINGS_TABS[idx - 1]);
+      }
+      if (e.key === "Escape") {
+        setShowCreate(false);
+        setShowRevoke(false);
+      }
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, []);
+
   const createToken = useMutation({
     mutationFn: (body) => meApi.createMcpToken(body),
     onSuccess: (data) => {

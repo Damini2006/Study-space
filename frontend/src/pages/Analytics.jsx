@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { motion } from "framer-motion";
 import {
@@ -78,7 +79,25 @@ function WeekDelta({ now, prev }) {
   );
 }
 
+const ANALYTICS_TABS = ["overview", "heatmap", "subjects", "weak", "refusals"];
+
 export default function Analytics() {
+  const [tab, setTab] = useState("overview");
+
+  // Number keys 1-5 switch tabs, Escape returns to Overview
+  useEffect(() => {
+    const onKeyDown = (e) => {
+      if (e.target.tagName === "INPUT" || e.target.tagName === "TEXTAREA") return;
+      const idx = parseInt(e.key, 10);
+      if (idx >= 1 && idx <= ANALYTICS_TABS.length) {
+        setTab(ANALYTICS_TABS[idx - 1]);
+      }
+      if (e.key === "Escape") setTab("overview");
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, []);
+
   // The window is part of the key: Dashboard caches this same summary at
   // 30 days, and the shared key used to paint whichever page filled it
   // first with the other page's numbers.
@@ -133,7 +152,7 @@ export default function Analytics() {
         <StatCard label="Total cards" value={analytics?.cards_total ?? 0} icon={BarChart2} hint={`${analytics?.due_today ?? 0} due today`} />
       </div>
 
-      <Tabs defaultValue="overview" className="space-y-4">
+      <Tabs value={tab} onValueChange={setTab} className="space-y-4">
         <TabsList>
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="heatmap">Heatmap</TabsTrigger>

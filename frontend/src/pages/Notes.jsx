@@ -34,6 +34,18 @@ const COLORS = ["#FFF9B3", "#FFD6A5", "#A0E7E5", "#BDB2FF", "#FFB3D9", "#C6F6D5"
 
 function NoteCard({ note, selected, onToggle, onOpen, onPin, onDelete, onExport }) {
   const preview = tiptapToText(note.content).slice(0, 220);
+  const contentText = note.content_text || (note.content ? tiptapToText(note.content).slice(0, 120) : "Empty note");
+  const meta = [
+    note.tags?.slice(0, 4).map(t => (
+      <Badge key={t} variant="default" className="text-[10px]">{t}</Badge>
+    )),
+    note.tags && note.tags.length > 4 && (
+      <Badge variant="default" className="text-[10px]">+{note.tags.length - 4}</Badge>
+    ),
+    note.space_id && <span className="text-[10px] text-muted-foreground">Space: {note.space_id}</span>,
+    note.created_at && <span className="text-[10px] text-muted-foreground">Created: {formatDate(note.created_at)}</span>,
+    contentText ? <span className="text-[10px] text-muted-foreground">{contentText}</span> : null,
+  ].filter(Boolean);
   return (
     <motion.div
       initial={{ opacity: 0, y: 10 }}
@@ -56,13 +68,8 @@ function NoteCard({ note, selected, onToggle, onOpen, onPin, onDelete, onExport 
           <h4 className={cn("font-semibold truncate", note.pinned && "text-primary")}>{note.title || "Untitled"}</h4>
           <p className="mt-1 text-sm text-muted-foreground line-clamp-3">{preview || "Empty note"}</p>
           <div className="mt-2 flex flex-wrap gap-1">
-            {note.tags?.slice(0, 4).map(t => (
-              <Badge key={t} variant="default" className="text-[10px]">{t}</Badge>
-            ))}
-            {note.tags && note.tags.length > 4 && (
-              <Badge variant="default" className="text-[10px]">+{note.tags.length - 4}</Badge>
-            )}
-          </div>
+            {meta}
+        </div>
         </button>
         <div className="flex items-center gap-1">
           <button
@@ -88,7 +95,7 @@ function NoteCard({ note, selected, onToggle, onOpen, onPin, onDelete, onExport 
   );
 }
 
-function NoteEditor({ note, onSave, onClose, allTags }) {
+function NoteEditor({ note, onSave, onClose, allTags, folderId }) {
   const { success, error } = useToast();
   const queryClient = useQueryClient();
   const [title, setTitle] = useState(note?.title || "");
@@ -174,7 +181,7 @@ function NoteEditor({ note, onSave, onClose, allTags }) {
 
   return (
     <Dialog open onClose={onClose} title={note ? "Edit note" : "New note"} className="max-w-3xl p-0">
-      <form onSubmit={e => { e.preventDefault(); onSave({ title, color, content, tags: noteTags, pinned }); }} className="p-4 space-y-4 max-h-[85vh] overflow-y-auto">
+      <form onSubmit={e => { e.preventDefault(); onSave({ title, color, content, tags: noteTags, pinned, folder_id: folderId || undefined }); }} className="p-4 space-y-4 max-h-[85vh] overflow-y-auto">
         <div className="space-y-1.5">
           <Label>Title</Label>
           <Input value={title} onChange={e => setTitle(e.target.value)} placeholder="Note title" autoFocus />
@@ -313,6 +320,7 @@ export default function Notes() {
   const [tagFilter, setTagFilter] = useState("");
   const [sort, setSort] = useState("updated");
   const [folderId, setFolderId] = useState(null);
+  const [spaceId, _setSpaceId] = useState("");
   const [selected, setSelected] = useState(() => new Set());
   const [editingNote, setEditingNote] = useState(null);
   // Separate from `editingNote`, because they used to be the same variable
@@ -326,7 +334,21 @@ export default function Notes() {
   const [newFolderName, setNewFolderName] = useState("");
   const [moveTarget, setMoveTarget] = useState("");
 
-  const { data: notes = [] } = useQuery({ queryKey: ["notes", { search, tag: tagFilter, sort, folderId }], queryFn: () => notesApi.list({ q: search, tag: tagFilter, sort, folder_id: folderId }) });
+  // Keyboard shortcuts: "n" opens a new note, Escape closes the editor
+  useEffect(() => {
+    const onKeyDown = (e) => {
+      if (e.target.tagName === "INPUT" || e.target.tagName === "TEXTAREA") return;
+      if (e.key === "Escape") setEditorOpen(false);
+      if (e.key === "n" && !e.metaKey && !e.ctrlKey) {
+        setEditingNote(null);
+        setEditorOpen(true);
+      }
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, []);
+
+  const { data: notes = [] } = useQuery({ queryKey: ["notes", { search, tag: tagFilter, sort, folderId, spaceId }], queryFn: () => notesApi.list({ q: search, tag: tagFilter, sort, folder_id: folderId, space_id: spaceId }) });
 
   const { data: folders = [] } = useQuery({ queryKey: ["note-folders"], queryFn: () => notesApi.folders.list() });
 
@@ -568,12 +590,13 @@ export default function Notes() {
                 >
                   <option value="">Select folder…</option>
                   {folders.map(f => <option key={f.id} value={f.id}>{f.name}</option>)}
+                  <option value="null">Move to no folder</option>
                 </select>
                 <Button
                   size="sm"
                   variant="outline"
                   disabled={!moveTarget}
-                  onClick={() => bulkMove.mutate({ ids: [...selected], folderId: moveTarget })}
+                  onClick={() => bulkMove.mutate({ ids: [...selected], folderId: moveTarget === "null" ? null : moveTarget })}
                 >
                   Move
                 </Button>
@@ -641,7 +664,8 @@ export default function Notes() {
             if (editingNote) updateMutation.mutate({ id: editingNote.id, body });
             else createMutation.mutate(body);
           }}
-        />
+          folderId={folderId}
+/>
       )}
     </div>
   );

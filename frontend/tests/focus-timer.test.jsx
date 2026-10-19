@@ -67,6 +67,8 @@ describe("the focus timer's completion", () => {
       kind: "focus",
       duration_min: 25,
       completed: true,
+      space_id: undefined,
+      started_at: expect.any(String),
     });
     expect(screen.getByText("1 completed this session")).toBeInTheDocument();
   });
@@ -89,6 +91,8 @@ describe("the focus timer's completion", () => {
       kind: "break",
       duration_min: 5,
       completed: true,
+      space_id: undefined,
+      started_at: expect.any(String),
     });
     expect(screen.getByText("2 completed this session")).toBeInTheDocument();
   });

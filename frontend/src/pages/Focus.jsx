@@ -7,6 +7,7 @@ import {
   Play,
   RotateCcw,
   Target,
+  Trash2,
 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -19,23 +20,6 @@ import { cn, formatClock, formatDate } from "@/lib/utils";
 
 const DEFAULT_FOCUS = 25;
 const DEFAULT_BREAK = 5;
-
-function SessionCard({ session }) {
-  return (
-    <Card className="p-4 flex items-center gap-3">
-      <span className={cn("size-10 rounded-full flex items-center justify-center text-sm font-medium", session.kind === "focus" ? "bg-primary/10 text-primary" : "bg-success-bg text-success")}>
-        {session.kind === "focus" ? <Target className="size-5" /> : <CheckCircle2 className="size-5" />}
-      </span>
-      <div className="flex-1 min-w-0">
-        <p className="font-medium capitalize">{session.kind}</p>
-        <p className="text-sm text-muted-foreground">
-          {formatClock(session.duration_min * 60)} · {formatDate(session.started_at)}
-        </p>
-      </div>
-      <span className="text-sm font-mono text-muted-foreground">{session.duration_min}m</span>
-    </Card>
-  );
-}
 
 function TimerCircle({ progress, children }) {
   const circumference = 2 * Math.PI * 90;
@@ -64,11 +48,15 @@ export default function Focus() {
   const [remaining, setRemaining] = useState(DEFAULT_FOCUS * 60);
   const [completed, setCompleted] = useState(0);
   const intervalRef = useRef(null);
-  
-  const { data: sessions = [] } = useQuery({ queryKey: ["focus", "sessions"], queryFn: () => focusApi.sessions(50) });
-  
+  const [editingSession, setEditingSession] = useState(null);
+
+  const { data: sessions = [] } = useQuery({
+    queryKey: ["focus", "sessions"],
+    queryFn: () => focusApi.sessions(100),
+  });
+
   const createSession = useMutation({
-    mutationFn: (body) => focusApi.create(body),
+    mutationFn: (body) => focusApi.create({ ...body, started_at: new Date().toISOString(), space_id: body.space_id }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["focus", "sessions"] });
       success(`${kind === "focus" ? "Focus" : "Break"} session logged.`);
@@ -76,26 +64,70 @@ export default function Focus() {
     onError: error,
   });
 
-  // The tick is pure on purpose. StrictMode re-invokes updater functions
-  // to surface impurity, and the old completion branch ran
-  // createSession.mutate from inside this updater — one completed Pomodoro
-  // logged the session twice and counted two completions. Side effects
-  // belong in the effect below, where one state transition runs once.
+  const updateSession = useMutation({
+    mutationFn: (id) => focusApi.update(id, { kind, duration_min: duration, completed: true }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["focus", "sessions"] });
+      success("Session updated.");
+    },
+    onError: error,
+  });
+
+  const deleteSession = useMutation({
+    mutationFn: (id) => focusApi.delete(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["focus", "sessions"] });
+      success("Session deleted.");
+    },
+    onError: error,
+  });
+
+  const progress = (duration * 60 - remaining) / (duration * 60);
+
+  const SessionCard = ({ session }) => {
+    return (
+      <Card className="p-4 flex items-center gap-3">
+        <span className={cn("size-10 rounded-full flex items-center justify-center text-sm font-medium", session.kind === "focus" ? "bg-primary/10 text-primary" : "bg-success-bg text-success")}>
+          {session.kind === "focus" ? <Target className="size-5" /> : <CheckCircle2 className="size-5" />}
+        </span>
+        <div className="flex-1 min-w-0">
+          <p className="font-medium capitalize">{session.kind}</p>
+          <p className="text-sm text-muted-foreground">
+            {formatClock(session.duration_min * 60)} · {session.started_at ? formatDate(session.started_at) : "—"} · {session.space_id ? `Space ${session.space_id}` : "—"}
+          </p>
+        </div>
+        <span className="text-sm font-mono text-muted-foreground">{session.duration_min}m</span>
+        {session.id && (
+          <div className="mt-2 flex items-center gap-2 text-xs">
+            <button
+              onClick={() => deleteSession.mutate(session.id)}
+              className="rounded bg-destructive/10 px-2 py-0.5 text-destructive text-sm"
+              aria-label="Delete session"
+            >
+              <Trash2 className="mr-1 size-3" /> Delete
+            </button>
+            <button
+              onClick={() => setEditingSession(session.id)}
+              className="rounded bg-primary/10 px-2 py-0.5 text-primary text-sm"
+              aria-label="Edit session"
+            >
+              Edit
+            </button>
+          </div>
+        )}
+      </Card>
+    );
+  };
+
   useEffect(() => {
     if (running && remaining > 0) {
-      intervalRef.current = setInterval(
-        () => setRemaining(r => (r <= 1 ? 0 : r - 1)),
-        1000
-      );
+      intervalRef.current = setInterval(() => setRemaining(r => (r <= 1 ? 0 : r - 1)), 1000);
     } else {
       clearInterval(intervalRef.current);
     }
     return () => clearInterval(intervalRef.current);
   }, [running, remaining]);
 
-  // Completion fires once per transition into (running, 0): StrictMode
-  // double-invokes updaters, but runs each committed update's effects a
-  // single time, so the log and the phase switch cannot double.
   useEffect(() => {
     if (!running || remaining !== 0) return;
     setRunning(false);
@@ -110,13 +142,25 @@ export default function Focus() {
       setDuration(DEFAULT_FOCUS);
       setRemaining(DEFAULT_FOCUS * 60);
     }
-    // `kind`/`duration`/`createSession` are deliberately not deps: the
-    // guard on (running, remaining) already scopes this to one transition,
-    // and listing them would re-run the effect on every render.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [running, remaining]);
+  }, [running, remaining, createSession, duration, kind]);
 
-  const progress = (duration * 60 - remaining) / (duration * 60);
+  // Keyboard shortcuts: Space toggles start/pause, "r" resets the timer, Escape closes the edit dialog
+  useEffect(() => {
+    const onKeyDown = (e) => {
+      if (e.target.tagName === "INPUT" || e.target.tagName === "TEXTAREA") return;
+      if (e.key === " ") {
+        e.preventDefault();
+        setRunning(r => !r);
+      }
+      if (e.key === "r" && !e.metaKey && !e.ctrlKey) {
+        setRunning(false);
+        setRemaining(duration * 60);
+      }
+      if (e.key === "Escape") setEditingSession(null);
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [duration]);
 
   return (
     <div className="mx-auto max-w-xl space-y-6">
@@ -125,7 +169,9 @@ export default function Focus() {
           <h1 className="text-2xl font-bold tracking-tight">Focus</h1>
           <p className="mt-0.5 text-sm text-muted-foreground">Pomodoro sessions with automatic break switching.</p>
         </div>
-        <Badge variant={kind === "focus" ? "primary" : "success"}>{kind.charAt(0).toUpperCase() + kind.slice(1)}</Badge>
+        <Badge variant={kind === "focus" ? "primary" : "success"}>
+          {kind.charAt(0).toUpperCase() + kind.slice(1)}
+        </Badge>
       </div>
 
       {/* Timer */}
@@ -138,7 +184,7 @@ export default function Focus() {
             </div>
           </TimerCircle>
         </div>
-        
+
         <div className="flex items-center justify-center gap-3 mb-4">
           <Button
             variant={running ? "secondary" : "default"}
@@ -202,6 +248,30 @@ export default function Focus() {
           </div>
         )}
       </div>
+
+      {/* Edit session form at bottom */}
+      {editingSession && (
+        <div className="mt-6 p-4 rounded bg-surface-2">
+          <h4 className="font-medium mb-3">Edit session</h4>
+          <p className="text-sm text-muted-foreground mb-2">
+            Editing session {editingSession}. Duration: {duration} minutes.
+          </p>
+          <div className="flex items-center gap-2">
+            <Input
+              type="number"
+              min="1"
+              max={kind === "focus" ? 90 : 30}
+              value={duration}
+              onChange={e => { const v = parseInt(e.target.value) || duration; setDuration(v); }}
+              className="w-20 text-center"
+            />
+            <Button variant="primary" onClick={() => { updateSession.mutate(editingSession); setEditingSession(null); success("Session updated."); }} size="sm">
+              Save
+            </Button>
+            <Button variant="outline" onClick={() => setEditingSession(null)} size="sm">Cancel</Button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

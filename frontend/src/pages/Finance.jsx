@@ -2,7 +2,7 @@
  * Finance — transactions, balance, and a live animated donut of spending
  * by category (restored from the prototype, ₹ formatting, tabular numbers).
  */
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { motion } from "framer-motion";
 import { Loader2, Pencil, Plus, Trash2, TrendingDown, TrendingUp, Wallet } from "lucide-react";
@@ -138,6 +138,23 @@ export default function Finance() {
     setEditing(tx);
   };
   const closeDialog = () => setEditing(null);
+
+  // Keyboard shortcuts: "n" opens a new transaction dialog, Escape closes any open dialog
+  useEffect(() => {
+    const onKeyDown = (e) => {
+      if (e.target.tagName === "INPUT" || e.target.tagName === "TEXTAREA" || e.target.tagName === "SELECT") return;
+      if (e.key === "Escape") {
+        setEditing(null);
+        setBudgetDialog(false);
+      }
+      if (e.key === "n" && !e.metaKey && !e.ctrlKey) {
+        setForm({ title: "", amount: "", kind: "expense", category: "Food", spent_on: "", note: "" });
+        setEditing("new");
+      }
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, []);
 
   const submit = (e) => {
     e.preventDefault();

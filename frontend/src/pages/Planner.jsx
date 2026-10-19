@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -145,7 +145,7 @@ function GhostTaskCard({ task, index, editing, onEdit, onCancel, onSave, onRemov
   );
 }
 
-function ApprovedTaskCard({ task, onToggle, onDelete }) {
+function ApprovedTaskCard({ task, onToggle, onDelete, onEdit }) {
   return (
     <Card className="p-4 space-y-2 flex items-center gap-3">
       <input
@@ -163,6 +163,18 @@ function ApprovedTaskCard({ task, onToggle, onDelete }) {
           {task.source === "ai" && <span className="px-1.5 py-0.5 rounded bg-primary/10 text-primary text-[10px]">AI</span>}
         </div>
       </div>
+      {onEdit && (
+        <div className="mt-1 flex items-center gap-2 text-xs">
+          <button
+            type="button"
+            onClick={() => onEdit(task.id)}
+            className="rounded bg-primary/10 px-2 py-0.5 text-primary text-sm"
+            aria-label="Edit task"
+          >
+            Edit
+          </button>
+        </div>
+      )}
       <button
         type="button"
         onClick={() => onDelete(task.id)}
@@ -253,9 +265,23 @@ export default function Planner() {
   const queryClient = useQueryClient();
   const [showForm, setShowForm] = useState(false);
   const [view, setView] = useState("calendar"); // "calendar" or "list"
+  const [includeDone, setIncludeDone] = useState(false);
+
+  // Keyboard shortcuts: "n" opens new plan, "v" toggles view, "d" toggles done visibility, Escape closes dialogs
+  useEffect(() => {
+    const onKeyDown = (e) => {
+      if (e.target.tagName === "INPUT" || e.target.tagName === "TEXTAREA") return;
+      if (e.key === "Escape") setShowForm(false);
+      if (e.key === "n" && !e.metaKey && !e.ctrlKey) setShowForm(true);
+      if (e.key === "v" && !e.metaKey && !e.ctrlKey) setView(v => (v === "calendar" ? "list" : "calendar"));
+      if (e.key === "d" && !e.metaKey && !e.ctrlKey) setIncludeDone(v => !v);
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, []);
 
   const { data: runs = [] } = useQuery({ queryKey: ["planner", "runs"], queryFn: plannerApi.listRuns });
-  const { data: tasks = [] } = useQuery({ queryKey: ["planner", "tasks"], queryFn: () => plannerApi.listTasks(false) });
+  const { data: tasks = [] } = useQuery({ queryKey: ["planner", "tasks"], queryFn: () => plannerApi.listTasks(includeDone) });
 
   const pendingRun = runs.find(r => r.status === "awaiting_approval");
   const approvedRuns = runs.filter(r => r.status === "approved");
@@ -389,6 +415,9 @@ export default function Planner() {
                   <TabsTrigger value="list">List</TabsTrigger>
                   <TabsTrigger value="history">History</TabsTrigger>
                 </TabsList>
+                <label className="text-xs text-muted-foreground cursor-pointer" onClick={() => setIncludeDone((prev) => !prev)}>
+                  Show completed
+                </label>
               </div>
             </div>
 
@@ -473,6 +502,7 @@ export default function Planner() {
                       task={task}
                       onToggle={(id, status) => toggleTask.mutate({ id, status })}
                       onDelete={(id) => removeTask.mutate(id)}
+                      onEdit={() => setEditingTask({ runId: pendingRun.id, taskId: task.id })}
                     />
                   ))}
                 </div>
